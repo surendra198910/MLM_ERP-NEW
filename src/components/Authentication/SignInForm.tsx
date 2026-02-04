@@ -73,7 +73,7 @@ const SignInForm: React.FC = () => {
         }
 
 
-        setTimeout(() => navigate("/welcome"), 800);
+        setTimeout(() => navigate("/superadmin"), 800);
       } else {
         const msg = result?.Msg || "Invalid Email or Password!";
         setApiError(msg);

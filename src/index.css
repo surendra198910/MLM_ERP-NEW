@@ -17,14 +17,19 @@
   --color-white: #ffffff;
   --color-black: #3a4252;
   --color-dark: #000000;
-  --color-primary-sidebar-bg: #ecf0ff;
-  --color-primary-sidebar-text: #ecf0ff;
-  --color-primary-sidebar-bg-hover: #ecf0ff;
-  --color-primary-table-bg: #ecf0ff;
-  --color-primary-table-text: #ecf0ff;
-  --color-primary-table-bg-hover: #ecf0ff;
-  --color-primary-button-bg-hover: #ecf0ff;
-  --color-primary-button-bg: #ecf0ff;
+  /* Sidebar */
+  --color-primary-sidebar-bg: #ecf0ff;        /* Light Blue */
+  --color-primary-sidebar-text: #1e3a8a;      /* Dark Blue */
+  --color-primary-sidebar-bg-hover: #dbe4ff;  /* Slightly Darker Blue */
+
+  /* Table */
+  --color-primary-table-bg: #ffffff;          /* White */
+  --color-primary-table-text: #1f2933;        /* Dark Gray */
+  --color-primary-table-bg-hover: #f1f5ff;    /* Light Blue Hover */
+
+  /* Buttons */
+  --color-primary-button-bg: #2563eb;         /* Primary Blue */
+  --color-primary-button-bg-hover: #1d4ed8;
   --color-primary-50: #ecf0ff;
   --color-primary-100: #dde4ff;
   --color-primary-200: #c2cdff;
