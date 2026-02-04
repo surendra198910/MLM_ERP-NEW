@@ -129,7 +129,7 @@ const GenerationTreeContainer = () => {
   };
 
   useEffect(() => {
-    const savedUser = localStorage.getItem("UserName");
+    const savedUser = "MLMERP";
     if (savedUser) {
       FetchData(savedUser);
     }
