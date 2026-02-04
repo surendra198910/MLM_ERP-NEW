@@ -67,8 +67,7 @@ const MemberAutocomplete: React.FC<Props> = ({
         value={query}
         placeholder="Type at least 3 characters..."
         onChange={(e) => setQuery(e.target.value)}
-        className="w-full h-[44px] px-4 border border-gray-300 rounded-lg
-        focus:ring-2 focus:ring-blue-500 outline-none"
+        className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm h-10 placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
       />
 
       {/* Dropdown */}

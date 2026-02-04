@@ -138,7 +138,7 @@ const GenerationTreeContainer = () => {
   //for User Modal
   useEffect(() => {
     fetchManagers();
-  }, []);
+  }, [userSearch]);
 
   return (
     <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-md">
@@ -215,7 +215,7 @@ const GenerationTreeContainer = () => {
                       className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-white text-white bg-primary-button-bg hover:bg-white hover:border-primary-button-bg hover:text-primary-button-bg transition-all disabled:opacity-50"
                     >
                       <i className="material-symbols-outlined text-[20px]">
-                        add
+                        manage_search
                       </i>
                     </button>
 
