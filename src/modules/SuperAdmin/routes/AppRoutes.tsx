@@ -56,6 +56,9 @@ import Template from "../../../components/CommonFormElements/Template.js";
 import MemberWallet from "../components/Client/MemberWallet.js";
 // import DummyTabForm from "../BindedComponent/DummyTabForm.js";
 
+import GlobalSetting from "../components/settings/GlobalSetting"
+import ManageClient from "../components/Client/ManageClient"
+
 const AppRoutes = () => {
   const [active, setActive] = useState(false);
 
@@ -232,8 +235,7 @@ const AppRoutes = () => {
               element={<MLMRegisterPage />}
             />
             <Route
-              path="/superadmin/client/generation-tree"
-              element={<GenerationTree />}
+              path="/superadmin/client/generation-tree" element={<GenerationTree />}
             />
             <Route
               path="/superadmin/client/binary-tree"
@@ -243,6 +245,8 @@ const AppRoutes = () => {
               path="/superadmin/client/member-wallet"
               element={<MemberWallet />}
             />
+            <Route path="/superadmin/mlm-setting/global-setting" element={<GlobalSetting />} />
+            <Route path="/superadmin/client/manage-client" element={<ManageClient />} />
           </Routes>
 
           {/* Footer */}
