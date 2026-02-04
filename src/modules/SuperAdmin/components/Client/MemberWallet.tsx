@@ -3,7 +3,7 @@ import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
 import AutoCompleter from "../../../../components/CommonFormElements/InputTypes/AutoCompleter";
 import { ApiService } from "../../../../services/ApiService";
-
+import Swal from "sweetalert2";
 /* ---------------- VALIDATION SCHEMA ---------------- */
 const validationSchema = Yup.object().shape({
   transactionType: Yup.string().required("Transaction Type is required"),
@@ -21,6 +21,7 @@ const MemberWalletsElegant: React.FC = () => {
     WalletId: number;
     WalletDisplayName: string;
     WalletValue: string;
+    Balance:number,
     IsActive: boolean;
   }
   const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
@@ -82,11 +83,12 @@ const MemberWalletsElegant: React.FC = () => {
       setMemberDetails(null);
     }
   };
-  const fetchWallets = async () => {
+  const fetchWallets = async (clientid: string) => {
     try {
       const payload = {
         procName: "GetMLMSettings",
         Para: JSON.stringify({
+          ClientId: clientid,
           ActionMode: "GetWallets",
         }),
       };
@@ -105,8 +107,65 @@ const MemberWalletsElegant: React.FC = () => {
     }
   };
   useEffect(() => {
-    fetchWallets();
+    fetchWallets("0");
   }, []);
+  const submitWalletTransaction = async (values: any) => {
+    try {
+      console.log(memberDetails);
+      // ✅ Client Validation
+      if (!memberDetails?.ClientId) {
+        Swal.fire("Error", "Please select a member first!", "error");
+        return;
+      }
+
+      // ✅ Wallet Validation
+      if (!selectedWallet?.WalletId) {
+        Swal.fire("Error", "Please select a wallet first!", "error");
+        return;
+      }
+
+      const payload = {
+        procName: "WalletTransaction_CRDR",
+        Para: JSON.stringify({
+          ClientId: memberDetails?.ClientId,
+          WalletId: selectedWallet.WalletId,
+          TranType: values.transactionType, // CR or DR
+          Amount: values.amount,
+          PaymentMode: values.paymentMode,
+          PaymentDate: values.paymentDate,
+          ReferenceNo: values.referenceNo || "",
+          Remarks: values.remarks || "",
+          EntryBy: 1, // Admin UserId
+        }),
+      };
+      const response = await universalService(payload);
+      const res = Array.isArray(response) ? response[0] : response?.data?.[0];
+      if (res?.StatusCode == "1") {
+        Swal.fire({
+          title: "Success!",
+          text: res?.Msg || "Action completed successfully.",
+          icon: "success",
+          confirmButtonText: "OK",
+          confirmButtonColor: "#3b82f6",
+        }).then((result) => {
+          if (result.isConfirmed) {
+            //navigate("/superadmin/company/manage-company/branch");
+          }
+        });
+      } else {
+        Swal.fire({
+          title: "Error",
+          text: res?.Msg || "Operation failed",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+      }
+    } catch (error) {
+      console.error("Transaction Failed", error);
+      alert("Something went wrong!");
+    }
+  };
+
   return (
     <div className="trezo-card bg-white dark:bg-[#0c1427] rounded-2xl shadow-lg p-6">
       {/* ================= HEADER ================= */}
@@ -146,6 +205,7 @@ const MemberWalletsElegant: React.FC = () => {
               onSelect={(member) => {
                 setSelectedUser(member.id);
                 fetchMemberDetails(member.id);
+                fetchWallets(member.id);
                 console.log("Selected Member:", member);
               }}
             />
@@ -245,7 +305,7 @@ const MemberWalletsElegant: React.FC = () => {
         }`}
           >
             {/* Amount (Static for now) */}
-            <h2 className="text-xl font-bold text-gray-800">$ 0</h2>
+            <h2 className="text-xl font-bold text-gray-800">${wallet.Balance}</h2>
 
             {/* Wallet Name from API */}
             <p className="text-sm text-gray-500 mt-1">
@@ -268,9 +328,8 @@ const MemberWalletsElegant: React.FC = () => {
             remarks: "",
           }}
           validationSchema={validationSchema}
-          onSubmit={(values) => {
-            console.log("Submitted Data:", values);
-            alert("Transaction Submitted Successfully!");
+          onSubmit={(values, { resetForm }) => {
+            submitWalletTransaction(values);
           }}
         >
           {() => (
