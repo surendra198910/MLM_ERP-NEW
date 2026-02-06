@@ -58,7 +58,7 @@ const ToDoList: React.FC = () => {
   const [editLoading, setEditLoading] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [permissionsLoading, setPermissionsLoading] = useState(true);
-const [hasPageAccess, setHasPageAccess] = useState(true);
+  const [hasPageAccess, setHasPageAccess] = useState(true);
 
 
   const totalPages =
@@ -90,7 +90,7 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
       procName: "CurrencyMaster",
       Para: JSON.stringify({
         ActionMode: "Export",
-        CompanyId: 1,
+        CompanyId: localStorage.getItem("CompanyId"),
         EntryBy: 1,
 
         Start: (currentPage - 1) * itemsPerPage,
@@ -186,7 +186,7 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
 
   const [iconColor, setIconColor] = useState("#1976d2"); // default color
   const [openColorPopup, setOpenColorPopup] = useState(false);
-  const iconColorRef = useRef<(color: string) => void>(() => {});
+  const iconColorRef = useRef<(color: string) => void>(() => { });
   const [sortColumn, setSortColumn] = useState("CurrencyId");
   const [sortDirection, setSortDirection] = useState("DESC");
   const [visibleColumns, setVisibleColumns] = useState<any[]>([]);
@@ -228,7 +228,7 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
   const handleDelete = async (id) => {
     const confirm = await ShowConfirmAlert(
       "Are you sure?",
-      "Do you really want to delete this category?",
+      "Do you really want to delete this currency?",
     );
 
     if (!confirm) return;
@@ -274,7 +274,7 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
         procName: "CurrencyMaster", // ✅ FIX
         Para: JSON.stringify({
           ActionMode: "List",
-          CompanyId: 1,
+          CompanyId: localStorage.getItem("CompanyId"),
           EntryBy: 1,
 
           Start: (currentPage - 1) * itemsPerPage,
@@ -365,7 +365,7 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
         Para: JSON.stringify({
           ActionMode: "Select",
           EditId: Number(id),
-          CompanyId: 1,
+          CompanyId: localStorage.getItem("CompanyId"),
         }),
       };
 
@@ -378,9 +378,16 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
 
       setEditData({
         id: data.CurrencyId,
+
         CurrencyName: data.CurrencyName,
-        IsAttachment: Boolean(data.IsAttachment),
+        CurrencyCode: data.CurrencyCode,
+        Rate: data.Rate,
+
+        IsPublished: Boolean(data.IsPublished),
+        IsBaseCurrency: Boolean(data.IsBaseCurrency),
       });
+
+
     } catch (err) {
       console.error("Edit fetch failed:", err);
     } finally {
@@ -424,61 +431,71 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
 
   const formSchema = Yup.object().shape({
     CurrencyName: Yup.string().required("Currency name is required"),
+
+    CurrencyCode: Yup.string()
+      .required("Currency code is required")
+      .max(5, "Max 5 characters"),
+
+    Rate: Yup.number()
+      .typeError("Rate must be a number")
+      .positive("Must be greater than 0")
+      .required("Rate is required"),
   });
+
 
   const displayedTasks = tasks; // backend already paginating
   const fetchDocumentPermissions = async () => {
-  try {
-    setPermissionsLoading(true);
+    try {
+      setPermissionsLoading(true);
 
-    const saved = localStorage.getItem("EmployeeDetails");
-    const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
+      const saved = localStorage.getItem("EmployeeDetails");
+      const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
 
-    const payload = {
-      procName: "AssignForm",
-      Para: JSON.stringify({
-        ActionMode: "Forms",
-        FormCategoryId: 27, // 👈 category for this page
-        EmployeeId: employeeId,
-      }),
-    };
+      const payload = {
+        procName: "AssignForm",
+        Para: JSON.stringify({
+          ActionMode: "Forms",
+          FormCategoryId: 27, // 👈 category for this page
+          EmployeeId: employeeId,
+        }),
+      };
 
-    const response = await universalService(payload);
-    const data = response?.data ?? response;
+      const response = await universalService(payload);
+      const data = response?.data ?? response;
 
-    // ❌ Invalid / empty response → deny access
-    if (!Array.isArray(data)) {
+      // ❌ Invalid / empty response → deny access
+      if (!Array.isArray(data)) {
+        setHasPageAccess(false);
+        return;
+      }
+
+      // 🔍 Find permission for THIS page
+      const pagePermission = data.find(
+        (p) =>
+          Number(p.FormId) === CURRENT_FORM_ID &&
+          Number(p.FormCategoryId) === 27
+      );
+
+      // ❌ No permission OR empty Action → block page
+      if (
+        !pagePermission ||
+        !pagePermission.Action ||
+        pagePermission.Action.trim() === ""
+      ) {
+        setHasPageAccess(false);
+        return;
+      }
+
+      // ✅ Permission OK → enable actions
+      SmartActions.load(data);
+      setHasPageAccess(true);
+    } catch (error) {
+      console.error("Document permission fetch failed:", error);
       setHasPageAccess(false);
-      return;
+    } finally {
+      setPermissionsLoading(false);
     }
-
-    // 🔍 Find permission for THIS page
-    const pagePermission = data.find(
-      (p) =>
-        Number(p.FormId) === CURRENT_FORM_ID &&
-        Number(p.FormCategoryId) === 27
-    );
-
-    // ❌ No permission OR empty Action → block page
-    if (
-      !pagePermission ||
-      !pagePermission.Action ||
-      pagePermission.Action.trim() === ""
-    ) {
-      setHasPageAccess(false);
-      return;
-    }
-
-    // ✅ Permission OK → enable actions
-    SmartActions.load(data);
-    setHasPageAccess(true);
-  } catch (error) {
-    console.error("Document permission fetch failed:", error);
-    setHasPageAccess(false);
-  } finally {
-    setPermissionsLoading(false);
-  }
-};
+  };
 
   const handlePrint = async () => {
     // ✅ 1. Get EXPORT data from backend
@@ -499,17 +516,17 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
         (row) => `
       <tr>
         ${visibleColumns
-          .map((col) => {
-            let value = row[col.ColumnName];
+            .map((col) => {
+              let value = row[col.ColumnName];
 
-            // format date → YYYY-MM-DD
-            if (DATE_COLUMNS.includes(col.ColumnName)) {
-              value = formatDate(value, "readable");
-            }
+              // format date → YYYY-MM-DD
+              if (DATE_COLUMNS.includes(col.ColumnName)) {
+                value = formatDate(value, "readable");
+              }
 
-            return `<td>${value ?? "-"}</td>`;
-          })
-          .join("")}
+              return `<td>${value ?? "-"}</td>`;
+            })
+            .join("")}
       </tr>
     `,
       )
@@ -652,11 +669,21 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
     searchTrigger,
   ]);
 
-  const renderColumnValue = (row: any, columnName: string) => {
+  const renderColumnValue = (row, columnName) => {
     const value = row[columnName];
 
+    // ✅ Format Dates
     if (DATE_COLUMNS.includes(columnName)) {
       return formatDate(value, "readable");
+    }
+
+    // ✅ Format Boolean Columns
+    if (columnName === "IsPublished") {
+      return value ? "Yes" : "No";
+    }
+
+    if (columnName === "IsBaseCurrency") {
+      return value ? "Yes" : "No";
     }
 
     return value ?? "-";
@@ -684,6 +711,13 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
   };
 
   useEffect(() => {
+    if (!open) {
+      setIsEdit(false);
+      setEditData(null);
+    }
+  }, [open]);
+
+  useEffect(() => {
     if (!visibleColumns.some((c) => c.ColumnName === sortColumn)) {
       setSortColumn("CurrencyId");
       setSortDirection("DESC");
@@ -707,9 +741,9 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
 
     loadInitialTable();
   }, [showTable, searchTrigger]);
-if (permissionsLoading) return <Loader />;
+  if (permissionsLoading) return <Loader />;
 
-if (!hasPageAccess) return <AccessRestricted />;
+  if (!hasPageAccess) return <AccessRestricted />;
 
   return (
     <>
@@ -748,11 +782,10 @@ if (!hasPageAccess) return <AccessRestricted />;
                         setCurrentPage(1);
                       }}
                       className={`w-full h-[34px] pl-8 pr-8 text-xs rounded-md appearance-none outline-none border transition-all
-            ${
-              SmartActions.canAdvancedSearch(CURRENT_FORM_ID)
-                ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
-                : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-            }`}
+            ${SmartActions.canAdvancedSearch(CURRENT_FORM_ID)
+                          ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
+                          : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                        }`}
                     >
                       <option value={NO_FILTER}>Select Filter Option</option>
                       <option value="CurrencyName">Currency Name</option>
@@ -787,11 +820,10 @@ if (!hasPageAccess) return <AccessRestricted />;
                       onChange={(e) => setSearchInput(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && applySearch()}
                       className={`h-[34px] w-full pl-8 pr-3 text-xs rounded-md outline-none border transition-all
-            ${
-              SmartActions.canSearch(CURRENT_FORM_ID)
-                ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
-                : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-            }`}
+            ${SmartActions.canSearch(CURRENT_FORM_ID)
+                          ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
+                          : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                        }`}
                     />
                   </div>
                 </PermissionAwareTooltip>
@@ -853,11 +885,10 @@ if (!hasPageAccess) return <AccessRestricted />;
                     deniedText="You do not have permission to manage columns"
                   >
                     <div
-                      className={`h-[34px] flex items-center ${
-                        SmartActions.canManageColumns(CURRENT_FORM_ID)
-                          ? ""
-                          : "pointer-events-none opacity-50"
-                      }`}
+                      className={`h-[34px] flex items-center ${SmartActions.canManageColumns(CURRENT_FORM_ID)
+                        ? ""
+                        : "pointer-events-none opacity-50"
+                        }`}
                     >
                       <ColumnSelector
                         procName="USP_CurrencyMaster"
@@ -880,6 +911,7 @@ if (!hasPageAccess) return <AccessRestricted />;
                       type="button"
                       onClick={() => {
                         setOpen(true);
+                        setEditData(null);
                         setIsEdit(false);
                       }}
                       disabled={!SmartActions.canAdd(CURRENT_FORM_ID)}
@@ -952,11 +984,10 @@ if (!hasPageAccess) return <AccessRestricted />;
                   }}
                   disabled={!SmartActions.canAdd(CURRENT_FORM_ID)}
                   className={`px-[26.5px] py-[12px] rounded-md transition-all
-      ${
-        SmartActions.canAdd(CURRENT_FORM_ID)
-          ? "bg-primary-button-bg text-white hover:bg-primary-button-bg-hover"
-          : "bg-gray-300 text-gray-500 cursor-not-allowed"
-      }`}
+      ${SmartActions.canAdd(CURRENT_FORM_ID)
+                      ? "bg-primary-button-bg text-white hover:bg-primary-button-bg-hover"
+                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    }`}
                 >
                   Add Currency
                 </button>
@@ -1052,79 +1083,79 @@ if (!hasPageAccess) return <AccessRestricted />;
                 </div>
                 {/* Placeholder Illustration */}
                 <div className="flex-shrink-0">
-                   <svg
-    viewBox="0 0 512 512"
-    className="w-[320px] h-auto select-none"
-    xmlns="http://www.w3.org/2000/svg"
-    fill="none"
-  >
-    {/* Box Outline */}
-    <path
-      d="M96 220L256 300L416 220"
-      className="stroke-primary-button-bg"
-      strokeWidth="10"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
+                  <svg
+                    viewBox="0 0 512 512"
+                    className="w-[320px] h-auto select-none"
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                  >
+                    {/* Box Outline */}
+                    <path
+                      d="M96 220L256 300L416 220"
+                      className="stroke-primary-button-bg"
+                      strokeWidth="10"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
 
-    {/* Left Flap */}
-    <path
-      d="M96 220L150 160L256 200"
-      className="stroke-primary-button-bg"
-      strokeWidth="10"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
+                    {/* Left Flap */}
+                    <path
+                      d="M96 220L150 160L256 200"
+                      className="stroke-primary-button-bg"
+                      strokeWidth="10"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
 
-    {/* Right Flap */}
-    <path
-      d="M416 220L362 160L256 200"
-      className="stroke-primary-button-bg"
-      strokeWidth="10"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
+                    {/* Right Flap */}
+                    <path
+                      d="M416 220L362 160L256 200"
+                      className="stroke-primary-button-bg"
+                      strokeWidth="10"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
 
-    {/* Bottom Box */}
-    <path
-      d="M96 220V340C96 360 112 376 132 376H380C400 376 416 360 416 340V220"
-      className="stroke-primary-button-bg"
-      strokeWidth="10"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
+                    {/* Bottom Box */}
+                    <path
+                      d="M96 220V340C96 360 112 376 132 376H380C400 376 416 360 416 340V220"
+                      className="stroke-primary-button-bg"
+                      strokeWidth="10"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
 
-    {/* Inner Fill */}
-    <path
-      d="M150 220L256 260L362 220L256 190L150 220Z"
-      className="fill-primary-button-bg"
-    />
+                    {/* Inner Fill */}
+                    <path
+                      d="M150 220L256 260L362 220L256 190L150 220Z"
+                      className="fill-primary-button-bg"
+                    />
 
-    {/* Floating Motion Path */}
-    <path
-      d="M256 110C300 90 340 110 340 140C340 165 300 175 256 200"
-      className="stroke-primary-button-bg"
-      strokeWidth="8"
-      strokeLinecap="round"
-      strokeDasharray="12 14"
-    />
+                    {/* Floating Motion Path */}
+                    <path
+                      d="M256 110C300 90 340 110 340 140C340 165 300 175 256 200"
+                      className="stroke-primary-button-bg"
+                      strokeWidth="8"
+                      strokeLinecap="round"
+                      strokeDasharray="12 14"
+                    />
 
-    {/* Floating e */}
-    <circle
-      cx="256"
-      cy="90"
-      r="26"
-      className="stroke-primary-button-bg fill-primary-50"
-      strokeWidth="6"
-    />
+                    {/* Floating e */}
+                    <circle
+                      cx="256"
+                      cy="90"
+                      r="26"
+                      className="stroke-primary-button-bg fill-primary-50"
+                      strokeWidth="6"
+                    />
 
-    <path
-      d="M245 92H268C268 78 245 78 245 92C245 106 268 106 268 92"
-      className="stroke-primary-button-bg"
-      strokeWidth="5"
-      strokeLinecap="round"
-    />
-  </svg>
+                    <path
+                      d="M245 92H268C268 78 245 78 245 92C245 106 268 106 268 92"
+                      className="stroke-primary-button-bg"
+                      strokeWidth="5"
+                      strokeLinecap="round"
+                    />
+                  </svg>
                 </div>
               </div>
             ) : (
@@ -1328,7 +1359,7 @@ if (!hasPageAccess) return <AccessRestricted />;
                 </div>
                 <div className="table-responsive overflow-x-auto">
                   <table className="w-full">
-                    <thead className="text-black dark:text-white">
+                    <thead className="text-primary-table-text dark:text-white">
                       <tr>
                         {visibleColumns.map((col) => (
                           <th
@@ -1337,11 +1368,10 @@ if (!hasPageAccess) return <AccessRestricted />;
                             className={`
     font-medium ltr:text-left rtl:text-right px-[20px] py-[11px]
     whitespace-nowrap cursor-pointer transition-colors
-    ${
-      sortColumn === col.ColumnName
-        ? "bg-primary-table-bg-hover dark:bg-[#1e2a4a]"
-        : "bg-primary-table-bg dark:bg-[#15203c]"
-    }
+    ${sortColumn === col.ColumnName
+                                ? "bg-primary-table-bg-hover dark:bg-[#1e2a4a]"
+                                : "bg-primary-table-bg dark:bg-[#15203c]"
+                              }
   `}
                           >
                             <div className="flex items-center gap-1 group font-semibold">
@@ -1352,11 +1382,10 @@ if (!hasPageAccess) return <AccessRestricted />;
                               <i
                                 className={`
         material-symbols-outlined text-sm transition-all
-        ${
-          sortColumn === col.ColumnName
-            ? "text-primary-button-bg dark:text-primary-button-bg-hover opacity-100"
-            : "text-gray-400 dark:text-gray-500 opacity-40"
-        }
+        ${sortColumn === col.ColumnName
+                                    ? "text-primary-button-bg dark:text-primary-button-bg-hover opacity-100"
+                                    : "text-gray-400 dark:text-gray-500 opacity-40"
+                                  }
       `}
                               >
                                 {sortDirection === "ASC"
@@ -1521,9 +1550,12 @@ p-[20px] md:p-[25px] rounded-t-md"
                     <Formik
                       initialValues={{
                         CurrencyName: editData?.CurrencyName || "",
+                        CurrencyCode: editData?.CurrencyCode || "",
+                        Rate: editData?.Rate || "",
                         IsBaseCurrency: editData?.IsBaseCurrency ?? false,
                         IsPublished: editData?.IsPublished ?? false,
                       }}
+
                       enableReinitialize
                       validationSchema={formSchema}
                       onSubmit={async (values, { resetForm }) => {
@@ -1533,31 +1565,35 @@ p-[20px] md:p-[25px] rounded-t-md"
                           const payload = {
                             procName: "CurrencyMaster",
                             Para: JSON.stringify({
+                              ActionMode: isEdit ? "Update" : "Insert", // ✅ REQUIRED
+
                               CurrencyName: values.CurrencyName,
+                              CurrencyCode: values.CurrencyCode,
+                              Rate: Number(values.Rate),
+
                               IsBaseCurrency: values.IsBaseCurrency,
                               IsPublished: values.IsPublished,
-                              EditId:
-                                isEdit && editData ? Number(editData.id) : 0,
 
-                              CompanyId: 1,
+                              EditId: isEdit && editData ? Number(editData.id) : 0,
+
+                              CompanyId: Number(localStorage.getItem("CompanyId")),
                               EntryBy: 1,
                             }),
                           };
 
                           const response = await universalService(payload);
-                          const res = Array.isArray(response)
-                            ? response[0]
-                            : response;
+                          const res = Array.isArray(response) ? response[0] : response;
 
                           if (res?.StatusCode === "1") {
                             ShowSuccessAlert(
                               isEdit
                                 ? "Currency Updated Successfully"
-                                : "Currency Added Successfully",
+                                : "Currency Added Successfully"
                             );
 
                             setOpen(false);
                             setIsEdit(false);
+                            setEditData(null); // ✅ IMPORTANT
                             resetForm();
                             fetchTableData();
                           }
@@ -1565,6 +1601,7 @@ p-[20px] md:p-[25px] rounded-t-md"
                           setSaving(false);
                         }
                       }}
+
                     >
                       {({ setFieldValue }) => {
                         iconColorRef.current = (color: string) => {
@@ -1583,7 +1620,7 @@ p-[20px] md:p-[25px] rounded-t-md"
                               }}
                             />
 
-                            {/* Category Name */}
+                            {/* Currency Name */}
                             <div>
                               <label className="mb-[10px] text-black dark:text-white font-medium block">
                                 Currency Name:
@@ -1604,6 +1641,49 @@ focus:border-primary-button-bg"
                                 className="text-red-500 text-sm"
                               />
                             </div>
+                            {/* Currency Code */}
+                            <div>
+                              <label className="mb-[10px] text-black dark:text-white font-medium block">
+                                Currency Code:
+                                <span className="text-red-500">*</span>
+                              </label>
+                              <Field
+                                type="text"
+                                name="CurrencyCode"
+                                placeholder="Enter Currency Code (₹, $, €)"
+                                className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
+dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
+transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
+focus:border-primary-button-bg"
+                              />
+                              <ErrorMessage
+                                name="CurrencyCode"
+                                component="p"
+                                className="text-red-500 text-sm"
+                              />
+                            </div>
+                            {/* Rate */}
+                            <div>
+                              <label className="mb-[10px] text-black dark:text-white font-medium block">
+                                Rate:
+                                <span className="text-red-500">*</span>
+                              </label>
+                              <Field
+                                type="number"
+                                step="0.0001"
+                                name="Rate"
+                                placeholder="Enter Rate"
+                                className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
+dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
+transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
+focus:border-primary-button-bg"
+                              />
+                              <ErrorMessage
+                                name="Rate"
+                                component="p"
+                                className="text-red-500 text-sm"
+                              />
+                            </div>
 
                             {/* TOGGLES */}
                             <div className="grid grid-cols-2 gap-[25px] mb-6">
@@ -1612,7 +1692,7 @@ focus:border-primary-button-bg"
                                   Is Published:
                                 </label>
 
-                                <Field name="IsAttachment">
+                                <Field name="IsPublished">
                                   {({ field }) => (
                                     <label className="relative inline-flex items-center cursor-pointer">
                                       <input
@@ -1637,32 +1717,32 @@ focus:border-primary-button-bg"
                             </div>
                             {/* TOGGLES */}
                             <div className="grid grid-cols-2 gap-[25px] mb-6">
-                              {/* <div className="flex items-center justify-between pr-4">
-                              <label className="font-medium">Is Base Currency:</label>
+                              <div className="flex items-center justify-between pr-4">
+                                <label className="font-medium">Is Base Currency:</label>
 
-                              <Field name="IsAttachment">
-                                {({ field }) => (
-                                  <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      checked={field.value}
-                                      onChange={(e) =>
-                                        field.onChange({
-                                          target: {
-                                            name: field.name,
-                                            value: e.target.checked,
-                                          },
-                                        })
-                                      }
-                                      className="sr-only peer"
-                                    />
-                                    <div className="w-11 h-6 bg-gray-200 rounded-full peer-checked:bg-primary-button-bg"></div>
-                                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all peer-checked:translate-x-5"></div>
-                                  </label>
-                                )}
-                              </Field>
+                                <Field name="IsBaseCurrency">
+                                  {({ field }) => (
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                      <input
+                                        type="checkbox"
+                                        checked={field.value}
+                                        onChange={(e) =>
+                                          field.onChange({
+                                            target: {
+                                              name: field.name,
+                                              value: e.target.checked,
+                                            },
+                                          })
+                                        }
+                                        className="sr-only peer"
+                                      />
+                                      <div className="w-11 h-6 bg-gray-200 rounded-full peer-checked:bg-primary-button-bg"></div>
+                                      <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all peer-checked:translate-x-5"></div>
+                                    </label>
+                                  )}
+                                </Field>
 
-                            </div> */}
+                              </div>
                             </div>
                             <hr className="border-0 border-t border-gray-200 dark:border-gray-700 my-4 mt-10 md:-mx-[25px] px-[20px] md:px-[25px]" />
 

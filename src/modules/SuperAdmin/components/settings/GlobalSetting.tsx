@@ -203,15 +203,17 @@ export default function GlobalSetting() {
           )}
 
           {/* HEADER */}
-          <div className="flex justify-between items-center border-b pb-3 mb-6">
-            <h2 className="text-lg font-bold text-gray-800 dark:text-white">
-              Global Settings
-            </h2>
+          <div className="flex justify-between items-center border-b border-gray-200  pb-3 mb-6 -mx-[20px] md:-mx-[20px] px-[20px] md:px-[25px]">
+           <div className="trezo-card-title">
+                <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
+                  Global Setting
+                </h5>
+              </div>
 
             <div className="flex gap-2">
               <button
                 type="submit"
-                className="flex items-center gap-2 px-4 py-1.5 bg-green-600 text-white rounded text-sm"
+                className="flex items-center gap-2 px-4 py-1.5 bg-primary-button-bg text-white rounded text-sm"
               >
                 <FaSave /> Update
               </button>
