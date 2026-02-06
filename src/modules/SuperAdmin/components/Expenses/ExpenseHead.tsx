@@ -54,8 +54,8 @@ const ToDoList: React.FC = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [searchTrigger, setSearchTrigger] = useState(0);
   const [editLoading, setEditLoading] = useState(false);
-const [permissionsLoading, setPermissionsLoading] = useState(true);
-const [hasPageAccess, setHasPageAccess] = useState(true);
+  const [permissionsLoading, setPermissionsLoading] = useState(true);
+  const [hasPageAccess, setHasPageAccess] = useState(true);
 
   const totalPages =
     totalCount > 0 && itemsPerPage > 0
@@ -86,7 +86,7 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
       procName: "ExpenseHead",
       Para: JSON.stringify({
         ActionMode: "Export",
-        // CompanyId: 1,
+        //CompanyId: localStorage.getItem("CompanyId"),
         EntryBy: 1,
 
         Start: (currentPage - 1) * itemsPerPage,
@@ -182,12 +182,39 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
 
   const [iconColor, setIconColor] = useState("#1976d2"); // default color
   const [openColorPopup, setOpenColorPopup] = useState(false);
-  const iconColorRef = useRef<(color: string) => void>(() => {});
+  const iconColorRef = useRef<(color: string) => void>(() => { });
   const [sortColumn, setSortColumn] = useState("ExpenseHeadId");
   const [sortDirection, setSortDirection] = useState("DESC");
   const [visibleColumns, setVisibleColumns] = useState<any[]>([]);
+  const [expendituregroup, setExpendituregroup] = useState([]); // ✅ ADD
+
   // 👇 Columns that should be formatted as dates
   const DATE_COLUMNS = ["EntryDate", "ModifiedDate"];
+  const fetchExpenditureGroups = async () => {
+    try {
+      const payload = {
+        procName: "ExpenditureGroup", // ⚠️ Confirm SP name
+        Para: JSON.stringify({
+          ActionMode: "List",
+          EntryBy: 1,
+        }),
+      };
+
+      const response = await universalService(payload);
+      const data = response?.data || response;
+
+      if (!Array.isArray(data)) return;
+
+      const formatted = data.map((item) => ({
+        value: item.ExpenditureGroupId,
+        label: item.ExpenditureGroupName,
+      }));
+
+      setExpendituregroup(formatted);
+    } catch (err) {
+      console.error("Expenditure Group Fetch Error:", err);
+    }
+  };
 
   const fetchVisibleColumns = async () => {
     try {
@@ -224,7 +251,7 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
   const handleDelete = async (id) => {
     const confirm = await ShowConfirmAlert(
       "Are you sure?",
-      "Do you really want to delete this category?",
+      "Do you really want to delete this expense head?",
     );
 
     if (!confirm) return;
@@ -234,10 +261,13 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
         procName: "ExpenseHead",
         Para: JSON.stringify({
           ActionMode: "Delete",
-          EditId: Number(id),
+
+          ExpenseHeadId: Number(id), // ✅ CORRECT PARAM
+
           EntryBy: 1,
         }),
       };
+
 
       const response = await universalService(payload);
       const res = Array.isArray(response) ? response[0] : response;
@@ -253,7 +283,7 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
         await fetchTableData();
       } else {
         console.error("Delete failed:", res);
-        ShowSuccessAlert("Unable to delete category");
+        ShowSuccessAlert("Delete failed. Please try again.");
       }
     } catch (err) {
       console.log("Delete Error:", err);
@@ -269,7 +299,7 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
         procName: "ExpenseHead", // ✅ FIX
         Para: JSON.stringify({
           ActionMode: "List",
-          // CompanyId: 1,
+          //CompanyId: localStorage.getItem("CompanyId"),
           EntryBy: 1,
 
           Start: (currentPage - 1) * itemsPerPage,
@@ -357,7 +387,7 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
         Para: JSON.stringify({
           ActionMode: "Select",
           EditId: Number(id),
-          // CompanyId: 1,
+          //CompanyId: localStorage.getItem("CompanyId"),
         }),
       };
 
@@ -371,8 +401,9 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
       setEditData({
         id: data.ExpenseHeadId,
         ExpenseHeadName: data.ExpenseHeadName,
-        Status: Boolean(data.Status),
+        ExpenditureGroupId: data.ExpenditureGroupId, // ✅ IMPORTANT
       });
+
     } catch (err) {
       console.error("Edit fetch failed:", err);
     } finally {
@@ -415,62 +446,66 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
   };
 
   const formSchema = Yup.object().shape({
-    ExpenseHeadName: Yup.string().required("Document name is required"),
+    ExpenseHeadName: Yup.string().required("Expense head is required"),
+
+    expenditureGroupId: Yup.string()
+      .required("Expenditure group is required"),
   });
 
+
   const displayedTasks = tasks; // backend already paginating
- const fetchDocumentPermissions = async () => {
-  try {
-    setPermissionsLoading(true);
+  const fetchDocumentPermissions = async () => {
+    try {
+      setPermissionsLoading(true);
 
-    const saved = localStorage.getItem("EmployeeDetails");
-    const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
+      const saved = localStorage.getItem("EmployeeDetails");
+      const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
 
-    const payload = {
-      procName: "AssignForm",
-      Para: JSON.stringify({
-        ActionMode: "Forms",
-        FormCategoryId: 3071, // 👈 category for this page
-        EmployeeId: employeeId,
-      }),
-    };
+      const payload = {
+        procName: "AssignForm",
+        Para: JSON.stringify({
+          ActionMode: "Forms",
+          FormCategoryId: 3071, // 👈 category for this page
+          EmployeeId: employeeId,
+        }),
+      };
 
-    const response = await universalService(payload);
-    const data = response?.data ?? response;
+      const response = await universalService(payload);
+      const data = response?.data ?? response;
 
-    // ❌ Invalid / empty response → deny access
-    if (!Array.isArray(data)) {
+      // ❌ Invalid / empty response → deny access
+      if (!Array.isArray(data)) {
+        setHasPageAccess(false);
+        return;
+      }
+
+      // 🔍 Find permission for THIS page
+      const pagePermission = data.find(
+        (p) =>
+          Number(p.FormId) === CURRENT_FORM_ID &&
+          Number(p.FormCategoryId) === 3071
+      );
+
+      // ❌ No permission OR empty Action → block page
+      if (
+        !pagePermission ||
+        !pagePermission.Action ||
+        pagePermission.Action.trim() === ""
+      ) {
+        setHasPageAccess(false);
+        return;
+      }
+
+      // ✅ Permission OK → enable actions
+      SmartActions.load(data);
+      setHasPageAccess(true);
+    } catch (error) {
+      console.error("Document permission fetch failed:", error);
       setHasPageAccess(false);
-      return;
+    } finally {
+      setPermissionsLoading(false);
     }
-
-    // 🔍 Find permission for THIS page
-    const pagePermission = data.find(
-      (p) =>
-        Number(p.FormId) === CURRENT_FORM_ID &&
-        Number(p.FormCategoryId) === 3071
-    );
-
-    // ❌ No permission OR empty Action → block page
-    if (
-      !pagePermission ||
-      !pagePermission.Action ||
-      pagePermission.Action.trim() === ""
-    ) {
-      setHasPageAccess(false);
-      return;
-    }
-
-    // ✅ Permission OK → enable actions
-    SmartActions.load(data);
-    setHasPageAccess(true);
-  } catch (error) {
-    console.error("Document permission fetch failed:", error);
-    setHasPageAccess(false);
-  } finally {
-    setPermissionsLoading(false);
-  }
-};
+  };
 
   const handlePrint = async () => {
     // ✅ 1. Get EXPORT data from backend
@@ -491,17 +526,17 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
         (row) => `
       <tr>
         ${visibleColumns
-          .map((col) => {
-            let value = row[col.ColumnName];
+            .map((col) => {
+              let value = row[col.ColumnName];
 
-            // format date → YYYY-MM-DD
-            if (DATE_COLUMNS.includes(col.ColumnName)) {
-              value = formatDate(value, "readable");
-            }
+              // format date → YYYY-MM-DD
+              if (DATE_COLUMNS.includes(col.ColumnName)) {
+                value = formatDate(value, "readable");
+              }
 
-            return `<td>${value ?? "-"}</td>`;
-          })
-          .join("")}
+              return `<td>${value ?? "-"}</td>`;
+            })
+            .join("")}
       </tr>
     `,
       )
@@ -577,6 +612,7 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
 
   useEffect(() => {
     fetchModules();
+    fetchExpenditureGroups();
   }, []);
   useEffect(() => {
     if (isEdit && editData && modules.length > 0) {
@@ -674,6 +710,12 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
       SearchTerm: value,
     };
   };
+  useEffect(() => {
+    if (!open) {
+      setIsEdit(false);
+      setEditData(null);
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!visibleColumns.some((c) => c.ColumnName === sortColumn)) {
@@ -699,9 +741,9 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
 
     loadInitialTable();
   }, [showTable, searchTrigger]);
-if (permissionsLoading) return <Loader />;
+  if (permissionsLoading) return <Loader />;
 
-if (!hasPageAccess) return <AccessRestricted />;
+  if (!hasPageAccess) return <AccessRestricted />;
 
   return (
     <>
@@ -740,14 +782,13 @@ if (!hasPageAccess) return <AccessRestricted />;
                         setCurrentPage(1);
                       }}
                       className={`w-full h-[34px] pl-8 pr-8 text-xs rounded-md appearance-none outline-none border transition-all
-            ${
-              SmartActions.canAdvancedSearch(CURRENT_FORM_ID)
-                ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
-                : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-            }`}
+            ${SmartActions.canAdvancedSearch(CURRENT_FORM_ID)
+                          ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
+                          : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                        }`}
                     >
                       <option value={NO_FILTER}>Select Filter Option</option>
-                      <option value="ExpenseHeadName">Expense Head Name</option>
+                      <option value="ExpenseHeadName">Expense Head</option>
                     </select>
                     <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
                       <i className="material-symbols-outlined !text-[18px]">
@@ -779,11 +820,10 @@ if (!hasPageAccess) return <AccessRestricted />;
                       onChange={(e) => setSearchInput(e.target.value)}
                       onKeyDown={(e) => e.key === "Enter" && applySearch()}
                       className={`h-[34px] w-full pl-8 pr-3 text-xs rounded-md outline-none border transition-all
-            ${
-              SmartActions.canSearch(CURRENT_FORM_ID)
-                ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
-                : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-            }`}
+            ${SmartActions.canSearch(CURRENT_FORM_ID)
+                          ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
+                          : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                        }`}
                     />
                   </div>
                 </PermissionAwareTooltip>
@@ -827,11 +867,10 @@ if (!hasPageAccess) return <AccessRestricted />;
                         fetchTableData();
                       }}
                       className={`w-[34px] h-[34px] flex items-center justify-center rounded-md
-        ${
-          SmartActions.canSearch(CURRENT_FORM_ID)
-            ? "border-gray-400 text-gray-600 hover:bg-gray-200"
-            : "border-gray-300 text-gray-300 cursor-not-allowed"
-        }`}
+        ${SmartActions.canSearch(CURRENT_FORM_ID)
+                          ? "border-gray-400 text-gray-600 hover:bg-gray-200"
+                          : "border-gray-300 text-gray-300 cursor-not-allowed"
+                        }`}
                     >
                       <i className="material-symbols-outlined text-[20px]">
                         refresh
@@ -848,11 +887,10 @@ if (!hasPageAccess) return <AccessRestricted />;
                     deniedText="You do not have permission to manage columns"
                   >
                     <div
-                      className={`h-[34px] flex items-center ${
-                        SmartActions.canManageColumns(CURRENT_FORM_ID)
-                          ? ""
-                          : "pointer-events-none opacity-50"
-                      }`}
+                      className={`h-[34px] flex items-center ${SmartActions.canManageColumns(CURRENT_FORM_ID)
+                        ? ""
+                        : "pointer-events-none opacity-50"
+                        }`}
                     >
                       <ColumnSelector
                         procName="USP_ExpenseHead"
@@ -875,6 +913,7 @@ if (!hasPageAccess) return <AccessRestricted />;
                       type="button"
                       onClick={() => {
                         setOpen(true);
+                        setEditData(null);
                         setIsEdit(false);
                       }}
                       disabled={!SmartActions.canAdd(CURRENT_FORM_ID)}
@@ -947,11 +986,10 @@ if (!hasPageAccess) return <AccessRestricted />;
                   }}
                   disabled={!SmartActions.canAdd(CURRENT_FORM_ID)}
                   className={`px-[26.5px] py-[12px] rounded-md transition-all
-      ${
-        SmartActions.canAdd(CURRENT_FORM_ID)
-          ? "bg-primary-button-bg text-white hover:bg-primary-button-bg-hover"
-          : "bg-gray-300 text-gray-500 cursor-not-allowed"
-      }`}
+      ${SmartActions.canAdd(CURRENT_FORM_ID)
+                      ? "bg-primary-button-bg text-white hover:bg-primary-button-bg-hover"
+                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                    }`}
                 >
                   Add Expense Head
                 </button>
@@ -1233,7 +1271,7 @@ if (!hasPageAccess) return <AccessRestricted />;
                 </div>
                 <div className="table-responsive overflow-x-auto">
                   <table className="w-full">
-                    <thead className="text-black dark:text-white">
+                    <thead className="text-primary-table-text dark:text-white">
                       <tr>
                         {visibleColumns.map((col) => (
                           <th
@@ -1242,11 +1280,10 @@ if (!hasPageAccess) return <AccessRestricted />;
                             className={`
     font-medium ltr:text-left rtl:text-right px-[20px] py-[11px]
     whitespace-nowrap cursor-pointer transition-colors
-    ${
-      sortColumn === col.ColumnName
-        ? "bg-primary-table-bg-hover dark:bg-[#1e2a4a]"
-        : "bg-primary-table-bg dark:bg-[#15203c]"
-    }
+    ${sortColumn === col.ColumnName
+                                ? "bg-primary-table-bg-hover dark:bg-[#1e2a4a]"
+                                : "bg-primary-table-bg dark:bg-[#15203c]"
+                              }
   `}
                           >
                             <div className="flex items-center gap-1 group font-semibold">
@@ -1257,11 +1294,10 @@ if (!hasPageAccess) return <AccessRestricted />;
                               <i
                                 className={`
         material-symbols-outlined text-sm transition-all
-        ${
-          sortColumn === col.ColumnName
-            ? "text-primary-button-bg dark:text-primary-button-bg-hover opacity-100"
-            : "text-gray-400 dark:text-gray-500 opacity-40"
-        }
+        ${sortColumn === col.ColumnName
+                                    ? "text-primary-button-bg dark:text-primary-button-bg-hover opacity-100"
+                                    : "text-gray-400 dark:text-gray-500 opacity-40"
+                                  }
       `}
                               >
                                 {sortDirection === "ASC"
@@ -1426,8 +1462,9 @@ p-[20px] md:p-[25px] rounded-t-md"
                     <Formik
                       initialValues={{
                         ExpenseHeadName: editData?.ExpenseHeadName || "",
-                        Status: editData?.Status ?? false,
+                        expenditureGroupId: editData?.ExpenditureGroupId || "",
                       }}
+
                       enableReinitialize
                       validationSchema={formSchema}
                       onSubmit={async (values, { resetForm }) => {
@@ -1437,38 +1474,39 @@ p-[20px] md:p-[25px] rounded-t-md"
                           const payload = {
                             procName: "ExpenseHead",
                             Para: JSON.stringify({
+                              ActionMode: isEdit ? "Update" : "Insert", // ✅ FIXED
                               ExpenseHeadName: values.ExpenseHeadName,
-                              Status: values.Status,
-                              ActionMode: isEdit ? "update" : "insert",
-                              EditId:
-                                isEdit && editData ? Number(editData.id) : 0,
-
-                              // CompanyId: 1,
+                              ExpenditureGroupId: Number(values.expenditureGroupId), // ✅ REQUIRED
+                              EditId: isEdit && editData ? Number(editData.id) : 0,
                               EntryBy: 1,
                             }),
                           };
 
                           const response = await universalService(payload);
-                          const res = Array.isArray(response)
-                            ? response[0]
-                            : response;
+                          const res = Array.isArray(response) ? response[0] : response;
+
+                          console.log("API RESPONSE:", res); // 👈 DEBUG
 
                           if (res?.StatusCode === "1") {
                             ShowSuccessAlert(
                               isEdit
                                 ? "Expense Head Updated Successfully"
-                                : "Expense Head Added Successfully",
+                                : "Expense Head Added Successfully"
                             );
 
                             setOpen(false);
                             setIsEdit(false);
+                            setEditData(null); // ✅ IMPORTANT
                             resetForm();
                             fetchTableData();
+                          } else {
+                            console.error("Insert Failed:", res);
                           }
                         } finally {
                           setSaving(false);
                         }
                       }}
+
                     >
                       {({ setFieldValue }) => {
                         iconColorRef.current = (color: string) => {
@@ -1477,26 +1515,47 @@ p-[20px] md:p-[25px] rounded-t-md"
 
                         return (
                           <Form className="space-y-5">
-                            {/* ICON POPUP */}
-                            <IconsPopUpPage
-                              open={openIconPopup}
-                              setOpen={setOpenIconPopup}
-                              onSelectIcon={(icon) => {
-                                setSelectedIcon(icon); // ✅ update preview icon
-                                setFieldValue("IconName", icon); // ✅ update Formik field
-                              }}
-                            />
 
-                            {/* Category Name */}
+
+
                             <div>
                               <label className="mb-[10px] text-black dark:text-white font-medium block">
-                                Expense Head Name:
+                                Select Expenditure Group:
+                                <span className="text-red-500">*</span>
+                              </label>
+
+                              <Field
+                                as="select"
+                                name="expenditureGroupId" // ✅ MUST be CountryId
+                                className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
+      dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[14px] block w-full
+      outline-0 cursor-pointer transition-all focus:border-primary-button-bg"
+                              >
+                                <option value="">Select Expenditure Group</option>
+
+                                {expendituregroup.map((c) => (
+                                  <option key={c.value} value={c.value}>
+                                    {c.label}
+                                  </option>
+                                ))}
+                              </Field>
+
+                              <ErrorMessage
+                                name="expenditureGroupId"
+                                component="p"
+                                className="text-red-500 text-sm"
+                              />
+                            </div>
+                            {/* Expense Name */}
+                            <div>
+                              <label className="mb-[10px] text-black dark:text-white font-medium block">
+                                Expense Head:
                                 <span className="text-red-500">*</span>
                               </label>
                               <Field
                                 type="text"
                                 name="ExpenseHeadName"
-                                placeholder="Enter Expense Head Name"
+                                placeholder="Enter Expense Head"
                                 className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
 dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
 transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
@@ -1509,34 +1568,7 @@ focus:border-primary-button-bg"
                               />
                             </div>
 
-                            {/* TOGGLES */}
-                            <div className="grid grid-cols-2 gap-[25px] mb-6">
-                              <div className="flex items-center justify-between pr-4">
-                                <label className="font-medium">Status:</label>
 
-                                <Field name="Status">
-                                  {({ field }) => (
-                                    <label className="relative inline-flex items-center cursor-pointer">
-                                      <input
-                                        type="checkbox"
-                                        checked={field.value}
-                                        onChange={(e) =>
-                                          field.onChange({
-                                            target: {
-                                              name: field.name,
-                                              value: e.target.checked,
-                                            },
-                                          })
-                                        }
-                                        className="sr-only peer"
-                                      />
-                                      <div className="w-11 h-6 bg-gray-200 rounded-full peer-checked:bg-primary-button-bg"></div>
-                                      <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all peer-checked:translate-x-5"></div>
-                                    </label>
-                                  )}
-                                </Field>
-                              </div>
-                            </div>
                             <hr className="border-0 border-t border-gray-200 dark:border-gray-700 my-4 mt-10 md:-mx-[25px] px-[20px] md:px-[25px]" />
 
                             {/* Footer */}

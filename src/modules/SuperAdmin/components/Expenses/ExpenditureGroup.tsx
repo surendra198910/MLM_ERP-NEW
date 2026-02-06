@@ -88,7 +88,7 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
       procName: "ExpenditureGroup",
       Para: JSON.stringify({
         ActionMode: "Export",
-        // CompanyId: 1,
+        //CompanyId: localStorage.getItem("CompanyId"),
         EntryBy: 1,
 
         Start: (currentPage - 1) * itemsPerPage,
@@ -226,7 +226,7 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
   const handleDelete = async (id) => {
     const confirm = await ShowConfirmAlert(
       "Are you sure?",
-      "Do you really want to delete this category?",
+      "Do you really want to delete this expenditure group?",
     );
 
     if (!confirm) return;
@@ -272,7 +272,7 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
         procName: "ExpenditureGroup", // ✅ FIX
         Para: JSON.stringify({
           ActionMode: "List",
-          // CompanyId: 1,
+          //CompanyId: localStorage.getItem("CompanyId"),
           EntryBy: 1,
 
           Start: (currentPage - 1) * itemsPerPage,
@@ -362,7 +362,7 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
         Para: JSON.stringify({
           ActionMode: "Select",
           EditId: Number(id),
-          // CompanyId: 1,
+          //CompanyId: localStorage.getItem("CompanyId"),
         }),
       };
 
@@ -420,7 +420,7 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
   };
 
   const formSchema = Yup.object().shape({
-    ExpenditureGroupName: Yup.string().required("Document name is required"),
+    ExpenditureGroupName: Yup.string().required("Expenditure group is required"),
   });
 
   const displayedTasks = tasks; // backend already paginating
@@ -1330,7 +1330,7 @@ if (!hasPageAccess) return <AccessRestricted />;
                 </div>
                 <div className="table-responsive overflow-x-auto">
                   <table className="w-full">
-                    <thead className="text-black dark:text-white">
+                    <thead className="text-primary-table-text dark:text-white">
                       <tr>
                         {visibleColumns.map((col) => (
                           <th
@@ -1542,7 +1542,7 @@ p-[20px] md:p-[25px] rounded-t-md"
                               EditId:
                                 isEdit && editData ? Number(editData.id) : 0,
 
-                              // CompanyId: 1,
+                              //CompanyId: localStorage.getItem("CompanyId"),
                               EntryBy: 1,
                             }),
                           };
