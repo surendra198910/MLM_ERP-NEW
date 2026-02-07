@@ -4,28 +4,28 @@ import * as Yup from "yup";
 import AutoCompleter from "../../../../components/CommonFormElements/InputTypes/AutoCompleter";
 import { ApiService } from "../../../../services/ApiService";
 import Swal from "sweetalert2";
-/* ---------------- VALIDATION SCHEMA ---------------- */
-const validationSchema = Yup.object().shape({
-  transactionType: Yup.string().required("Transaction Type is required"),
-  amount: Yup.number()
-    .typeError("Amount must be a number")
-    .positive("Amount must be greater than 0")
-    .required("Amount is required"),
-  paymentMode: Yup.string().required("Payment Mode is required"),
-  paymentDate: Yup.string().required("Payment Date is required"),
-  referenceNo: Yup.string().max(30, "Max 30 characters allowed"),
-});
+
 const today = new Date().toISOString().split("T")[0];
 const MemberWalletsElegant: React.FC = () => {
-  interface Wallet {
-    WalletId: number;
-    WalletDisplayName: string;
-    WalletValue: string;
-    Balance: number;
-    IsActive: boolean;
-  }
-  const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
-  const [walletList, setWalletList] = useState<any[]>([]);
+  /* ---------------- VALIDATION SCHEMA ---------------- */
+  const ValidationSchema = () =>
+    Yup.object().shape({
+      PackageId: Yup.string().required("Package is required"),
+      amount: Yup.number()
+        .required("Amount is required")
+        .test("range-check", "Invalid amount", function (value) {
+          if (!selectedPackage || value === undefined) return true;
+
+          if (selectedPackage.Type === "Fixed") {
+            return Number(value) === Number(selectedPackage.MinAmount);
+          }
+
+          return (
+            value >= selectedPackage.MinAmount &&
+            value <= selectedPackage.MaxAmount
+          );
+        }),
+    });
   const [users, setUsers] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [memberDetails, setMemberDetails] = useState<any>(null);
@@ -35,9 +35,12 @@ const MemberWalletsElegant: React.FC = () => {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
+  const [investments, setInvestments] = useState<any[]>([]);
   const totalPages = Math.ceil(totalCount / pageSize);
   const formikRef = useRef<any>(null);
   const [autoResetKey, setAutoResetKey] = useState(0);
+  const [packages, setPackages] = useState<any[]>([]);
+  const [selectedPackage, setSelectedPackage] = useState<any | null>(null);
 
   // ✅ Member List comes from API / state
   /* ---------------- API FUNCTION ---------------- */
@@ -68,6 +71,29 @@ const MemberWalletsElegant: React.FC = () => {
       setLoading(false);
     }
   };
+  const fetchPackages = async () => {
+    try {
+      setLoading(true);
+
+      const payload = {
+        procName: "MemberInvestmentByAdmin",
+        Para: JSON.stringify({
+          ActionMode: "GetPackages",
+        }),
+      };
+
+      const res = await universalService(payload);
+      const data = res?.data || res;
+      console.log(data);
+      setPackages(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("Failed to load packages", err);
+      setPackages([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchMemberDetails = async (clientId: number) => {
     try {
       const payload = {
@@ -91,128 +117,98 @@ const MemberWalletsElegant: React.FC = () => {
       setMemberDetails(null);
     }
   };
-  const fetchWallets = async (clientid: string) => {
-    try {
-      const payload = {
-        procName: "GetMLMSettings",
-        Para: JSON.stringify({
-          ClientId: clientid,
-          ActionMode: "GetWallets",
-        }),
-      };
 
-      const res = await universalService(payload);
-      const data = res?.data || res;
-
-      if (Array.isArray(data)) {
-        setWalletList(data);
-      } else {
-        setWalletList([]);
-      }
-    } catch (err) {
-      console.error("Wallet fetch failed", err);
-      setWalletList([]);
-    }
-  };
-  useEffect(() => {
-    fetchWallets("0");
-  }, []);
-  const submitWalletTransaction = async (values: any) => {
+  const submitMemberInvestment = async (values: any) => {
     try {
-      console.log(memberDetails);
-      // ✅ Client Validation
+      // ✅ Member validation
       if (!memberDetails?.ClientId) {
         Swal.fire("Error", "Please select a member first!", "error");
         return;
       }
 
-      // ✅ Wallet Validation
-      if (!selectedWallet?.WalletId) {
-        Swal.fire("Error", "Please select a wallet first!", "error");
+      // ✅ Package validation
+      if (!values.PackageId) {
+        Swal.fire("Error", "Please select a package!", "error");
         return;
       }
 
       const payload = {
-        procName: "WalletTransaction_CRDR",
+        procName: "MemberInvestmentByAdmin",
         Para: JSON.stringify({
-          ClientId: memberDetails?.ClientId,
-          WalletId: selectedWallet.WalletId,
-          TranType: values.transactionType, // CR or DR
+          ClientId: memberDetails.ClientId,
+          PackageId: values.PackageId,
           Amount: values.amount,
-          PaymentMode: values.paymentMode,
-          PaymentDate: values.paymentDate,
-          ReferenceNo: values.referenceNo || "",
           Remarks: values.remarks || "",
-          EntryBy: 1, // Admin UserId,
-          ActionMode: "WalletTransaction",
+          EntryBy: 1, // Admin UserId
+          ActionMode: "AdminCreateInvestment",
         }),
       };
+
       const response = await universalService(payload);
       const res = Array.isArray(response) ? response[0] : response?.data?.[0];
-      if (res?.StatusCode == "1") {
+
+      if (res?.StatusCode == 1) {
         Swal.fire({
           title: "Success!",
-          text: res?.Msg || "Action completed successfully.",
+          text: res.Msg || "Investment created successfully.",
           icon: "success",
-          confirmButtonText: "OK",
           confirmButtonColor: "#3b82f6",
-        }).then((result) => {
-          if (result.isConfirmed) {
-            //navigate("/superadmin/company/manage-company/branch");
-          }
+        }).then(() => {
+          // Optional refresh actions
+          fetchInvestmentTransactions(selectedUser, page, pageSize);
         });
       } else {
         Swal.fire({
           title: "Error",
-          text: res?.Msg || "Operation failed",
+          text: res?.Msg || "Investment failed",
           icon: "error",
-          confirmButtonText: "OK",
         });
       }
     } catch (error) {
-      console.error("Transaction Failed", error);
-      alert("Something went wrong!");
+      console.error("Investment Failed", error);
+      Swal.fire("Error", "Something went wrong!", "error");
     }
   };
-  const fetchWalletTransactions = async (
+
+  const fetchInvestmentTransactions = async (
     clientId: number,
-    pageNumber: number,
+    page: number,
     pageSize: number,
   ) => {
-    try {
-      const payload = {
-        procName: "WalletTransaction_CRDR",
-        Para: JSON.stringify({
-          ClientId: clientId,
-          ActionMode: "GetWalletTransaction",
-          PageNumber: pageNumber,
-          PageSize: pageSize,
-        }),
-      };
+    const payload = {
+      procName: "MemberInvestmentByAdmin",
+      Para: JSON.stringify({
+        ClientId: clientId,
+        PageNumber: page,
+        PageSize: pageSize,
+        ActionMode: "GetInvestmentTransaction",
+      }),
+    };
 
-      const res = await universalService(payload);
-      const data = res?.data || res;
+    const res = await universalService(payload);
 
-      if (Array.isArray(data)) {
-        setTransactions(data);
-        setTotalCount(data[0].TotalCount);
-      } else if (Array.isArray(data?.data)) {
-        setTransactions(data.data);
-        setTotalCount(data.TotalCount || 0);
-      } else {
-        setTransactions([]);
-      }
-    } catch (err) {
-      console.error("Failed to load wallet transactions", err);
-      setTransactions([]);
-      setTotalCount(0);
-    }
+    // normalize response
+    const data = Array.isArray(res?.data)
+      ? res.data
+      : Array.isArray(res)
+        ? res
+        : [];
+
+    setInvestments(data);
+    setTotalCount(data.length > 0 ? data[0].TotalCount : 0);
   };
+
+  useEffect(() => {
+    fetchPackages();
+  }, []);
+
   useEffect(() => {
     if (selectedUser) {
+      setSelectedPackage(null);
+      formikRef.current?.setFieldValue("PackageId", "");
+      formikRef.current?.setFieldValue("amount", "");
       fetchMemberDetails(selectedUser);
-      fetchWallets(selectedUser);
-      fetchWalletTransactions(selectedUser, page, pageSize);
+      fetchInvestmentTransactions(selectedUser, page, pageSize);
     }
   }, [selectedUser, page]);
   const handleResetAll = () => {
@@ -220,20 +216,19 @@ const MemberWalletsElegant: React.FC = () => {
     setAutoResetKey((k) => k + 1); // 👈 clears autocomplete
     setSelectedUser(null);
     setMemberDetails(null);
-    setSelectedWallet(null);
-    setTransactions([]);
+    setInvestments([]);
     setUsers([]);
     setPage(1);
     setTotalCount(0);
-    fetchWallets("0");
   };
   const imageBaseUrl = import.meta.env.VITE_IMAGE_PREVIEW_URL;
+
   return (
     <div className="trezo-card bg-white dark:bg-[#0c1427] rounded-2xl shadow-lg p-6">
       {/* ================= HEADER ================= */}
       <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
         <div className="text-lg font-bold text-gray-800 dark:text-white">
-          Wallet Credit & Debit
+          Member Investment
         </div>
 
         <div className="flex gap-3">
@@ -373,64 +368,79 @@ flex items-center"
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-10">
         {/* ================= WALLET CARDS ================= */}
         <div>
-          <div className="flex flex-wrap gap-5">
-            {walletList.map((wallet) => (
-              <div
-                key={wallet.WalletId}
-                onClick={() => setSelectedWallet(wallet)}
-                className={`w-[170px] p-5 rounded-xl cursor-pointer transition-all shadow-sm
-        ${
-          selectedWallet?.WalletId === wallet.WalletId
-            ? "bg-blue-50 border-2 border-primary-button-bg scale-[1.03]"
-            : "bg-gray-50 border border-gray-200 hover:scale-[1.02]"
-        }`}
-              >
-                {/* Amount (Static for now) */}
-                <h2 className="text-xl font-bold text-gray-800">
-                  ${wallet.Balance}
-                </h2>
-
-                {/* Wallet Name from API */}
-                <p className="text-sm text-gray-500 mt-1">
-                  {wallet.WalletDisplayName}
-                </p>
-              </div>
-            ))}
-          </div>
           {/* ================= LEFT FORM ================= */}
           <Formik
             innerRef={formikRef}
             initialValues={{
-              transactionType: "",
+              PackageId: "",
               amount: "",
-              paymentMode: "",
-              paymentDate: today,
-              referenceNo: "",
               remarks: "",
             }}
-            validationSchema={validationSchema}
+            validationSchema={ValidationSchema}
             onSubmit={(values, { resetForm }) => {
-              submitWalletTransaction(values);
+              submitMemberInvestment(values);
             }}
           >
-            {() => (
-              <Form id="walletForm" className="space-y-5 mt-5">
-                {/* Transaction Type */}
+            {({ setFieldValue }) => (
+              <Form id="walletForm" className="space-y-5 ">
+                {/* Package */}
                 <div>
                   <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">
-                    Transaction Type <span className="text-red-500">*</span>
+                    Package <span className="text-red-500">*</span>
                   </label>
                   <Field
                     as="select"
-                    name="transactionType"
-                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm h-10 placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500  "
+                    name="PackageId"
+                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm h-10"
+                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => {
+                      const value = e.target.value; // ✅ STRING
+
+                      // If "Select Package"
+                      if (!value) {
+                        setFieldValue("PackageId", "");
+                        setFieldValue("amount", "");
+                        setSelectedPackage(null);
+                        return;
+                      }
+
+                      // Convert ONLY for lookup
+                      const selectedId = Number(value);
+
+                      const pkg = packages.find(
+                        (p: any) => Number(p.ProductId) === selectedId,
+                      );
+
+                      console.log("Selected Package:", pkg);
+
+                      // ✅ STORE STRING IN FORMIK
+                      setFieldValue("PackageId", value);
+
+                      if (pkg?.Type === "Fixed") {
+                        setFieldValue("amount", String(pkg.MinAmount));
+                      } else {
+                        setFieldValue("amount", "");
+                      }
+
+                      setSelectedPackage(pkg);
+                    }}
                   >
-                    <option value="">Select Transaction Type</option>
-                    <option value="CR">Credit</option>
-                    <option value="DR">Debit</option>
+                    <option value="">Select Package</option>
+
+                    {packages.map((pkg: any, index: number) => (
+                      <option
+                        key={`pkg-${pkg.ProductId ?? index}`}
+                        value={String(pkg.ProductId)} // ✅ STRING
+                      >
+                        {pkg.ProductName}
+                        {pkg.Type === "Fixed"
+                          ? ` (${pkg.MinAmount})`
+                          : ` (${pkg.MinAmount} - ${pkg.MaxAmount})`}
+                      </option>
+                    ))}
                   </Field>
+
                   <ErrorMessage
-                    name="transactionType"
+                    name="PackageId"
                     component="p"
                     className="text-red-500 text-xs mt-1"
                   />
@@ -442,67 +452,25 @@ flex items-center"
                     Amount($) <span className="text-red-500">*</span>
                   </label>
                   <Field
-                    type="text"
+                    type="number"
                     name="amount"
-                    placeholder="Enter Amount"
-                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm h-10 placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500  "
+                    placeholder={
+                      selectedPackage?.Type === "Fixed"
+                        ? "Fixed Amount"
+                        : selectedPackage
+                          ? `Enter amount between ${selectedPackage.MinAmount} - ${selectedPackage.MaxAmount}`
+                          : "Enter amount"
+                    }
+                    disabled={selectedPackage?.Type === "Fixed"}
+                    min={selectedPackage?.MinAmount}
+                    max={selectedPackage?.MaxAmount}
+                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm h-10 placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
                   />
+
                   <ErrorMessage
                     name="amount"
                     component="p"
                     className="text-red-500 text-xs mt-1"
-                  />
-                </div>
-
-                {/* Payment Mode */}
-                <div>
-                  <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">
-                    Payment Mode <span className="text-red-500">*</span>
-                  </label>
-                  <Field
-                    as="select"
-                    name="paymentMode"
-                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm h-10 placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500  "
-                  >
-                    <option value="">Select Mode</option>
-                    <option value="Bank">Bank</option>
-                    <option value="UPI">UPI</option>
-                    <option value="Wallet">Wallet</option>
-                  </Field>
-                  <ErrorMessage
-                    name="paymentMode"
-                    component="p"
-                    className="text-red-500 text-xs mt-1"
-                  />
-                </div>
-
-                {/* Payment Date */}
-                <div>
-                  <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">
-                    Payment Date <span className="text-red-500">*</span>
-                  </label>
-                  <Field
-                    type="date"
-                    name="paymentDate"
-                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm h-10 placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500  "
-                  />
-                  <ErrorMessage
-                    name="paymentDate"
-                    component="p"
-                    className="text-red-500 text-xs mt-1"
-                  />
-                </div>
-
-                {/* Reference */}
-                <div>
-                  <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">
-                    Reference Number
-                  </label>
-                  <Field
-                    type="text"
-                    name="referenceNo"
-                    placeholder="Optional Reference"
-                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm h-10 placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500  "
                   />
                 </div>
 
@@ -528,11 +496,11 @@ flex items-center"
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <div className="text-lg font-bold text-gray-800 dark:text-white">
-              Transaction History
+              Investment History
             </div>
 
             <span className="text-xs px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500">
-              Recent Activity
+              Member Investments
             </span>
           </div>
 
@@ -541,74 +509,79 @@ flex items-center"
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 rounded-lg shadow-sm">
               <thead className="bg-gray-50 dark:bg-gray-800">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">
                     #
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                    Date
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">
+                    Investment Date
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                    Wallet
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">
+                    Package
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">
                     Amount
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                    Mode
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">
+                    Status
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
-                    Ref No
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">
+                    Paid By
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase">
                     Remarks
                   </th>
                 </tr>
               </thead>
+
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                {transactions.length === 0 ? (
+                {investments.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-10 text-center">
+                    <td colSpan={7} className="py-10 text-center">
                       <div className="flex flex-col items-center gap-2 text-gray-400">
                         <i className="material-symbols-outlined text-5xl">
-                          receipt_long
+                          inventory_2
                         </i>
                         <p className="font-medium text-gray-600 dark:text-gray-300">
-                          No Transactions Found
+                          No Investments Found
                         </p>
                         <p className="text-xs text-gray-400">
-                          Wallet transactions will appear here once added.
+                          Member investments will appear here.
                         </p>
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  transactions.map((item, index) => (
+                  investments.map((item, index) => (
                     <tr
-                      key={index}
+                      key={item.InvestmentId}
                       className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
                     >
                       <td className="px-4 py-3 font-medium">{index + 1}</td>
-                      <td className="px-4 py-3">{item.PaymentDate}</td>
-                      <td className="px-4 py-3">{item.WalletDisplayName}</td>
+
+                      <td className="px-4 py-3">{item.InvestmentDate}</td>
+
+                      <td className="px-4 py-3 font-semibold">
+                        {item.PackageName}
+                      </td>
+
+                      <td className="px-4 py-3 font-semibold">
+                        ${item.Amount}
+                      </td>
+
                       <td className="px-4 py-3">
                         <span
                           className={`px-2 py-1 rounded text-xs font-semibold ${
-                            item.TranType === "CR"
+                            item.Status === "Active"
                               ? "bg-green-100 text-green-700"
                               : "bg-red-100 text-red-700"
                           }`}
                         >
-                          {item.TranType}
+                          {item.Status}
                         </span>
                       </td>
-                      <td className="px-4 py-3 font-semibold">{item.Amount}</td>
-                      <td className="px-4 py-3">{item.PaymentMode}</td>
-                      <td className="px-4 py-3 text-xs text-gray-500">
-                        {item.ReferenceNo || "-"}
-                      </td>
+
+                      <td className="px-4 py-3">{item.PaidBy}</td>
+
                       <td className="px-4 py-3 text-xs text-gray-500">
                         {item.Remarks || "-"}
                       </td>

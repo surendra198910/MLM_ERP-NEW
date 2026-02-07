@@ -11,7 +11,7 @@ interface UserDescription {
   rightTeamCount?: number;
   leftRemainingTeamCount?: number;
   rightRemaining?: number;
-  totalInvestmentAmount?:number
+  totalInvestmentAmount?: number;
 }
 
 interface User {
@@ -63,7 +63,7 @@ export default class BinaryTreeNode extends React.Component<BinaryTreeNodeProps>
       allUsers.find((item) => item.id === user.left_child_id) || fakeUser;
     let rightChild =
       allUsers.find((item) => item.id === user.right_child_id) || fakeUser;
-
+    const imageBaseUrl = import.meta.env.VITE_IMAGE_PREVIEW_URL;
     return (
       <li>
         {colorText && (
@@ -79,8 +79,11 @@ export default class BinaryTreeNode extends React.Component<BinaryTreeNodeProps>
               <div className="distributor-wrap">
                 <div className="avatar">
                   <img
-                    src={`/images/${user.image}`}
-                    alt={user.username}
+                    src={`${imageBaseUrl}${user.image}`}
+                    alt="User"
+                    onError={(e: any) => {
+                      e.target.src = `${imageBaseUrl}default.jpg`;
+                    }}
                   />
                 </div>
                 <span className="name text_yellow" style={{ color: colorText }}>
@@ -133,7 +136,9 @@ export default class BinaryTreeNode extends React.Component<BinaryTreeNodeProps>
                     <div className="d-flex align-items-center justify-content-between w-100">
                       <div className="label">Investment</div>
                       <div className="value">
-                        ${user.description?.totalInvestmentAmount?.toFixed(2) || "0"}
+                        $
+                        {user.description?.totalInvestmentAmount?.toFixed(2) ||
+                          "0"}
                       </div>
                     </div>
                   </div>

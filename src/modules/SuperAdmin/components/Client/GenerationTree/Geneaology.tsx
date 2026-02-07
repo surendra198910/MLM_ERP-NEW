@@ -3,13 +3,13 @@ import React, { useState, useEffect } from "react";
 import { ApiService } from "../../../../../services/ApiService";
 import AutoCompleter from "../../../../../components/CommonFormElements/InputTypes/AutoCompleter";
 
-
 const BinaryTreeComponent = () => {
-  const { universalService, loading } = ApiService();
+  const { universalService} = ApiService();
   const [firstNode, setfirstNode] = useState<any>(null);
   const [treeData, settreeData] = useState<any>([]);
   const [ClientID, setClientID] = useState(1);
-
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
   const generateTreeNodes = (Data: any) => {
     return Data.map((itm: any) => ({
       id: itm?.id,
@@ -35,6 +35,9 @@ const BinaryTreeComponent = () => {
   };
 
   const FetchNodeData = async (clientId: any) => {
+    // ✅ Clear Old Tree Before Loading New
+    setfirstNode(null);
+    settreeData([]);
     const param = { ClientId: clientId };
     const obj = {
       procName: "GetBinaryTree",
@@ -58,10 +61,36 @@ const BinaryTreeComponent = () => {
       throw error;
     }
   };
+  const fetchManagers = async (searchText: string) => {
+    try {
+      setLoading(true);
 
+      const payload = {
+        procName: "Client",
+        Para: JSON.stringify({
+          searchData: searchText,
+          ActionMode: "getUsersList",
+        }),
+      };
+
+      const res = await universalService(payload);
+      const data = res?.data || res;
+
+      if (Array.isArray(data)) {
+        setUsers(data);
+      } else {
+        setUsers([]);
+      }
+    } catch (err) {
+      console.error("Failed to load managers", err);
+      setUsers([]);
+    } finally {
+      setLoading(false);
+    }
+  };
   useEffect(() => {
     FetchNodeData(ClientID);
-  }, []);
+  }, [ClientID]);
 
   return (
     <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-md">
@@ -75,25 +104,22 @@ const BinaryTreeComponent = () => {
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:w-auto w-full">
           <div className="flex flex-col sm:flex-row items-center gap-3 flex-wrap justify-end">
-           <div>
-       
-
-          <div className="flex shadow-sm rounded-lg overflow-visible">
-            <AutoCompleter
-              // memberList={users}
-              loading={loading}
-              // onSearch={fetchManagers}
-              onSelect={(member) => {
-                // setSelectedUser(member.id);
-                // fetchMemberDetails(member.id);
-                console.log("Selected Member:", member);
-              }}
-            />
-            <button className="w-[55px] ml-2 rounded-md border flex items-center justify-center bg-primary-button-bg text-white hover:bg-primary-button-bg-hover transition">
-              <i className="material-symbols-outlined">search</i>
-            </button>
-          </div>
-        </div>
+            <div>
+              <div className="flex shadow-sm rounded-lg overflow-visible">
+                <AutoCompleter
+                  memberList={users}
+                  loading={loading}
+                  onSearch={fetchManagers} // ✅ Parent API Passed Here
+                  onSelect={(member) => {
+                    FetchNodeData(member.id);
+                    console.log("Selected Member:", member);
+                  }}
+                />
+                <button className="w-[55px] ml-2 rounded-md border flex items-center justify-center bg-primary-button-bg text-white hover:bg-primary-button-bg-hover transition">
+                  <i className="material-symbols-outlined">search</i>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

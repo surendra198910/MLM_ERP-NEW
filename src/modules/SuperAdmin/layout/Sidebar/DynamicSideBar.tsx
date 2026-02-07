@@ -34,13 +34,7 @@ const iconMap: Record<string, React.ReactNode> = {
 /* --------------------------------------------
  DOT ICON FOR SUB CATEGORIES
 --------------------------------------------- */
-const DotIcon = (
-  <Circle
-    size={4}
-    fill="currentColor"
-    className="opacity-70"
-  />
-);
+const DotIcon = <Circle size={4} fill="currentColor" className="opacity-70" />;
 
 /* --------------------------------------------
  TYPES
@@ -52,6 +46,7 @@ interface RawMenuItem {
   FormCategoryName: string;
   ParentCategoryName: string | null;
   FormDisplayName: string;
+  FormNameWithExt: string;
   Icon: string | null;
   ShowInMenu: boolean;
 }
@@ -96,38 +91,35 @@ const DynamicSideBar: React.FC = () => {
   const activeModuleId = Number(localStorage.getItem("ActiveModuleId")) || null;
   const employee = JSON.parse(localStorage.getItem("EmployeeDetails") || "{}");
   const employeeId = employee.EmployeeId;
-  
+
   // 2. Default Settings fallback
   const defaultSettings: PanelSettings = {
     SidebarColor: "#1E293B",
     TextColor: "#FFFFFF",
     HoverColor: "#3e3f42",
     SidebarHeader: "Sysfo Super Admin",
-    Logo: "logo-icon.svg" // Default logo fallback
+    Logo: "logo-icon.svg", // Default logo fallback
   };
 
   const [panelSettings, setPanelSettings] =
-  useState<PanelSettings>(defaultSettings);
+    useState<PanelSettings>(defaultSettings);
 
   const isDarkMode = document.documentElement.classList.contains("dark");
 
-
   useEffect(() => {
-  const onThemeUpdate = () => {
-    const stored = localStorage.getItem("PanelSetting");
-    if (stored) {
-      setPanelSettings(JSON.parse(stored));
-    }
-  };
+    const onThemeUpdate = () => {
+      const stored = localStorage.getItem("PanelSetting");
+      if (stored) {
+        setPanelSettings(JSON.parse(stored));
+      }
+    };
 
-  window.addEventListener("panel-theme-updated", onThemeUpdate);
+    window.addEventListener("panel-theme-updated", onThemeUpdate);
 
-  return () => {
-    window.removeEventListener("panel-theme-updated", onThemeUpdate);
-  };
-}, []);
-
-
+    return () => {
+      window.removeEventListener("panel-theme-updated", onThemeUpdate);
+    };
+  }, []);
 
   /* --------------------------------------------
    FETCH MENU
@@ -147,10 +139,10 @@ const DynamicSideBar: React.FC = () => {
         const rows = Array.isArray(res?.data)
           ? res.data
           : Array.isArray(res?.data?.recordset)
-          ? res.data.recordset
-          : Array.isArray(res)
-          ? res
-          : [];
+            ? res.data.recordset
+            : Array.isArray(res)
+              ? res
+              : [];
 
         setMenuData(rows);
       } catch (err) {
@@ -164,33 +156,32 @@ const DynamicSideBar: React.FC = () => {
   }, [activeModuleId]);
 
   useEffect(() => {
-  const storedTheme = localStorage.getItem("PanelSetting");
-  if (storedTheme) {
-    setPanelSettings(JSON.parse(storedTheme));
-  }
-}, []);
-
-useEffect(() => {
-  const fetchTheme = async () => {
-    try {
-      const res = await universalService({
-        procName: "PanelSetting",
-        Para: JSON.stringify({ ActionMode: "GET_ACTIVE_THEME" }),
-      });
-
-      const data = res?.data?.[0] || res?.[0];
-      if (!data) return;
-
-      localStorage.setItem("PanelSetting", JSON.stringify(data));
-      setPanelSettings(data);
-    } catch (err) {
-      console.error("Theme sync failed", err);
+    const storedTheme = localStorage.getItem("PanelSetting");
+    if (storedTheme) {
+      setPanelSettings(JSON.parse(storedTheme));
     }
-  };
+  }, []);
 
-  fetchTheme();
-}, []);
+  useEffect(() => {
+    const fetchTheme = async () => {
+      try {
+        const res = await universalService({
+          procName: "PanelSetting",
+          Para: JSON.stringify({ ActionMode: "GET_ACTIVE_THEME" }),
+        });
 
+        const data = res?.data?.[0] || res?.[0];
+        if (!data) return;
+
+        localStorage.setItem("PanelSetting", JSON.stringify(data));
+        setPanelSettings(data);
+      } catch (err) {
+        console.error("Theme sync failed", err);
+      }
+    };
+
+    fetchTheme();
+  }, []);
 
   /* --------------------------------------------
    BUILD TREE STRUCTURE
@@ -225,13 +216,14 @@ useEffect(() => {
         map.get(row.FormCategoryId).Forms.push({
           FormId: row.FormId,
           FormDisplayName: row.FormDisplayName,
+          FormNameWithExt: row.FormNameWithExt,
         });
       }
     });
 
     /* STEP 2: INJECT MASTER IF REQUIRED */
     const hasMasterChildren = Array.from(map.values()).some(
-      (x) => x.ParentCategoryId === MASTER_CATEGORY_ID
+      (x) => x.ParentCategoryId === MASTER_CATEGORY_ID,
     );
 
     if (hasMasterChildren && !map.has(MASTER_CATEGORY_ID)) {
@@ -261,7 +253,7 @@ useEffect(() => {
       (x) =>
         !x.ParentCategoryId ||
         x.ParentCategoryId === 0 ||
-        x.ParentCategoryId === x.FormCategoryId
+        x.ParentCategoryId === x.FormCategoryId,
     );
 
     roots.sort((a, b) => a.FormCategoryId - b.FormCategoryId);
@@ -296,17 +288,16 @@ useEffect(() => {
         {item.Forms.map((f: any) => (
           <Link
             key={f.FormId}
-            to={makePath(fullPath, slug(f.FormDisplayName))}
+            to={makePath(
+              fullPath,
+              slug(f.FormNameWithExt || f.FormDisplayName),
+            )}
             className="text-primary-sidebar-text dark:text-gray-100 flex items-center py-2 px-3 rounded-md text-sm transition-colors hover:bg-primary-sidebar-bg-hover dark:hover:bg-gray-800"
             // Apply text color directly here to ensure icons inside don't get forced to this color if handled separately
             // className="text-primary-sidebar-text dark:text-gray-100"
-
           >
             {/* Arrow inherits text color */}
-            <ArrowRight
-              size={12}
-              className="mr-2 opacity-60"
-            />
+            <ArrowRight size={12} className="mr-2 opacity-60" />
             <span className="truncate">{f.FormDisplayName}</span>
           </Link>
         ))}
@@ -323,12 +314,14 @@ useEffect(() => {
 "
                 onClick={() => toggle(childKey)}
                 // className="text-primary-sidebar-text dark:text-gray-100"
-
               >
                 <div className="flex items-center gap-2 overflow-hidden">
-                  <span className="text-primary-sidebar-text dark:text-gray-100"
->{DotIcon}</span>
-                  <span className="text-sm truncate">{child.FormCategoryName}</span>
+                  <span className="text-primary-sidebar-text dark:text-gray-100">
+                    {DotIcon}
+                  </span>
+                  <span className="text-sm truncate">
+                    {child.FormCategoryName}
+                  </span>
                 </div>
 
                 {(child.Children.length > 0 || child.Forms.length > 0) &&
@@ -351,48 +344,47 @@ useEffect(() => {
    MAIN RENDER
   --------------------------------------------- */
   // Determine Logo URL
-  const logoUrl = panelSettings.Logo 
-    ? (IMAGE_PREVIEW_URL ? `${IMAGE_PREVIEW_URL}${panelSettings.Logo}` : panelSettings.Logo)
+  const logoUrl = panelSettings.Logo
+    ? IMAGE_PREVIEW_URL
+      ? `${IMAGE_PREVIEW_URL}${panelSettings.Logo}`
+      : panelSettings.Logo
     : "/images/logo-icon.svg";
 
   return (
-<div
-  className="
+    <div
+      className="
     sidebar-area fixed z-[7] top-0 w-[270px] h-screen transition-all shadow-lg flex flex-col
     bg-primary-sidebar-bg text-primary-sidebar-text
     dark:bg-[#0c1427]  dark:text-gray-100
   "
-  style={
-    !isDarkMode
-      ? ({
-          "--sidebar-bg": panelSettings.SidebarColor,
-          "--sidebar-text": panelSettings.TextColor,
-          "--sidebar-hover": panelSettings.HoverColor,
-        } as React.CSSProperties)
-      : undefined
-  }
->
-
-
+      style={
+        !isDarkMode
+          ? ({
+              "--sidebar-bg": panelSettings.SidebarColor,
+              "--sidebar-text": panelSettings.TextColor,
+              "--sidebar-hover": panelSettings.HoverColor,
+            } as React.CSSProperties)
+          : undefined
+      }
+    >
       {/* LOGO AREA - Corrected to use VITE_IMAGE_PREVIEW_URL */}
-      <div 
+      <div
         className="logo shrink-0 border-b px-6 py-4 flex items-center gap-3 h-[64px]"
-        style={{ borderColor: 'rgba(255,255,255,0.1)' }}
+        style={{ borderColor: "rgba(255,255,255,0.1)" }}
       >
         <Link to="/superadmin" className="flex items-center gap-3 w-full">
-          <img 
+          <img
             src={logoUrl}
-            alt="logo" 
+            alt="logo"
             className="w-8 h-8 object-contain rounded-full"
             onError={(e) => {
               // Fallback if image fails to load
-              (e.target as HTMLImageElement).src = "/images/logo-icon.svg"; 
+              (e.target as HTMLImageElement).src = "/images/logo-icon.svg";
             }}
           />
-          <span 
-            className="font-bold text-lg leading-tight truncate text-primary-sidebar-text dark:text-gray-100" 
+          <span
+            className="font-bold text-lg leading-tight truncate text-primary-sidebar-text dark:text-gray-100"
             // className="text-primary-sidebar-text dark:text-gray-100"
-
           >
             {panelSettings.SidebarHeader}
           </span>
@@ -425,14 +417,11 @@ useEffect(() => {
 "
                       >
                         {/* Icon retains its own color from iconMap */}
-                        <span className="shrink-0">
-                          {iconMap.Dashboard}
-                        </span>
+                        <span className="shrink-0">{iconMap.Dashboard}</span>
                         {/* Text forced to theme color */}
-                        <span 
+                        <span
                           className="font-medium text-sm text-primary-sidebar-text dark:text-gray-100"
                           // className="text-primary-sidebar-text dark:text-gray-100"
-
                         >
                           Dashboard
                         </span>
@@ -456,22 +445,18 @@ useEffect(() => {
                     >
                       <div className="flex items-center gap-3 overflow-hidden">
                         {/* Icon Container - Preserves specific colors */}
-                        <span className="shrink-0">
-                          {icon}
-                        </span>
+                        <span className="shrink-0">{icon}</span>
                         {/* Text Container - Uses dynamic theme color */}
-                        <span 
+                        <span
                           className="font-medium text-sm truncate text-primary-sidebar-text dark:text-gray-100"
                           // className="text-primary-sidebar-text dark:text-gray-100"
-
                         >
                           {cat.FormCategoryName}
                         </span>
                       </div>
 
                       {/* Chevron uses theme color */}
-                      <span className="text-primary-sidebar-text dark:text-gray-100"
->
+                      <span className="text-primary-sidebar-text dark:text-gray-100">
                         {isOpen ? (
                           <ChevronUp size={17} />
                         ) : (

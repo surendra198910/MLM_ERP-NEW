@@ -621,7 +621,7 @@ const CompanyList: React.FC = () => {
                                 >
                                     <button
                                         type="button"
-                                        onClick={() => navigate("/superadmin/company/add-company")}
+                                        onClick={() => navigate("/superadmin/client/add-client")}
                                         disabled={!SmartActions.canAdd(CURRENT_FORM_ID)}
                                         className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-white text-white bg-primary-500 hover:bg-primary-200 hover:text-primary-500 transition-all disabled:opacity-50"
                                     >
@@ -670,14 +670,14 @@ const CompanyList: React.FC = () => {
                             >
                                 <button
                                     type="button"
-                                    onClick={() => navigate("/superadmin/company/add-company")}
+                                    onClick={() => navigate("/superadmin/client/add-client")}
                                     disabled={!SmartActions.canAdd(CURRENT_FORM_ID)}
                                     className={`px-[26.5px] py-[12px] rounded-md transition-all ${SmartActions.canAdd(CURRENT_FORM_ID)
                                         ? "bg-primary-500 text-white hover:bg-primary-400"
                                         : "bg-gray-300 text-gray-500 cursor-not-allowed"
                                         }`}
                                 >
-                                    Add Company
+                                    Add Client
                                 </button>
                             </PermissionAwareTooltip>
                         </div>

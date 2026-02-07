@@ -7,10 +7,13 @@ interface Member {
 }
 
 interface Props {
-  memberList: Member[]; // ✅ List from Parent
-  loading: boolean; // ✅ Loading from Parent
-  onSearch: (text: string) => void; // ✅ API trigger from Parent
+  memberList: Member[];
+  loading: boolean;
+  onSearch: (text: string) => void;
   onSelect: (member: Member) => void;
+
+  value?: string; // optional controlled value
+  clearTrigger?: number; // change value to reset
 }
 
 const MemberAutocomplete: React.FC<Props> = ({
@@ -18,39 +21,65 @@ const MemberAutocomplete: React.FC<Props> = ({
   loading,
   onSearch,
   onSelect,
+  value,
+  clearTrigger,
 }) => {
   const [query, setQuery] = useState("");
   const [showDropdown, setShowDropdown] = useState(false);
 
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const isUserTyping = useRef(false); // ✅ key fix
 
-  /* ---------------- CALL PARENT API WHEN 3 CHARS ---------------- */
+  /* ---------- SYNC VALUE FROM PARENT (NO API CALL) ---------- */
   useEffect(() => {
+    if (value !== undefined) {
+      isUserTyping.current = false;
+      setQuery(value);
+    }
+  }, [value]);
+
+  /* ---------- CLEAR FROM PARENT (NO API CALL) ---------- */
+  useEffect(() => {
+    if (clearTrigger !== undefined) {
+      isUserTyping.current = false;
+      setQuery("");
+      setShowDropdown(false);
+    }
+  }, [clearTrigger]);
+
+  /* ---------- SEARCH ONLY WHEN USER TYPES ---------- */
+  useEffect(() => {
+    if (!isUserTyping.current) return;
+
     if (query.length < 3) {
       setShowDropdown(false);
       return;
     }
 
-    // ✅ Debounce (400ms)
     const timer = setTimeout(() => {
       onSearch(query);
       setShowDropdown(true);
+      isUserTyping.current = false;
     }, 400);
 
     return () => clearTimeout(timer);
-  }, [query]);
+  }, [query, onSearch]);
 
-  /* ---------------- SELECT MEMBER ---------------- */
+  /* ---------- SELECT MEMBER ---------- */
   const handleSelect = (member: Member) => {
+    isUserTyping.current = false;
     setQuery(member.username);
     setShowDropdown(false);
     onSelect(member);
   };
 
-  /* ---------------- CLOSE ON OUTSIDE CLICK ---------------- */
+  /* ---------- CLOSE ON OUTSIDE CLICK ---------- */
   useEffect(() => {
-    const handleClickOutside = (event: any) => {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        wrapperRef.current &&
+        !wrapperRef.current.contains(event.target as Node)
+      ) {
         setShowDropdown(false);
       }
     };
@@ -66,50 +95,93 @@ const MemberAutocomplete: React.FC<Props> = ({
         type="text"
         value={query}
         placeholder="Type at least 3 characters..."
-        onChange={(e) => setQuery(e.target.value)}
-        className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm h-10 placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500"
+        onChange={(e) => {
+          isUserTyping.current = true;
+          setQuery(e.target.value);
+        }}
+        className="
+          w-full h-10 px-3 text-sm
+          border border-gray-200 rounded-md
+          bg-white dark:bg-gray-800
+          dark:border-gray-700 dark:text-gray-100
+          placeholder-gray-400 dark:placeholder-gray-500
+          focus:outline-none focus:border-primary-500
+          focus:ring-1 focus:ring-primary-500
+          transition-all
+        "
       />
 
       {/* Dropdown */}
       {showDropdown && (
         <div
           className="
-            absolute top-[48px] left-0 w-full
-            bg-white border rounded-xl shadow-lg
+            absolute top-[44px] left-0 w-full
+            bg-white dark:bg-[#0c1427]
+            border border-gray-200 dark:border-gray-700
+            rounded-xl shadow-lg
             z-[9999] overflow-hidden
           "
         >
-          {/* Loading */}
           {loading && (
             <p className="px-4 py-2 text-sm text-gray-500">Loading...</p>
           )}
 
-          {/* No Data */}
           {!loading && memberList.length === 0 && (
             <p className="px-4 py-2 text-sm text-gray-400">
               No members found...
             </p>
           )}
 
-          {/* Results */}
           {!loading && memberList.length > 0 && (
-            <ul className="max-h-[160px] overflow-y-auto divide-y divide-gray-100">
+            <ul
+              className="
+    max-h-48
+    overflow-y-auto
+    divide-y divide-gray-100 dark:divide-gray-700
+    scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600
+  "
+            >
               {memberList.map((member) => (
                 <li
                   key={member.id}
                   onClick={() => handleSelect(member)}
                   className="
-          px-3 py-2 cursor-pointer
-          flex items-center justify-between
-          hover:bg-blue-50 dark:hover:bg-[#172036]
-          transition text-sm
-        "
+        group
+        px-4 py-2.5
+        cursor-pointer
+        flex items-center justify-between
+        rounded-md
+        hover:bg-blue-50 dark:hover:bg-[#172036]
+        focus:bg-blue-50
+        transition-all duration-150
+        text-sm
+      "
                 >
-                  <span className="font-semibold text-gray-800 dark:text-white">
-                    {member.username}
-                  </span>
+                  {/* LEFT: Username */}
+                  <div className="flex flex-col min-w-0">
+                    <span
+                      className="
+            font-semibold text-gray-800 dark:text-white
+            group-hover:text-blue-600
+          "
+                    >
+                      {member.username}
+                    </span>
 
-                  <span className="text-xs text-gray-500 dark:text-gray-400 truncate max-w-[140px]">
+                    {/* Secondary info (mobile-friendly) */}
+                    <span className="text-xs text-gray-400 truncate sm:hidden">
+                      {member.name}
+                    </span>
+                  </div>
+
+                  {/* RIGHT: Name */}
+                  <span
+                    className="
+          text-xs text-gray-500 dark:text-gray-400
+          truncate max-w-[160px]
+          hidden sm:block
+        "
+                  >
                     {member.name}
                   </span>
                 </li>
