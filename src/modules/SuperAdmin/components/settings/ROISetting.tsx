@@ -58,90 +58,29 @@ const Template: React.FC = () => {
       <div className="trezo-card-header mb-[10px] md:mb-[10px] sm:flex items-center justify-between pb-5 border-b border-gray-200 -mx-[20px] md:-mx-[25px] px-[20px] md:px-[25px]">
         <div className="trezo-card-title">
           <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
-            Manage Template
+            ROI Setting
           </h5>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:w-auto w-full">
           <div className="flex flex-col sm:flex-row items-center gap-3 flex-wrap justify-end">
-            {/* 1. Filter Dropdown (Exactly from your design) */}
-            <div className="relative w-full sm:w-[180px]">
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-500">
-                <i className="material-symbols-outlined !text-[18px]">
-                  filter_list
-                </i>
-              </span>
-              <select
-                value={filterColumn}
-                onChange={(e) => setFilterColumn(e.target.value)}
-                className="w-full h-[34px] pl-8 pr-8 text-xs rounded-md appearance-none outline-none border border-gray-300 dark:border-[#172036] bg-white dark:bg-[#0c1427] text-black dark:text-white transition-all focus:border-primary-button-bg"
-              >
-                <option value="__NONE__">Select Filter Option</option>
-                <option value="TemplateName">Template Name</option>
-              </select>
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
-                <i className="material-symbols-outlined !text-[18px]">
-                  expand_more
-                </i>
-              </span>
-            </div>
+            
 
-            {/* 2. Search Input (Exactly from your design) */}
-            <div className="relative">
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-500">
-                <i className="material-symbols-outlined !text-[18px]">search</i>
-              </span>
-              <input
-                type="text"
-                value={searchInput}
-                placeholder="Enter Criteria..."
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && applySearch()}
-                className="h-[34px] w-full pl-8 pr-3 text-xs rounded-md outline-none border border-gray-300 dark:border-[#172036] bg-white dark:bg-[#0c1427] text-black dark:text-white focus:border-primary-button-bg transition-all"
-              />
-            </div>
+            
 
             {/* 3. BUTTONS GROUP (Exactly from your design) */}
             <div className="flex items-center gap-2">
-              {/* SEARCH BUTTON */}
-              <button
-                type="button"
-                onClick={applySearch}
-                className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-primary-button-bg text-primary-button-bg hover:bg-primary-button-bg hover:text-white transition-all shadow-sm"
-              >
-                <i className="material-symbols-outlined text-[20px]">search</i>
-              </button>
-
-              {/* COLUMN SELECTOR BUTTON */}
-              <button
-                type="button"
-                className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 transition-all"
-              >
-                <i className="material-symbols-outlined text-[20px]">
-                  view_column
-                </i>
-              </button>
+             
 
               {/* ADD BUTTON */}
               <button
                 type="button"
-                className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-white text-white bg-primary-button-bg hover:bg-white hover:border-primary-button-bg hover:text-primary-button-bg transition-all shadow-sm"
+                className="px-6 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded text-sm font-medium transition-colors flex items-center justify-center gap-2"
               >
-                <i className="material-symbols-outlined text-[20px]">add</i>
+                Sumit
               </button>
 
-              {/* REFRESH BUTTON (Visible when showTable is true) */}
-              {showTable && (
-                <button
-                  type="button"
-                  onClick={resetSearch}
-                  className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-gray-400 text-gray-500 hover:bg-gray-100 transition-all"
-                >
-                  <i className="material-symbols-outlined text-[20px]">
-                    refresh
-                  </i>
-                </button>
-              )}
+              
             </div>
           </div>
         </div>
@@ -152,54 +91,85 @@ const Template: React.FC = () => {
         <div className="trezo-card mb-[25px]">
           <div className="trezo-card-content">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-[25px]">
-              {currentCreators.map((creator) => (
+              {currentCreators.map((pkg) => (
                 <div
-                  key={creator.id}
-                  className="bg-white dark:bg-[#0c1427] rounded-2xl shadow-[2px_0px_11px_0px_#e7e5e5] border border-gray-100 overflow-hidden"
+                  key={pkg.id}
+                  className="relative group bg-white/80 dark:bg-[#0b1220]/80 backdrop-blur-xl border border-blue-100 dark:border-blue-900/40 rounded-3xl shadow-md hover:shadow-2xl transition-all duration-300 p-6 flex flex-col min-w-[280px] max-w-[320px]"
                 >
+                  {/* Top Glow */}
+                  <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-blue-500/60 to-transparent"></div>
+
+                  {/* Ribbon Badge */}
+                  <div className="absolute top-0 right-0 z-20">
+                    <div className="relative">
+                      <div className="absolute right-0 top-0 w-24 h-24 overflow-hidden">
+                        <span className="absolute top-[22px] right-[-38px] w-40 rotate-45 bg-blue-600 text-white text-[11px] font-semibold tracking-wide text-center py-1 shadow-md">
+                          ACTIVE
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                   {/* Header */}
-                  <div className="relative bg-gradient-to-b from-green-500 to-green-700 text-white p-5 text-center">
-                    <h2 className="text-xl font-bold">Growth Plan</h2>
-
-                    {/* Popular Ribbon */}
-                    <span className="absolute top-2 left-2 bg-yellow-400 text-black text-xs font-bold px-2 py-1 rounded">
-                      POPULAR
-                    </span>
+                  <div className="text-lg font-semibold text-gray-900 dark:text-white tracking-tight leading-snug">
+                    {pkg.name}
                   </div>
 
-                  {/* Coin Plant Image */}
-                  <div className="flex justify-center -mt-10">
-                    <img
-                      src={creator.avatar}
-                      className="w-28 drop-shadow-xl"
-                      alt="Growth Plan"
+                  {/* Image */}
+                  <div className="mt-6 flex justify-center">
+                    <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-[#111827] dark:to-[#020617] p-[2px] shadow-lg">
+                      <img
+                        src={pkg.banner}
+                        alt="package"
+                        className="w-full h-full object-cover rounded-2xl bg-white"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Investment Amount */}
+                  <div className="mt-5 text-center">
+                    <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                      ${pkg.items}
+                    </p>
+                  </div>
+
+                  {/* Details Card */}
+                  <div className=" bg-blue-50/60 dark:bg-[#0f172a] border border-blue-100 dark:border-blue-900/40 rounded-2xl p-4 space-y-4 text-sm">
+                    {/* ROI Input */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-500 dark:text-gray-400">
+                        Daily ROI (%)
+                      </span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        placeholder="0.30"
+                        className="w-24 text-right bg-white dark:bg-[#020617] border border-blue-200 dark:border-blue-800 rounded-xl px-3 py-1.5 text-sm font-semibold text-blue-700 dark:text-blue-400 focus:ring-2 focus:ring-blue-500 outline-none"
+                      />
+                    </div>
+
+                    {/* Duration */}
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-500 dark:text-gray-400">
+                        Duration
+                      </span>
+                      <span className="font-semibold text-gray-900 dark:text-gray-200">
+                        365 Days
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Investment Input (replacing button) */}
+                  {/* <div className="mt-6">
+                    <input
+                      type="number"
+                      placeholder="Enter investment amount"
+                      className="w-full rounded-2xl px-4 py-3 bg-white dark:bg-[#020617] border border-blue-200 dark:border-blue-800 text-sm font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none shadow-inner"
                     />
-                  </div>
-
-                  {/* ROI Box */}
-                  <div className="bg-gray-50 dark:bg-[#10192e] mx-4 mt-3 p-4 rounded-xl border border-gray-200 dark:border-[#172036]">
-                    <div className="flex justify-between py-2 border-b border-gray-200 dark:border-[#172036]">
-                      <span className="font-semibold text-sm">Amount</span>
-                      <span className="font-bold text-green-700">$100</span>
-                    </div>
-
-                    <div className="flex justify-between py-2 border-b border-gray-200 dark:border-[#172036]">
-                      <span className="font-semibold text-sm">Daily ROI</span>
-                      <span className="font-bold text-green-700">0.3%</span>
-                    </div>
-
-                    <div className="flex justify-between py-2">
-                      <span className="font-semibold text-sm">Duration</span>
-                      <span className="font-bold text-green-700">365 Days</span>
-                    </div>
-                  </div>
-
-                  {/* Button */}
-                  <div className="p-4">
-                    <button className="w-full bg-gradient-to-r from-green-500 to-green-700 hover:from-green-600 hover:to-green-800 text-white py-3 rounded-full font-bold transition">
-                      INVEST NOW →
-                    </button>
-                  </div>
+                  </div> */}
+                  {/* Footer Note */}
+                  <p className="mt-4 text-[11px] text-gray-400 text-center tracking-wide">
+                    Smart returns start with smart investments.
+                  </p>
                 </div>
               ))}
             </div>
