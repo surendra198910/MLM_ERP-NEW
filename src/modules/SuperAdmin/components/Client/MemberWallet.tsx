@@ -229,9 +229,9 @@ const MemberWalletsElegant: React.FC = () => {
   };
   const imageBaseUrl = import.meta.env.VITE_IMAGE_PREVIEW_URL;
   return (
-    <div className="trezo-card bg-white dark:bg-[#0c1427] rounded-2xl shadow-lg p-6">
+    <div className="trezo-card bg-white dark:bg-[#0c1427] rounded-2xl shadow-lg">
       {/* ================= HEADER ================= */}
-      <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-4 mb-6">
+      <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-4 py-4 mb-4">
         <div className="text-lg font-bold text-gray-800 dark:text-white">
           Wallet Credit & Debit
         </div>
@@ -263,7 +263,7 @@ sm:px-6
 md:px-10
 min-h-[135px]
 rounded-[14px]
-flex items-center"
+flex items-center mx-4"
       >
         {/* SEARCH MEMBER */}
         <div>
@@ -370,7 +370,7 @@ flex items-center"
       </div>
 
       {/* ================= FORM + TABLE ================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-10">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-5 p-4 px-5">
         {/* ================= WALLET CARDS ================= */}
         <div>
           <div className="flex flex-wrap gap-5">
