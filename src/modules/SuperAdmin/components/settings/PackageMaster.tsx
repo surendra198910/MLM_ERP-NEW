@@ -72,7 +72,7 @@ interface DocumentValue {
 
 interface FormValues {
     companyName: string;
-
+    isPublished: boolean;
     // Package Pricing
     packageType: string;
     minAmount: string;
@@ -240,30 +240,25 @@ const companyValidationSchema = Yup.object().shape({
     minAmount: Yup.string().when("packageType", {
         is: "Flexible",
         then: () => Yup.string().required("Min amount required"),
-        otherwise: () => Yup.string().notRequired(),
     }),
 
     maxAmount: Yup.string().when("packageType", {
         is: "Flexible",
         then: () => Yup.string().required("Max amount required"),
-        otherwise: () => Yup.string().notRequired(),
     }),
 
     amount: Yup.string().when("packageType", {
         is: "Fixed",
         then: () => Yup.string().required("Amount required"),
-        otherwise: () => Yup.string().notRequired(),
-        shortDesc: Yup.string().required("Short description is required"),
-        longDesc: Yup.string().required("Long description is required"),
-
     }),
 
-    validity: Yup.string().required("Validity is required"),
+    shortDesc: Yup.string().nullable(),
 
-    companyCodePrefix: Yup.string()
-        .matches(/^[A-Z]{1,5}$/, "Only uppercase letters")
-        .required("Code prefix required"),
+    longDesc: Yup.string().nullable(),
+
+    validity: Yup.string().required("Validity is required"),
 });
+
 
 // ----------------------------------------------------------------------
 // MAIN COMPONENT
@@ -315,112 +310,166 @@ export default function AddCompany() {
     const [shipToManuallyEdited, setShipToManuallyEdited] = useState(false);
 
     // Multiple Images
-    const [images, setImages] = useState([]); // [{file, preview, isDefault}]
+    const [images, setImages] = useState([]);
+    // { file, preview, fileName, isDefault, uploading }
+
     const [uploadingIndex, setUploadingIndex] = useState(null);
     // Handle multiple images
-    const handleImagesUpload = (e) => {
+    const handleImagesUpload = async (e) => {
         const files = Array.from(e.target.files);
 
         if (!files.length) return;
 
-        const newImages = files.map((file) => {
+        for (let file of files) {
+
             if (file.size > 2 * 1024 * 1024) {
                 toast.error(`${file.name} is larger than 2MB`);
-                return null;
+                continue;
             }
 
-            return {
+            // Preview immediately
+            const preview = URL.createObjectURL(file);
+
+            const tempImage = {
                 file,
-                preview: URL.createObjectURL(file),
-                isDefault: false,
+                preview,
+                fileName: "",
+                isDefault: images.length === 0, // 🔥 First image = default
+                uploading: true,
             };
-        }).filter(Boolean);
 
-        setImages((prev) => {
-            // First image default if none exists
-            const hasDefault = prev.some((img) => img.isDefault);
 
-            if (!hasDefault && newImages.length > 0) {
-                newImages[0].isDefault = true;
+            // Add temp image first
+            setImages((prev) => [...prev, tempImage]);
+
+            try {
+
+                /* ===== Upload via PostService ===== */
+
+                const fd = new FormData();
+                fd.append("UploadedImage", file);
+                fd.append("pagename", "EmpDoc");
+
+                const res = await postDocument(fd);
+
+                const uploadedFileName = res?.fileName || res?.Message;
+
+                if (!uploadedFileName) {
+                    toast.error("Image upload failed");
+                    continue;
+                }
+
+                /* ===== Update uploaded image ===== */
+
+                setImages((prev) =>
+                    prev.map((img) =>
+                        img.preview === preview
+                            ? {
+                                ...img,
+                                fileName: uploadedFileName,
+                                uploading: false,
+                            }
+                            : img
+                    )
+                );
+
+            } catch (err) {
+
+                console.error("Image upload error:", err);
+                toast.error("Image upload failed");
+
+                // Remove failed upload
+                setImages((prev) =>
+                    prev.filter((img) => img.preview !== preview)
+                );
             }
-
-            return [...prev, ...newImages];
-        });
+        }
     };
+
+
+    // Prepare Images JSON for DB
+    const imagesPayload = images
+        .filter((img) => img.fileName) // only uploaded
+        .map((img, index) => ({
+            ImageName: img.fileName,
+            IsDefault: img.isDefault ? 1 : 0,
+            Position: index + 1,
+        }));
 
 
     // Remove image
     // Remove image with confirmation
-const removeImage = (index) => {
-  Swal.fire({
-    title: "Delete this image?",
-    text: "This image will be permanently removed.",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonText: "Yes, delete",
-    cancelButtonText: "Cancel",
-    confirmButtonColor: "#ef4444",
-    cancelButtonColor: "#9ca3af",
-    reverseButtons: true,
-  }).then((result) => {
-    if (!result.isConfirmed) return;
+    const removeImage = (index) => {
+        Swal.fire({
+            title: "Delete this image?",
+            text: "This image will be permanently removed.",
+            icon: "warning",
+            showCancelButton: true,
+            confirmButtonText: "Yes, delete",
+            cancelButtonText: "Cancel",
+            confirmButtonColor: "#ef4444",
+            cancelButtonColor: "#9ca3af",
+            reverseButtons: true,
+        }).then((result) => {
+            if (!result.isConfirmed) return;
 
-    setImages((prev) => {
-      const updated = [...prev];
-      const removed = updated.splice(index, 1)[0];
+            setImages((prev) => {
+                const updated = [...prev];
+                const removed = updated.splice(index, 1)[0];
 
-      // If default removed, set first as default
-      if (removed?.isDefault && updated.length > 0) {
-        updated[0].isDefault = true;
-      }
+                // If default removed, set first as default
+                if (removed?.isDefault && updated.length > 0) {
+                    updated[0].isDefault = true;
+                }
 
-      return updated;
-    });
+                return updated;
+            });
 
-    Swal.fire({
-      title: "Deleted!",
-      text: "Image has been removed.",
-      icon: "success",
-      timer: 1200,
-      showConfirmButton: false,
-    });
-  });
-};
+            Swal.fire({
+                title: "Deleted!",
+                text: "Image has been removed.",
+                icon: "success",
+                timer: 1200,
+                showConfirmButton: false,
+            });
+        });
+    };
 
 
 
     // Set default image
-   // Set default image with confirmation
-const setDefaultImage = (index) => {
-  Swal.fire({
-    title: "Set as Default Image?",
-    text: "This image will be used as the main/default image.",
-    icon: "question",
-    showCancelButton: true,
-    confirmButtonText: "Yes, set default",
-    cancelButtonText: "Cancel",
-    confirmButtonColor: "#22c55e", // green
-    cancelButtonColor: "#9ca3af", // gray
-    reverseButtons: true,
-  }).then((result) => {
-    if (!result.isConfirmed) return;
+    // Set default image with confirmation
+    const setDefaultImage = (index) => {
+        Swal.fire({
+            title: "Set as Default Image?",
+            text: "This image will be used as the main/default image.",
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonText: "Yes, set default",
+            cancelButtonText: "Cancel",
+            confirmButtonColor: "#22c55e", // green
+            cancelButtonColor: "#9ca3af", // gray
+            reverseButtons: true,
+        }).then((result) => {
+            if (!result.isConfirmed) return;
 
-    setImages((prev) =>
-      prev.map((img, i) => ({
-        ...img,
-        isDefault: i === index,
-      }))
-    );
+            setImages((prev) =>
+                prev.map((img, i) => ({
+                    ...img,
+                    isDefault: i === index,
+                }))
+            );
 
-    Swal.fire({
-      title: "Updated!",
-      text: "Default image has been changed.",
-      icon: "success",
-      timer: 1200,
-      showConfirmButton: false,
-    });
-  });
-};
+            Swal.fire({
+                title: "Updated!",
+                text: "Default image has been changed.",
+                icon: "success",
+                timer: 1200,
+                showConfirmButton: false,
+            });
+        });
+    };
+
 
 
     const editDisabled = {
@@ -438,7 +487,7 @@ const setDefaultImage = (index) => {
     };
     const initialValues: FormValues = {
         companyName: "",
-
+        isPublished: true,
         packageType: "",
         minAmount: "",
         maxAmount: "",
@@ -691,7 +740,7 @@ const setDefaultImage = (index) => {
                     validity: data.Validity || "",
 
                     companyCodePrefix: data.CompanyCodePrefix || "",
-
+                    isPublished: data.IsPublished === 1,
                     shortDesc: data.ShortDesc || "", // ✅
                     longDesc: data.LongDesc || "",   // ✅
                 };
@@ -910,101 +959,140 @@ const setDefaultImage = (index) => {
 
     const handleSubmit = async (
         values: FormValues,
-        { resetForm }: FormikHelpers<FormValues>,
+        { resetForm, setSubmitting }: FormikHelpers<FormValues>
     ) => {
+
         setLoading(true);
-        const documentsArray = masterDocuments
-            .map((doc) => {
-                const userEntry = docValues[doc.DocumentId];
-
-                // Edit mode: send all docs
-                if (isEditMode) {
-                    return {
-                        DocumentId: Number(doc.DocumentId),
-                        DocumentName: doc.DocumentName,
-                        DocumentNumber: userEntry?.number || "",
-                        File: userEntry?.isDeleted ? "" : userEntry?.fileName || "",
-                        IsDeleted: userEntry?.isDeleted ? "Y" : "N", // ✅ IMPORTANT
-                    };
-                }
-
-                // Insert mode: only send filled ones
-                if (userEntry?.fileName || userEntry?.number) {
-                    return {
-                        DocumentId: Number(doc.DocumentId),
-                        DocumentName: doc.DocumentName,
-                        DocumentNumber: userEntry.number || "",
-                        File: userEntry.fileName || "",
-                        IsDeleted: "N",
-                    };
-                }
-
-                return null;
-            })
-            .filter(Boolean);
 
         try {
+
+            /* ================= PRICE LOGIC ================= */
+
+            let minPrice: string | null = null;
+            let maxPrice: string | null = null;
+
+            if (values.packageType === "Fixed") {
+                // Fixed → Same value for Min & Max
+                minPrice = values.amount || null;
+                maxPrice = values.amount || null;
+            }
+            else if (values.packageType === "Flexible") {
+                // Flexible → Use Min / Max
+                minPrice = values.minAmount || null;
+                maxPrice = values.maxAmount || null;
+            }
+
+
+            /* ================= IMAGES ================= */
+
+            const imagesPayload = images.map((img, index) => ({
+                ImageName: img.fileName,
+                IsDefault: img.isDefault ? 1 : 0,
+                Position: index + 1,
+            }));
+
+
+            /* ================= USER ================= */
+
+            const saved = localStorage.getItem("EmployeeDetails");
+            const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
+
+
+            /* ================= MODE ================= */
+
+            const actionMode = isEditMode ? "Update" : "Insert";
+
+
+            /* ================= PAYLOAD ================= */
+
             const payload = {
-                procName: "Package",
+                procName: "CreatePackage", // ✅ Stored Procedure
                 Para: JSON.stringify({
-                    ActionMode: isEditMode ? "Update" : "Insert",
-                    EditId: isEditMode ? Number(id) : "",
 
-                    CompanyName: values.companyName,
+                    ActionMode: actionMode,
 
-                    PackageType: values.packageType,
-                    MinAmount: values.minAmount,
-                    MaxAmount: values.maxAmount,
-                    Amount: values.amount,
+                    // For Update (if needed later)
+                    // ProductId: isEditMode ? Number(id) : null,
 
-                    Validity: values.validity,
+                    CompanyId: 1,
+                    CategoryId: 1,
+
+                    Type: values.packageType,
+                    ProductName: values.companyName,
+
+                    // ✅ Correct price values
+                    MinAmount: minPrice,
+                    MaxAmount: maxPrice,
+
+                    Publish: values.isPublished ? 1 : 0,
+
                     ShortDesc: values.shortDesc,
                     LongDesc: values.longDesc,
-                    CompanyCodePrefix: values.companyCodePrefix,
+
+                    Validity: values.validity,
+
+                    EntryBy: employeeId,
+
+                    ImagesJson: JSON.stringify(imagesPayload),
                 }),
-
             };
-            const response = await universalService(payload);
-            const res = Array.isArray(response) ? response[0] : response?.data?.[0];
 
-            if (res?.statuscode === "1" || res?.statuscode === "2") {
-                Swal.fire({
-                    title: isEditMode ? "Updated!" : "Success!",
-                    text: res?.msg || "Action completed successfully.",
-                    icon: "success",
-                    confirmButtonText: "OK",
-                    confirmButtonColor: "#3b82f6",
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        if (!isEditMode) {
-                            resetForm();
-                            setCompanyLogo("");
-                            setDocValues({});
-                            setTab(0);
-                        }
-                        navigate("/superadmin/company/manage-company/branch");
-                    }
-                });
+
+            /* ================= API ================= */
+
+            const response = await universalService(payload);
+
+            const res = Array.isArray(response)
+                ? response[0]
+                : response?.data?.[0];
+
+
+            /* ================= RESULT ================= */
+
+            if (res?.StatusCode == 1 || res?.statuscode == 1) {
+
+                Swal.fire(
+                    "Success",
+                    res?.Msg || "Saved Successfully",
+                    "success"
+                );
+
+                if (!isEditMode) {
+                    resetForm();
+                    setImages([]);
+                    setTab(0);
+                }
+
+                navigate("/superadmin/company/manage-company/branch");
+
             } else {
-                Swal.fire({
-                    title: "Error",
-                    text: res?.msg || "Operation failed",
-                    icon: "error",
-                    confirmButtonText: "OK",
-                });
+
+                Swal.fire(
+                    "Error",
+                    res?.Msg || "Operation Failed",
+                    "error"
+                );
             }
-        } catch (error) {
-            console.error("Submit Error", error);
-            Swal.fire({
-                title: "Error",
-                text: "Something went wrong during submission.",
-                icon: "error",
-                confirmButtonText: "OK",
-            });
+
+        } catch (err) {
+
+            console.error("Submit Error:", err);
+
+            Swal.fire(
+                "Error",
+                "Server error. Please try again.",
+                "error"
+            );
+
         } finally {
+
             setLoading(false);
+            setSubmitting(false);
         }
     };
+
+
+
 
     // UPDATED: Added dark mode text color for labels
     const InputField = ({
@@ -1030,6 +1118,7 @@ const setDefaultImage = (index) => {
                     label
                 )}
             </label>
+
             <input
                 name={name}
                 type={type}
@@ -1037,19 +1126,23 @@ const setDefaultImage = (index) => {
                 value={values[name] || ""}
                 onChange={handleChange}
                 disabled={disabled}
-                className={`${bigInputClasses} ${disabled
-                    ? "bg-gray-100 cursor-not-allowed opacity-70 dark:bg-gray-800 dark:text-gray-400"
+                className={`${bigInputClasses} ${errors[name] && touched[name]
+                    ? "border-red-500 focus:ring-red-500"
                     : ""
-                    } ${errors[name] && touched[name]
-                        ? "border-red-500 focus:ring-red-500"
-                        : ""
                     }`}
             />
-            {errors[name] && touched[name] && (
-                <span className="text-xs text-red-600 mt-1">{errors[name]}</span>
-            )}
+
+            {/* 🔥 Reserve space always */}
+            <div className="min-h-[16px] mt-1">
+                {errors[name] && touched[name] && (
+                    <span className="text-xs text-red-600">
+                        {errors[name]}
+                    </span>
+                )}
+            </div>
         </div>
     );
+
 
     // UPDATED: Added dark mode text color for labels
     const SelectField = ({
@@ -1147,6 +1240,23 @@ const setDefaultImage = (index) => {
             )}
         </div>
     );
+    // ---------------- TOGGLE SWITCH ----------------
+    const ToggleSwitch = ({ name, value, onChange }) => {
+        return (
+            <button
+                type="button"
+                onClick={() => onChange(name, !value)}
+                className={`relative inline-flex h-6 w-12 items-center rounded-full transition-colors duration-200
+        ${value ? "bg-primary-button-bg" : "bg-gray-300 dark:bg-gray-600"}`}
+            >
+                <span
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform duration-200
+          ${value ? "translate-x-6" : "translate-x-1"}`}
+                />
+            </button>
+        );
+    };
+
 
     const tabs = [
         { label: "Pricing", icon: <FaRegAddressCard size={18} /> },
@@ -1270,19 +1380,7 @@ const setDefaultImage = (index) => {
                     onSubmit={handleSubmit}
                     className="relative bg-white dark:bg-[#0c1427] dark:text-gray-100 rounded-lg mb-10"
                 >
-                    <FormObserver
-                        setStates={setStates}
-                        setCities={setCities}
-                        setLoadingStates={setLoadingStates}
-                        setLoadingCities={setLoadingCities}
-                        fetchDDL={fetchDDL}
-                        normalizeDDL={normalizeDDL}
-                        countries={countries}
-                        states={states}
-                        cities={cities}
-                        billToManuallyEdited={billToManuallyEdited}
-                        shipToManuallyEdited={shipToManuallyEdited}
-                    />
+
 
                     {(loading || isSubmitting || permissionLoading) && (
                         <div className="absolute inset-0 z-50 bg-white/50 dark:bg-[#0c1427] /50 backdrop-blur-sm flex items-center justify-center rounded-lg">
@@ -1304,29 +1402,18 @@ const setDefaultImage = (index) => {
                             >
                                 Back
                             </button>
-                            <PermissionAwareTooltip
-                                allowed={
-                                    !permissionLoading &&
-                                    (isEditMode ? canEditCompany : canAddCompany)
-                                }
-                                allowedText="Submit Package"
-                                deniedText="You do not have permission"
+                            <button
+                                type="submit"
+                                disabled={loading || isSubmitting}
+                                className={`px-4 py-1.5 rounded text-sm font-medium flex items-center gap-2
+    ${loading || isSubmitting
+                                        ? "bg-gray-300 text-white cursor-not-allowed"
+                                        : "bg-primary-button-bg hover:bg-primary-button-bg-hover text-white"
+                                    }`}
                             >
-                                <button
-                                    type="submit"
-                                    disabled={
-                                        permissionLoading ||
-                                        (isEditMode ? !canEditCompany : !canAddCompany)
-                                    }
-                                    className={`px-4 py-1.5 rounded text-sm font-medium flex items-center gap-2
-      ${permissionLoading || (isEditMode ? !canEditCompany : !canAddCompany)
-                                            ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                                            : "bg-primary-500 hover:bg-primary-600 text-primary-50"
-                                        }`}
-                                >
-                                    Submit
-                                </button>
-                            </PermissionAwareTooltip>
+                                {loading || isSubmitting ? "Submitting..." : "Submit"}
+                            </button>
+
                         </div>
                     </div>
 
@@ -1336,7 +1423,7 @@ const setDefaultImage = (index) => {
 
                             {/* --- RIGHT: FORM FIELDS --- */}
                             <div className="flex-1 w-full">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+                                <div className="grid grid-cols-1 md:grid-cols-4 gap-5 items-end">
                                     <InputField
                                         label="Package Name:*"
                                         name="companyName"
@@ -1351,21 +1438,36 @@ const setDefaultImage = (index) => {
 
                                     <div className="flex flex-col">
                                         <label className="text-sm text-gray-700 dark:text-gray-300 mb-1">
-                                            Package Type
+                                            Package Type<span className="text-red-500 ml-0.5">*</span>
                                         </label>
 
                                         <select
                                             name="packageType"
                                             value={values.packageType || ""}
                                             onChange={handleChange}
-                                            className="border border-gray-300 dark:border-gray-700 rounded px-3 py-2 text-sm h-10
-               bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200"
+                                            onBlur={() => setFieldValue("packageType", values.packageType)}
+                                            className={`border rounded px-3 py-2 text-sm h-10
+      bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200
+      ${errors.packageType && touched.packageType
+                                                    ? "border-red-500 focus:ring-red-500"
+                                                    : "border-gray-300 dark:border-gray-700"
+                                                }`}
                                         >
                                             <option value="">Select Package Type</option>
                                             <option value="Flexible">Flexible</option>
                                             <option value="Fixed">Fixed</option>
                                         </select>
+
+                                        {/* Error Message */}
+                                        <div className="min-h-[16px] mt-1">
+                                            {errors.packageType && touched.packageType && (
+                                                <span className="text-xs text-red-600">
+                                                    {errors.packageType}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
+
 
 
                                     <InputField
@@ -1378,6 +1480,33 @@ const setDefaultImage = (index) => {
                                         touched={touched}
                                     />
 
+                                    {/* Publish Toggle */}
+                                    {/* Publish Toggle */}
+                                    <div className="flex flex-col">
+                                        {/* Fake label to match height */}
+                                        <label className="text-sm text-gray-700 dark:text-gray-300 mb-1">
+                                            &nbsp;
+                                        </label>
+
+                                        {/* Toggle Box (same height as input) */}
+                                        <div className="flex items-center justify-between h-10
+    border border-gray-300 dark:border-gray-700
+    rounded-md px-3 bg-white dark:bg-gray-800"
+                                        >
+                                            <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                                                Publish on Website
+                                            </span>
+
+                                            <ToggleSwitch
+                                                name="isPublished"
+                                                value={values.isPublished}
+                                                onChange={setFieldValue}
+                                            />
+                                        </div>
+
+                                        {/* 🔥 Reserve error space (VERY IMPORTANT) */}
+                                        <div className="min-h-[16px] mt-1"></div>
+                                    </div>
 
                                 </div>
                             </div>
@@ -1395,8 +1524,8 @@ const setDefaultImage = (index) => {
                                         onClick={() => setTab(i)}
                                         // FIX APPLIED: flex-shrink-0 prevents the buttons from getting squashed
                                         className={`pb-2 px-5 text-sm font-medium transition-colors flex items-center gap-2 flex-shrink-0 ${tab === i
-                                            ? "border-b-2 border-primary-500 text-primary-500"
-                                            : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border-b-2 border-transparent"
+                                            ? "border-b-2 border-primary-button-bg text-primary-button-bg"
+                                            : "text-gray-500 dark:text-gray-400 hover:text-primary-button-bg dark:hover:text-gray-200 border-b-2 border-transparent"
                                             }`}
                                     >
                                         {t.icon}
@@ -1472,8 +1601,8 @@ const setDefaultImage = (index) => {
                                     <label
                                         htmlFor="imageUpload"
                                         className="inline-flex items-center gap-2 px-4 py-2 
-        bg-primary-500 text-white rounded-md cursor-pointer 
-        hover:bg-primary-600 transition shadow"
+        bg-primary-button-bg text-white rounded-md cursor-pointer 
+        hover:bg-primary-button-bg-hover transition shadow"
                                     >
                                         <FaUpload />
                                         Upload Images
