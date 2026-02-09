@@ -61,6 +61,7 @@ import ManageClient from "../components/Client/ManageClient"
 import MemberInvestment from "../components/Client/MemberInvestment.js";
 import PackageMaster from "../components/settings/PackageMaster.js";
 import ROISetting from "../components/settings/ROISetting.js";
+import ManagePackage from "../components/settings/ManagePackage.js";
 
 const AppRoutes = () => {
   const [active, setActive] = useState(false);
@@ -253,6 +254,7 @@ const AppRoutes = () => {
             <Route path="/superadmin/client/member-investment" element={<MemberInvestment/>} />
             <Route path="/superadmin/mlm-setting/add-package" element={<PackageMaster/>} />
             <Route path="/superadmin/mlm-setting/roi-setting" element={<ROISetting/>} />
+            <Route path="/superadmin/mlm-setting/manage-package" element={<ManagePackage/>} />
           </Routes>
 
           {/* Footer */}
