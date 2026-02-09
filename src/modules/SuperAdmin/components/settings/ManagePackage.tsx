@@ -119,7 +119,8 @@ const Template: React.FC = () => {
 
             {/* ================= HEADER ================= */}
 
-            <div className="flex items-center justify-between pb-5 border-b border-gray-200 mb-5">
+            <div className="flex items-center justify-between pb-5 border-b border-gray-200 mb-5 -mx-7 px-5">
+
 
                 <h5 className="font-bold text-xl text-black dark:text-white">
                     Manage Packages
@@ -127,7 +128,7 @@ const Template: React.FC = () => {
 
                 <button
                     onClick={() => navigate("/superadmin/mlm-setting/add-package")}
-                    className="px-6 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded text-sm font-medium"
+                    className="px-6 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover text-white rounded text-sm font-medium"
                 >
                     + Add Package
                 </button>
@@ -197,9 +198,43 @@ const Template: React.FC = () => {
 
                                     ) : (
 
-                                        <div className="w-full h-full flex items-center justify-center text-xs text-gray-400">
-                                            No Image
+                                        <div className="w-full h-full flex items-center justify-center">
+                                            <svg
+                                                viewBox="0 0 64 64"
+                                                className="w-14 h-14"
+                                                xmlns="http://www.w3.org/2000/svg"
+                                            >
+                                                <defs>
+                                                    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+                                                        <stop offset="0%" stopColor="#60a5fa" />
+                                                        <stop offset="100%" stopColor="#6366f1" />
+                                                    </linearGradient>
+                                                    <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
+                                                        <stop offset="0%" stopColor="#93c5fd" />
+                                                        <stop offset="100%" stopColor="#818cf8" />
+                                                    </linearGradient>
+                                                </defs>
+
+                                                {/* Top face */}
+                                                <polygon
+                                                    points="32,6 54,18 32,30 10,18"
+                                                    fill="url(#g2)"
+                                                />
+
+                                                {/* Left face */}
+                                                <polygon
+                                                    points="10,18 32,30 32,56 10,44"
+                                                    fill="url(#g1)"
+                                                />
+
+                                                {/* Right face */}
+                                                <polygon
+                                                    points="54,18 32,30 32,56 54,44"
+                                                    fill="#4f46e5"
+                                                />
+                                            </svg>
                                         </div>
+
 
                                     )}
 
@@ -214,38 +249,55 @@ const Template: React.FC = () => {
                             <div className="mt-5 text-center">
 
                                 <p className="text-3xl font-bold bg-gradient-to-r
-                from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+from-blue-600 to-indigo-600 bg-clip-text text-transparent">
 
-                                    $ {pkg.MinAmount} - {pkg.MaxAmount}
+                                    {pkg.MinAmount === pkg.MaxAmount
+                                        ? `$${pkg.MinAmount}`
+                                        : `$${pkg.MinAmount} - $${pkg.MaxAmount}`}
 
                                 </p>
+
 
                             </div>
 
                             {/* Details */}
-                            <div className="mt-5 bg-blue-50/60 dark:bg-[#0f172a]
-              border border-blue-100 dark:border-blue-900/40
-              rounded-2xl p-4 space-y-3 text-sm">
+                            <div className="mt-5 
+    bg-gradient-to-br from-blue-50 to-indigo-50
+    dark:from-[#0f172a] dark:to-[#020617]
+    border border-blue-100 dark:border-blue-900/40
+    rounded-2xl p-5 space-y-4 text-sm shadow-inner">
 
-                                <div className="flex justify-between">
-                                    <span className="text-gray-500 dark:text-gray-400">
-                                        Type
-                                    </span>
-                                    <span className="font-semibold">
+                                {/* Type */}
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                                        <span className="text-xs uppercase tracking-wide">
+                                            Type
+                                        </span>
+                                    </div>
+
+                                    <span className="font-semibold text-gray-900 dark:text-white">
                                         {pkg.Type}
                                     </span>
                                 </div>
 
-                                <div className="flex justify-between">
-                                    <span className="text-gray-500 dark:text-gray-400">
-                                        Validity
-                                    </span>
-                                    <span className="font-semibold">
+                                {/* Divider */}
+                                <div className="h-px bg-gradient-to-r from-transparent via-blue-200 dark:via-blue-800 to-transparent" />
+
+                                {/* Validity */}
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+                                        <span className="text-xs uppercase tracking-wide">
+                                            Validity
+                                        </span>
+                                    </div>
+
+                                    <span className="font-semibold text-gray-900 dark:text-white">
                                         {pkg.Validity} Days
                                     </span>
                                 </div>
 
                             </div>
+
 
                             {/* Actions */}
                             <div className="mt-5 flex justify-between items-center gap-2">
@@ -253,7 +305,7 @@ const Template: React.FC = () => {
                                 {/* Edit */}
                                 <button
                                     onClick={() =>
-                                        navigate(`/superadmin/package/edit/${pkg.ProductId}`)
+                                        navigate(`/superadmin/mlm-setting/add-package/${pkg.ProductId}`)
                                     }
                                     className="flex items-center gap-1 px-3 py-1.5
                   bg-blue-500 hover:bg-blue-600

@@ -311,6 +311,8 @@ export default function AddCompany() {
 
     // Multiple Images
     const [images, setImages] = useState([]);
+    const [cropIndex, setCropIndex] = useState<number | null>(null);
+
     // { file, preview, fileName, isDefault, uploading }
 
     const [uploadingIndex, setUploadingIndex] = useState(null);
@@ -320,71 +322,81 @@ export default function AddCompany() {
 
         if (!files.length) return;
 
-        for (let file of files) {
+        /* ================= VALIDATION ================= */
 
-            if (file.size > 2 * 1024 * 1024) {
-                toast.error(`${file.name} is larger than 2MB`);
-                continue;
-            }
+        if (files.length > 1) {
+            toast.error("Please select only one image at a time.");
+            return;
+        }
 
-            // Preview immediately
+        const file = files[0];
+
+        if (file.size > 2 * 1024 * 1024) {
+            toast.error(`${file.name} is larger than 2MB`);
+            return;
+        }
+
+        /* ================= OPEN CROPPER ================= */
+
+        const reader = new FileReader();
+        reader.onload = () => {
+            setRawImage(reader.result as string);
+            setShowCropper(true);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    const handleCroppedImage = async (croppedBase64: string) => {
+        try {
+            // convert base64 → file
+            const res = await fetch(croppedBase64);
+            const blob = await res.blob();
+            const file = new File([blob], `package_${Date.now()}.png`, {
+                type: blob.type,
+            });
+
             const preview = URL.createObjectURL(file);
 
             const tempImage = {
                 file,
                 preview,
                 fileName: "",
-                isDefault: images.length === 0, // 🔥 First image = default
+                isDefault: images.length === 0,
                 uploading: true,
             };
 
-
-            // Add temp image first
             setImages((prev) => [...prev, tempImage]);
 
-            try {
+            const fd = new FormData();
+            fd.append("UploadedImage", file);
+            fd.append("pagename", "EmpDoc");
 
-                /* ===== Upload via PostService ===== */
+            const uploadRes = await postDocument(fd);
+            const uploadedFileName =
+                uploadRes?.fileName || uploadRes?.Message;
 
-                const fd = new FormData();
-                fd.append("UploadedImage", file);
-                fd.append("pagename", "EmpDoc");
-
-                const res = await postDocument(fd);
-
-                const uploadedFileName = res?.fileName || res?.Message;
-
-                if (!uploadedFileName) {
-                    toast.error("Image upload failed");
-                    continue;
-                }
-
-                /* ===== Update uploaded image ===== */
-
-                setImages((prev) =>
-                    prev.map((img) =>
-                        img.preview === preview
-                            ? {
-                                ...img,
-                                fileName: uploadedFileName,
-                                uploading: false,
-                            }
-                            : img
-                    )
-                );
-
-            } catch (err) {
-
-                console.error("Image upload error:", err);
+            if (!uploadedFileName) {
                 toast.error("Image upload failed");
-
-                // Remove failed upload
-                setImages((prev) =>
-                    prev.filter((img) => img.preview !== preview)
-                );
+                return;
             }
+
+            setImages((prev) =>
+                prev.map((img) =>
+                    img.preview === preview
+                        ? {
+                            ...img,
+                            fileName: uploadedFileName,
+                            uploading: false,
+                        }
+                        : img
+                )
+            );
+        } catch (err) {
+            console.error("Cropped upload error:", err);
+            toast.error("Image upload failed");
         }
     };
+
 
 
     // Prepare Images JSON for DB
@@ -487,7 +499,7 @@ export default function AddCompany() {
     };
     const initialValues: FormValues = {
         companyName: "",
-        isPublished: true,
+        isPublished: false,
         packageType: "",
         minAmount: "",
         maxAmount: "",
@@ -672,19 +684,7 @@ export default function AddCompany() {
         }
     }, [universalService]);
 
-    useEffect(() => {
-        const loadBasics = async () => {
-            const countryData = await fetchDDL({
-                tbl: "master.country",
-                searchField: "countryname",
-            });
-            setCountries(normalizeDDL(countryData, "id", "name"));
-            fetchMasterDocuments();
-            fetchParentCompanies();
-            fetchCurrencies();
-        };
-        loadBasics();
-    }, [normalizeDDL]);
+
 
     useEffect(() => {
         // 🔥 SWITCHED TO ADD MODE (Edit → Add)
@@ -713,12 +713,13 @@ export default function AddCompany() {
                 setInitialLoading(true);
 
                 const payload = {
-                    procName: "Package",
+                    procName: "CreatePackage",
                     Para: JSON.stringify({
                         ActionMode: "Select",
-                        EditId: Number(id),
+                        ProductId: Number(id),
                     }),
                 };
+
 
                 const res = await universalService(payload);
                 const data = res?.data?.[0] || res?.[0];
@@ -730,23 +731,50 @@ export default function AddCompany() {
 
                 // ---------- FORM VALUES ----------
                 const newForm: FormValues = {
-                    companyName: data.CompanyName || "",
+                    companyName: data.ProductName || "",
 
-                    packageType: data.PackageType || "",
-                    minAmount: data.MinAmount || "",
-                    maxAmount: data.MaxAmount || "",
-                    amount: data.Amount || "",
+                    packageType: data.Type || "",
 
-                    validity: data.Validity || "",
+                    minAmount: data.MinAmount ? String(data.MinAmount) : "",
+                    maxAmount: data.MaxAmount ? String(data.MaxAmount) : "",
+                    amount:
+                        data.MinAmount && data.MinAmount === data.MaxAmount
+                            ? String(data.MinAmount)
+                            : "",
 
-                    companyCodePrefix: data.CompanyCodePrefix || "",
-                    isPublished: data.IsPublished === 1,
-                    shortDesc: data.ShortDesc || "", // ✅
-                    longDesc: data.LongDesc || "",   // ✅
+                    validity: data.Validity ? String(data.Validity) : "",
+
+                    companyCodePrefix: "",
+
+                    isPublished: data.Publish === 1 || data.Publish === true,
+
+
+                    shortDesc: data.ShortDescription || "",
+                    longDesc: data.LongDescription || "",
                 };
 
 
+
                 setForm(newForm);
+
+                /* ================= LOAD IMAGES IN EDIT ================= */
+                if (data.ImagesJson) {
+                    try {
+                        const imgs = JSON.parse(data.ImagesJson);
+
+                        const loadedImages = imgs.map((img: any) => ({
+                            preview: `${IMAGE_PREVIEW_URL}${img.ImagePath}`,
+                            fileName: img.ImagePath,
+                            isDefault: img.IsDefault === 1 || img.IsDefault === true,
+                            uploading: false,
+                        }));
+
+                        setImages(loadedImages);
+                    } catch (err) {
+                        console.error("Image JSON parse error:", err);
+                    }
+                }
+
 
                 // ---------- DOCUMENTS ----------
                 if (data.CompanyDocuments) {
@@ -957,139 +985,135 @@ export default function AddCompany() {
         });
     };
 
-    const handleSubmit = async (
-        values: FormValues,
-        { resetForm, setSubmitting }: FormikHelpers<FormValues>
-    ) => {
+const handleSubmit = async (
+    values: FormValues,
+    { resetForm, setSubmitting }: FormikHelpers<FormValues>
+) => {
 
-        setLoading(true);
+    const confirm = await Swal.fire({
+        title: isEditMode ? "Update Package?" : "Create Package?",
+        text: isEditMode
+            ? "Are you sure you want to update this package?"
+            : "Are you sure you want to create this package?",
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonText: isEditMode ? "Yes, Update" : "Yes, Create",
+        cancelButtonText: "Cancel",
+        confirmButtonColor: "#3085d6",
+    });
 
-        try {
+    if (!confirm.isConfirmed) return;
 
-            /* ================= PRICE LOGIC ================= */
+    setLoading(true);
 
-            let minPrice: string | null = null;
-            let maxPrice: string | null = null;
+    try {
 
-            if (values.packageType === "Fixed") {
-                // Fixed → Same value for Min & Max
-                minPrice = values.amount || null;
-                maxPrice = values.amount || null;
-            }
-            else if (values.packageType === "Flexible") {
-                // Flexible → Use Min / Max
-                minPrice = values.minAmount || null;
-                maxPrice = values.maxAmount || null;
-            }
+        /* ================= PRICE LOGIC ================= */
 
+        let minPrice: string | null = null;
+        let maxPrice: string | null = null;
 
-            /* ================= IMAGES ================= */
+        if (values.packageType === "Fixed") {
+            minPrice = values.amount || null;
+            maxPrice = values.amount || null;
+        }
+        else if (values.packageType === "Flexible") {
+            minPrice = values.minAmount || null;
+            maxPrice = values.maxAmount || null;
+        }
 
-            const imagesPayload = images.map((img, index) => ({
-                ImageName: img.fileName,
-                IsDefault: img.isDefault ? 1 : 0,
-                Position: index + 1,
-            }));
+        /* ================= IMAGES ================= */
 
+        const imagesPayload = images.map((img, index) => ({
+            ImageName: img.fileName,
+            IsDefault: img.isDefault ? 1 : 0,
+            Position: index + 1,
+        }));
 
-            /* ================= USER ================= */
+        /* ================= USER ================= */
 
-            const saved = localStorage.getItem("EmployeeDetails");
-            const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
+        const saved = localStorage.getItem("EmployeeDetails");
+        const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
 
+        /* ================= MODE ================= */
 
-            /* ================= MODE ================= */
+        const actionMode = isEditMode ? "Update" : "Insert";
 
-            const actionMode = isEditMode ? "Update" : "Insert";
+        /* ================= BASE DATA ================= */
 
+        const packageData: any = {
+            ActionMode: actionMode,
+            CompanyId: 1,
+            CategoryId: 1,
+            Type: values.packageType,
+            ProductName: values.companyName,
+            MinAmount: minPrice,
+            MaxAmount: maxPrice,
+            SalePrice: minPrice,
+            Publish: values.isPublished ? 1 : 0,
+            ShortDesc: values.shortDesc,
+            LongDesc: values.longDesc,
+            Validity: values.validity,
+            EntryBy: employeeId,
+            ImagesJson: JSON.stringify(imagesPayload),
+        };
 
-            /* ================= PAYLOAD ================= */
+        if (isEditMode) {
+            packageData.ProductId = Number(id);
+        }
 
-            const payload = {
-                procName: "CreatePackage", // ✅ Stored Procedure
-                Para: JSON.stringify({
+        const payload = {
+            procName: "CreatePackage",
+            Para: JSON.stringify(packageData),
+        };
 
-                    ActionMode: actionMode,
+        const response = await universalService(payload);
 
-                    // For Update (if needed later)
-                    // ProductId: isEditMode ? Number(id) : null,
+        const res = Array.isArray(response)
+            ? response[0]
+            : response?.data?.[0];
 
-                    CompanyId: 1,
-                    CategoryId: 1,
+        if (res?.StatusCode == 1 || res?.statuscode == 1) {
 
-                    Type: values.packageType,
-                    ProductName: values.companyName,
+            Swal.fire(
+                "Success",
+                res?.Msg || "Saved Successfully",
+                "success"
+            );
 
-                    // ✅ Correct price values
-                    MinAmount: minPrice,
-                    MaxAmount: maxPrice,
-
-                    Publish: values.isPublished ? 1 : 0,
-
-                    ShortDesc: values.shortDesc,
-                    LongDesc: values.longDesc,
-
-                    Validity: values.validity,
-
-                    EntryBy: employeeId,
-
-                    ImagesJson: JSON.stringify(imagesPayload),
-                }),
-            };
-
-
-            /* ================= API ================= */
-
-            const response = await universalService(payload);
-
-            const res = Array.isArray(response)
-                ? response[0]
-                : response?.data?.[0];
-
-
-            /* ================= RESULT ================= */
-
-            if (res?.StatusCode == 1 || res?.statuscode == 1) {
-
-                Swal.fire(
-                    "Success",
-                    res?.Msg || "Saved Successfully",
-                    "success"
-                );
-
-                if (!isEditMode) {
-                    resetForm();
-                    setImages([]);
-                    setTab(0);
-                }
-
-                navigate("/superadmin/company/manage-company/branch");
-
-            } else {
-
-                Swal.fire(
-                    "Error",
-                    res?.Msg || "Operation Failed",
-                    "error"
-                );
+            if (!isEditMode) {
+                resetForm();
+                setImages([]);
+                setTab(0);
             }
 
-        } catch (err) {
+            navigate("/superadmin/mlm-setting/manage-package");
 
-            console.error("Submit Error:", err);
+        } else {
 
             Swal.fire(
                 "Error",
-                "Server error. Please try again.",
+                res?.Msg || "Operation Failed",
                 "error"
             );
-
-        } finally {
-
-            setLoading(false);
-            setSubmitting(false);
         }
-    };
+
+    } catch (err) {
+
+        console.error("Submit Error:", err);
+
+        Swal.fire(
+            "Error",
+            "Server error. Please try again.",
+            "error"
+        );
+
+    } finally {
+        setLoading(false);
+        setSubmitting(false);
+    }
+};
+
 
 
 
@@ -1270,7 +1294,7 @@ export default function AddCompany() {
                 <div className="flex flex-col items-center gap-3">
                     <div className="animate-spin w-10 h-10 border-4 border-primary-600 border-t-transparent rounded-full"></div>
                     <span className="text-sm text-gray-500 dark:text-gray-400">
-                        Loading company details...
+                        Loading package details...
                     </span>
                 </div>
             </div>
@@ -1411,8 +1435,13 @@ export default function AddCompany() {
                                         : "bg-primary-button-bg hover:bg-primary-button-bg-hover text-white"
                                     }`}
                             >
-                                {loading || isSubmitting ? "Submitting..." : "Submit"}
+                                {loading || isSubmitting
+                                    ? "Submitting..."
+                                    : isEditMode
+                                        ? "Update Package"
+                                        : "Add Package"}
                             </button>
+
 
                         </div>
                     </div>
@@ -1638,14 +1667,21 @@ export default function AddCompany() {
 
 
                                 {/* Drag Area */}
-                                <div
+                                {/* <div
                                     onDragOver={(e) => e.preventDefault()}
                                     onDrop={(e) => {
                                         e.preventDefault();
+
+                                        if (e.dataTransfer.files.length > 1) {
+                                            toast.error("Please drop only one image at a time.");
+                                            return;
+                                        }
+
                                         handleImagesUpload({
                                             target: { files: e.dataTransfer.files },
                                         });
                                     }}
+
                                     className="border-2 border-dashed border-gray-300 dark:border-gray-700
       rounded-lg p-6 text-center text-gray-500
       hover:border-primary-500 transition"
@@ -1655,7 +1691,7 @@ export default function AddCompany() {
                                     <span className="text-xs">
                                         or click Upload
                                     </span>
-                                </div>
+                                </div> */}
 
 
                                 {/* Preview Grid */}
@@ -1704,6 +1740,17 @@ export default function AddCompany() {
                   hover:scale-105 transition"
                                                         >
                                                             ⭐
+                                                        </button>
+                                                        {/* View */}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => window.open(img.preview, "_blank")}
+                                                            title="View Image"
+                                                            className="w-9 h-9 rounded-full bg-white 
+        text-blue-500 flex items-center justify-center shadow
+        hover:scale-105 transition"
+                                                        >
+                                                            👁
                                                         </button>
 
                                                         {/* Delete */}
@@ -1871,6 +1918,14 @@ export default function AddCompany() {
 
 
                     <ToastContainer position="top-right" autoClose={3000} />
+                    <CropperModal
+                        open={showCropper}
+                        image={rawImage}
+                        aspectRatio={1}
+                        onCrop={handleCroppedImage}
+                        onClose={() => setShowCropper(false)}
+                    />
+
                 </form>
             )}
         </Formik>

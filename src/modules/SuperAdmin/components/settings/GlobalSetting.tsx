@@ -7,7 +7,9 @@ import { ApiService } from "../../../../services/ApiService";
 import { toast, ToastContainer } from "react-toastify";
 import Swal from "sweetalert2";
 import "react-toastify/dist/ReactToastify.css";
-import { FaEdit, FaSave } from "react-icons/fa";
+import { FaEdit, FaSave, FaSitemap, FaShieldAlt, FaProjectDiagram } from "react-icons/fa";
+import { PostService } from "../../../../services/PostService";
+import CropperModal from "../Cropper/Croppermodel";
 
 // -------------------------------------
 // TYPES
@@ -22,6 +24,8 @@ const initialValues = {
   PasswordType: "",
   PlanType: "",
   PlacementType: "",
+  MaleDefaultIcon: "",
+  FemaleDefaultIcon: "",
 };
 
 // -------------------------------------
@@ -44,10 +48,26 @@ const validationSchema = Yup.object().shape({
 
 export default function GlobalSetting() {
   const { universalService } = ApiService();
-
+  const { postDocument } = PostService();
   const [form, setForm] = useState(initialValues);
   const [loading, setLoading] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [maleIcon, setMaleIcon] = useState("");
+  const [femaleIcon, setFemaleIcon] = useState("");
+  const IMAGE_PREVIEW_URL = import.meta.env.VITE_IMAGE_PREVIEW_URL;
+  const [rawMale, setRawMale] = useState("");
+  const [rawFemale, setRawFemale] = useState("");
+  const [showCropper, setShowCropper] = useState(false);
+  const [rawImage, setRawImage] = useState("");
+  const [cropTarget, setCropTarget] = useState<"male" | "female" | null>(null);
+
+
+  const [tab, setTab] = useState(0);
+  const tabs = [
+    { label: "Genealogy Settings", icon: <FaSitemap /> },
+  ];
+
+
 
   // -------------------------------------
   // INPUT STYLE (Same Pattern)
@@ -57,6 +77,107 @@ export default function GlobalSetting() {
     "w-full border border-gray-200 rounded-md px-3 py-2 text-sm h-10 " +
     "focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 " +
     "bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100";
+  const onMaleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image must be under 2MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setRawImage(reader.result as string);
+      setCropTarget("male");
+      setShowCropper(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const onFemaleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Image must be under 2MB");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setRawImage(reader.result as string);
+      setCropTarget("female");
+      setShowCropper(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+
+
+  const deleteMale = async () => {
+    const res = await Swal.fire({
+      title: "Remove Male Icon?",
+      text: "This will remove the default male icon.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, remove",
+    });
+
+    if (res.isConfirmed) {
+      setMaleIcon("");
+      toast.success("Male icon removed. Click Update to save.");
+    }
+  };
+
+  const deleteFemale = async () => {
+    const res = await Swal.fire({
+      title: "Remove Female Icon?",
+      text: "This will remove the default female icon.",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonText: "Yes, remove",
+    });
+
+    if (res.isConfirmed) {
+      setFemaleIcon("");
+      toast.success("Female icon removed. Click Update to save.");
+    }
+  };
+
+  const handleCroppedImage = async (croppedBase64: string) => {
+    try {
+      const res = await fetch(croppedBase64);
+      const blob = await res.blob();
+      const file = new File([blob], `icon_${Date.now()}.png`, {
+        type: blob.type,
+      });
+
+      const fd = new FormData();
+      fd.append("UploadedImage", file);
+      fd.append("pagename", "EmpDoc");
+
+      const uploadRes = await postDocument(fd);
+      const fileName = uploadRes?.fileName || uploadRes?.Message;
+
+      if (!fileName) {
+        toast.error("Upload failed");
+        return;
+      }
+
+      if (cropTarget === "male") {
+        setMaleIcon(fileName);
+      } else if (cropTarget === "female") {
+        setFemaleIcon(fileName);
+      }
+    } catch (err) {
+      console.error("Crop upload error:", err);
+      toast.error("Upload failed");
+    } finally {
+      setShowCropper(false);
+      setCropTarget(null);
+    }
+  };
 
   // -------------------------------------
   // LOAD DATA (GET)
@@ -88,7 +209,14 @@ export default function GlobalSetting() {
         PasswordType: data.PasswordType || "",
         PlanType: data.PlanType || "",
         PlacementType: data.PlacementType || "",
+        MaleDefaultIcon: data.MaleDefaultIcon || "",
+        FemaleDefaultIcon: data.FemaleDefaultIcon || "",
       });
+
+      // set icons for preview
+      setMaleIcon(data.MaleDefaultIcon || "");
+      setFemaleIcon(data.FemaleDefaultIcon || "");
+
     } catch (err) {
       console.error("Load Error", err);
       toast.error("Failed to load settings");
@@ -110,6 +238,18 @@ export default function GlobalSetting() {
   // -------------------------------------
 
   const handleSubmit = async (values) => {
+    const confirm = await Swal.fire({
+      title: "Update Settings?",
+      text: "Are you sure you want to save these changes?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonText: "Yes, Update",
+      cancelButtonText: "Cancel",
+      confirmButtonColor: "#3085d6",
+    });
+
+    if (!confirm.isConfirmed) return;
+
     try {
       setLoading(true);
 
@@ -126,6 +266,9 @@ export default function GlobalSetting() {
           PasswordType: values.PasswordType,
           PlanType: values.PlanType,
           PlacementType: values.PlacementType,
+
+          MaleDefaultIcon: maleIcon,
+          FemaleDefaultIcon: femaleIcon,
         }),
       };
 
@@ -159,6 +302,7 @@ export default function GlobalSetting() {
       setLoading(false);
     }
   };
+
 
 
   // -------------------------------------
@@ -204,11 +348,11 @@ export default function GlobalSetting() {
 
           {/* HEADER */}
           <div className="flex justify-between items-center border-b border-gray-200  pb-3 mb-6 -mx-[20px] md:-mx-[20px] px-[20px] md:px-[25px]">
-           <div className="trezo-card-title">
-                <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
-                  Global Setting
-                </h5>
-              </div>
+            <div className="trezo-card-title">
+              <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
+                Global Setting
+              </h5>
+            </div>
 
             <div className="flex gap-2">
               <button
@@ -222,7 +366,7 @@ export default function GlobalSetting() {
           </div>
 
           {/* FORM GRID */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
 
             {/* Username Prefix */}
             <div>
@@ -359,8 +503,201 @@ export default function GlobalSetting() {
 
 
           </div>
+          {/* TABS */}
+          <div className="mt-4 mb-6">
+            <div className="flex border-b border-gray-200 gap-6 overflow-x-auto">
+              {tabs.map((t, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setTab(i)}
+                  className={`pb-2 text-sm font-medium transition-colors flex items-center gap-2
+    ${tab === i
+                      ? "border-b-2 border-primary-500 text-primary-500"
+                      : "text-gray-500 hover:text-gray-700 border-b-2 border-transparent"
+                    }`}
+                >
+                  {t.icon}
+                  {t.label}
+                </button>
+              ))}
+
+
+            </div>
+          </div>
+          {tab === 0 && (
+            <div className="space-y-6 animate-fadeIn">
+
+              {/* IMAGE SELECTORS */}
+              <div className="flex flex-wrap gap-10">
+
+                {/* Male Icon */}
+                <div className="text-center">
+                  <p className="text-sm font-medium mb-2">Male Default Icon</p>
+
+                  <div className="relative w-36 h-36 group">
+                    <div className="w-full h-full rounded-xl border-[4px] border-white shadow-md overflow-hidden bg-gray-200 flex items-center justify-center">
+
+                      {maleIcon ? (
+                        <img
+                          src={
+                            maleIcon?.startsWith("data:")
+                              ? maleIcon
+                              : `${IMAGE_PREVIEW_URL}${maleIcon}`
+                          }
+                          alt="Male"
+                          className="w-full h-full object-cover"
+                        />
+
+                      ) : (
+                        <span className="text-gray-400 text-xs">
+                          No Image
+                        </span>
+                      )}
+
+                    </div>
+
+                    {/* Upload */}
+                    <label className="absolute -top-3 -right-3 w-9 h-9 flex items-center justify-center bg-white text-primary-500 rounded-full shadow-lg cursor-pointer border">
+                      ✎
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*"
+                        onChange={onMaleChange}
+                      />
+                    </label>
+
+                    {/* Delete */}
+                    {maleIcon && (
+                      <button
+                        type="button"
+                        onClick={deleteMale}
+                        className="absolute -bottom-3 -right-3 w-9 h-9 flex items-center justify-center bg-white text-red-500 rounded-full shadow-lg border"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {/* Female Icon */}
+                <div className="text-center">
+                  <p className="text-sm font-medium mb-2">Female Default Icon</p>
+
+                  <div className="relative w-36 h-36 group">
+                    <div className="w-full h-full rounded-xl border-[4px] border-white shadow-md overflow-hidden bg-gray-200 flex items-center justify-center">
+
+                      {femaleIcon ? (
+                        <img
+                          src={
+                            femaleIcon?.startsWith("data:")
+                              ? femaleIcon
+                              : `${IMAGE_PREVIEW_URL}${femaleIcon}`
+                          }
+                          alt="Female"
+                          className="w-full h-full object-cover"
+                        />
+
+                      ) : (
+                        <span className="text-gray-400 text-xs">
+                          No Image
+                        </span>
+                      )}
+
+                    </div>
+
+                    {/* Upload */}
+                    <label className="absolute -top-3 -right-3 w-9 h-9 flex items-center justify-center bg-white text-primary-500 rounded-full shadow-lg cursor-pointer border">
+                      ✎
+                      <input
+                        type="file"
+                        hidden
+                        accept="image/*"
+                        onChange={onFemaleChange}
+                      />
+                    </label>
+
+                    {/* Delete */}
+                    {femaleIcon && (
+                      <button
+                        type="button"
+                        onClick={deleteFemale}
+                        className="absolute -bottom-3 -right-3 w-9 h-9 flex items-center justify-center bg-white text-red-500 rounded-full shadow-lg border"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+          )}
+
+          {tab === 1 && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 animate-fadeIn">
+
+              <div>
+                <label className="text-sm mb-1 block">Password Type</label>
+                <select
+                  name="PasswordType"
+                  value={values.PasswordType}
+                  onChange={handleChange}
+                  className={inputClass}
+                >
+                  <option value="">Select Password Type</option>
+                  <option value="Manual">Manual</option>
+                  <option value="Auto">Auto</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="text-sm mb-1 block">Placement Type</label>
+                <select
+                  name="PlacementType"
+                  value={values.PlacementType}
+                  onChange={handleChange}
+                  className={inputClass}
+                >
+                  <option value="">Select Placement Type</option>
+                  <option value="Manual">Manual</option>
+                  <option value="Auto">Auto</option>
+                </select>
+              </div>
+
+            </div>
+          )}
+          {tab === 2 && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 animate-fadeIn">
+
+              <div>
+                <label className="text-sm mb-1 block">Plan Type</label>
+                <select
+                  name="PlanType"
+                  value={values.PlanType}
+                  onChange={handleChange}
+                  className={inputClass}
+                >
+                  <option value="">Select Plan Type</option>
+                  <option value="Generation">Generation</option>
+                  <option value="Binary">Binary</option>
+                </select>
+              </div>
+
+            </div>
+          )}
 
           <ToastContainer position="top-right" autoClose={3000} />
+          <CropperModal
+            open={showCropper}
+            image={rawImage}
+            aspectRatio={1}
+            onCrop={handleCroppedImage}
+            onClose={() => setShowCropper(false)}
+          />
+
         </form>
       )}
     </Formik>
