@@ -27,7 +27,7 @@ const Template: React.FC = () => {
 
     const [packages, setPackages] = useState<PackageItem[]>([]);
     const [loading, setLoading] = useState(false);
-
+    const IMAGE_PREVIEW_URL = import.meta.env.VITE_IMAGE_PREVIEW_URL;
     /* Pagination */
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 8;
@@ -69,7 +69,7 @@ const Template: React.FC = () => {
             return "";
         }
 
-        return `http://122.160.25.202/mlmapi/uploads/employeedocuments/${img}`;
+        return `${IMAGE_PREVIEW_URL}${img}`;
     };
 
 
@@ -191,7 +191,7 @@ const Template: React.FC = () => {
                                     {pkg.DefaultImageURL ? (
 
                                         <img
-                                            src={`http://122.160.25.202/mlmapi/uploads/employeedocuments/${pkg.DefaultImageURL}`}
+                                            src={`${IMAGE_PREVIEW_URL}${pkg.DefaultImageURL}`}
                                             alt={pkg.ProductName}
                                             className="w-full h-full object-cover rounded-2xl bg-white"
                                         />
