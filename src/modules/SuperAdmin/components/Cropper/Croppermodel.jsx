@@ -1,4 +1,4 @@
- import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Cropper from "cropperjs";
 import "cropperjs/dist/cropper.css";
 
@@ -16,13 +16,14 @@ const CropperModal = ({
   const cropperRef = useRef(null);
 
   const [zoom, setZoom] = useState(1);
+  const [currentRatio, setCurrentRatio] = useState(aspectRatio);
 
   /* ================= INIT ================= */
   useEffect(() => {
     if (!open || !imgRef.current) return;
 
     cropperRef.current = new Cropper(imgRef.current, {
-      aspectRatio,
+      aspectRatio: currentRatio,
       viewMode: 1,
       dragMode: "move",
       autoCropArea: 1,
@@ -192,23 +193,103 @@ const CropperModal = ({
               </button>
             </div>
 
-            {/* Aspect Ratio */}
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={setSquare}
-                className="flex-1 px-3 py-2 rounded-md border text-sm"
-              >
-                Square
-              </button>
-              <button
-                type="button"
-                onClick={setFree}
-                className="flex-1 px-3 py-2 rounded-md border text-sm"
-              >
-                Free
-              </button>
+            {/* Aspect Ratio Options */}
+            <div>
+              <label className="text-xs font-medium text-gray-600 dark:text-gray-400">
+                Aspect Ratio
+              </label>
+
+              <div className="grid grid-cols-3 gap-3 mt-2 items-center">
+
+                {/* 1:1 */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    cropperRef.current?.setAspectRatio(1);
+                    setCurrentRatio(1);
+                  }}
+                  className="aspect-square flex items-center justify-center
+      border rounded-md text-xs font-medium
+      hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                >
+                  1:1
+                </button>
+
+                {/* 4:3 */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    cropperRef.current?.setAspectRatio(4 / 3);
+                    setCurrentRatio(4 / 3);
+                  }}
+                  className="aspect-[4/3] flex items-center justify-center
+      border rounded-md text-xs font-medium
+      hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                >
+                  4:3
+                </button>
+
+                {/* 16:9 */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    cropperRef.current?.setAspectRatio(16 / 9);
+                    setCurrentRatio(16 / 9);
+                  }}
+                  className="aspect-[16/9] flex items-center justify-center
+      border rounded-md text-xs font-medium
+      hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                >
+                  16:9
+                </button>
+
+                {/* 3:4 */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    cropperRef.current?.setAspectRatio(3 / 4);
+                    setCurrentRatio(3 / 4);
+                  }}
+                  className="aspect-[3/4] flex items-center justify-center
+      border rounded-md text-xs font-medium
+      hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                >
+                  3:4
+                </button>
+
+                {/* 9:16 */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    cropperRef.current?.setAspectRatio(9 / 16);
+                    setCurrentRatio(9 / 16);
+                  }}
+                  className="aspect-[9/16] flex items-center justify-center
+      border rounded-md text-xs font-medium
+      hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                >
+                  9:16
+                </button>
+
+                {/* Free */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    cropperRef.current?.setAspectRatio(NaN);
+                    setCurrentRatio(NaN);
+                  }}
+                  className="aspect-square flex items-center justify-center
+      border-dashed border rounded-md text-xs font-medium
+      hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                >
+                  Free
+                </button>
+
+              </div>
             </div>
+
+
+
 
             {/* Reset */}
             <button

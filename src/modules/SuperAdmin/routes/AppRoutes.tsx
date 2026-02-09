@@ -249,12 +249,16 @@ const AppRoutes = () => {
               path="/superadmin/client/member-wallet"
               element={<MemberWallet />}
             />
-            <Route path="/superadmin/mlm-setting/global-setting" element={<GlobalSetting />} />
-            <Route path="/superadmin/client/manage-client" element={<ManageClient />} />
+            <Route path="/superadmin/mlm-setting/global-setting" element={<GlobalSetting/>} />
+            <Route path="/superadmin/client/manage-client" element={<ManageClient/>} />
             <Route path="/superadmin/client/member-investment" element={<MemberInvestment/>} />
             <Route path="/superadmin/mlm-setting/add-package" element={<PackageMaster/>} />
-            <Route path="/superadmin/mlm-setting/roi-setting" element={<ROISetting/>} />
-            <Route path="/superadmin/mlm-setting/manage-package" element={<ManagePackage/>} />
+            <Route
+              path="/superadmin/mlm-setting/add-package/:id"
+              element={<PackageMaster/>}
+            />
+            <Route path="/superadmin/mlm-setting/roi-setting" element={<ROISetting />} />
+            <Route path="/superadmin/mlm-setting/manage-package" element={<ManagePackage />} />
           </Routes>
 
           {/* Footer */}
