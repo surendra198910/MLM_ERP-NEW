@@ -6,6 +6,7 @@ import axios from "axios";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import { FaEye, FaEyeSlash, FaSpinner } from "react-icons/fa";
+import { useCurrency } from "../../modules/SuperAdmin/context/CurrencyContext";
 
 const SignInForm: React.FC = () => {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ const SignInForm: React.FC = () => {
   const [apiError, setApiError] = useState("");
 
   const loginUrl = import.meta.env.VITE_LOGIN_URL;
-
+  const { setCurrency } = useCurrency();
   const initialValues = { adminId: "", password: "" };
 
   const validationSchema = Yup.object({
@@ -45,33 +46,57 @@ const SignInForm: React.FC = () => {
         if (result.Employee) {
           localStorage.setItem(
             "EmployeeDetails",
-            JSON.stringify(result.Employee)
+            JSON.stringify(result.Employee),
           );
 
+          setCurrency({
+            code: result.Employee.CurrencyName,
+            symbol: result.Employee.CurrencyCode,
+            rate: result.Employee.Rate || 1,
+          });
           // Save common values for use in UI
           localStorage.setItem("FullName", result.Employee.FirstName || "");
           localStorage.setItem("EmailId", result.Employee.EmailId || "");
           localStorage.setItem("CompanyId", result.Employee.CompanyId || "");
-          localStorage.setItem("ActiveModuleId",result.Employee.ActiveModuleId || "");
-          localStorage.setItem("ActiveModuleId",result.Employee.ActiveModuleId || "");
-
+          localStorage.setItem(
+            "ActiveModuleId",
+            result.Employee.ActiveModuleId || "",
+          );
+          localStorage.setItem(
+            "ActiveModuleId",
+            result.Employee.ActiveModuleId || "",
+          );
         }
 
         // ⭐ SAVE PANEL SETTINGS (THEME)
         if (result.PanelSetting) {
           localStorage.setItem(
             "PanelSetting",
-            JSON.stringify(result.PanelSetting)
+            JSON.stringify(result.PanelSetting),
           );
 
-          localStorage.setItem("SidebarColor", result.PanelSetting.SidebarColor || "");
-          localStorage.setItem("TextColor", result.PanelSetting.TextColor || "");
-          localStorage.setItem("FooterData", result.PanelSetting.FooterData || "");
+          localStorage.setItem(
+            "SidebarColor",
+            result.PanelSetting.SidebarColor || "",
+          );
+          localStorage.setItem(
+            "TextColor",
+            result.PanelSetting.TextColor || "",
+          );
+          localStorage.setItem(
+            "FooterData",
+            result.PanelSetting.FooterData || "",
+          );
           localStorage.setItem("PanelLogo", result.PanelSetting.Logo || "");
-          localStorage.setItem("HoverColor", result.PanelSetting.HoverColor || "");
-          localStorage.setItem("SidebarHeader", result.PanelSetting.SidebarHeader || "");
+          localStorage.setItem(
+            "HoverColor",
+            result.PanelSetting.HoverColor || "",
+          );
+          localStorage.setItem(
+            "SidebarHeader",
+            result.PanelSetting.SidebarHeader || "",
+          );
         }
-
 
         setTimeout(() => navigate("/superadmin"), 800);
       } else {
@@ -144,7 +169,7 @@ const SignInForm: React.FC = () => {
                         />
                       </button>
                     </div>
-                  )
+                  ),
                 )}
               </div>
 
