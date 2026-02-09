@@ -1,57 +1,101 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { ApiService } from "../../../../services/ApiService";
+import Swal from "sweetalert2";
 // Define the data structure for creators
-interface Creator {
-  id: number;
-  banner: string;
-  avatar: string;
-  name: string;
-  items: number;
-  isFollowing: boolean;
+export interface PackageROI {
+  PackageId: number;
+  Type: string;
+  PackageName: string;
+  PackageAmount: string; // "100-500" or "100"
+  PackageImage: string;
+  Validity: number;
+  ROIPercentage: number;
 }
 
-// Initial data for creators
-const initialCreators: Creator[] = [
-  {
-    id: 1,
-    banner: "/images/nfts/creator1.jpg",
-    avatar: "/images/nfts/user.gif",
-    name: "Hunny Bunny",
-    items: 3204,
-    isFollowing: false,
-  },
-  {
-    id: 2,
-    banner: "/images/nfts/creator2.jpg",
-    avatar: "/images/nfts/user.gif",
-    name: "Aristocrat",
-    items: 5301,
-    isFollowing: false,
-  },
-];
 const Template: React.FC = () => {
-  const [creators, setCreators] = useState<Creator[]>(initialCreators); // Manage creators state
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 8;
+  const [loading, setLoading] = useState(false);
+  const { universalService } = ApiService();
+  const [packages, setPackages] = useState<PackageROI[]>([]);
+  const [roiMap, setRoiMap] = useState<{ [key: number]: number }>({});
 
-  // Calculate the current creators to display
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentCreators = creators.slice(indexOfFirstItem, indexOfLastItem);
-  const [searchInput, setSearchInput] = useState("");
-  const [filterColumn, setFilterColumn] = useState("__NONE__");
-  const [showTable, setShowTable] = useState(false); // Toggle to show 'Oops' or 'Welcome'
+  const fetchPackages = async () => {
+    try {
+      setLoading(true);
 
-  const applySearch = () => {
-    // Dummy trigger to show the "No Records" state
-    setShowTable(true);
+      const payload = {
+        procName: "ROISetting",
+        Para: JSON.stringify({ ActionMode: "GetPackages" }),
+      };
+
+      const res = await universalService(payload);
+      const data = res?.data || res;
+
+      const pkgList: PackageROI[] = Array.isArray(data) ? data : [];
+      setPackages(pkgList);
+
+      // 🔥 Bind ROI into roiMap
+      const roiObj: { [key: number]: number } = {};
+      pkgList.forEach((p) => {
+        roiObj[p.PackageId] = p.ROIPercentage ?? 0;
+      });
+      setRoiMap(roiObj);
+    } catch (err) {
+      console.error("Failed to load packages", err);
+      setPackages([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const resetSearch = () => {
-    setShowTable(false);
-    setSearchInput("");
-    setFilterColumn("__NONE__");
+  // Load on page load
+  useEffect(() => {
+    fetchPackages();
+  }, []);
+  const saveROI = async () => {
+    try {
+      const payload = Object.keys(roiMap).map((id) => ({
+        PackageId: Number(id),
+        ROIPercentage: roiMap[id],
+      }));
+
+      const response = await universalService({
+        procName: "ROISetting",
+        Para: JSON.stringify({
+          ActionMode: "UpdateROI",
+          Data:  JSON.stringify(payload),
+        }),
+      });
+
+      const res = Array.isArray(response) ? response[0] : response?.data?.[0];
+
+      if (res?.StatusCode == "1") {
+        Swal.fire({
+          title: "Success!",
+          text: res?.Msg || "Action completed successfully.",
+          icon: "success",
+          confirmButtonText: "OK",
+          confirmButtonColor: "#3b82f6",
+        });
+      } else {
+        Swal.fire({
+          title: "Error",
+          text: res?.Msg || "Operation failed",
+          icon: "error",
+          confirmButtonText: "OK",
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      Swal.fire({
+        title: "Error",
+        text: "Server error occurred",
+        icon: "error",
+        confirmButtonText: "OK",
+      });
+    }
   };
 
+  const imageBaseUrl = import.meta.env.VITE_IMAGE_PREVIEW_URL;
   return (
     <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-md">
       {/* --- HEADER & SEARCH SECTION --- */}
@@ -64,23 +108,16 @@ const Template: React.FC = () => {
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:w-auto w-full">
           <div className="flex flex-col sm:flex-row items-center gap-3 flex-wrap justify-end">
-            
-
-            
-
             {/* 3. BUTTONS GROUP (Exactly from your design) */}
             <div className="flex items-center gap-2">
-             
-
               {/* ADD BUTTON */}
               <button
                 type="button"
+                onClick={saveROI}
                 className="px-6 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded text-sm font-medium transition-colors flex items-center justify-center gap-2"
               >
                 Sumit
               </button>
-
-              
             </div>
           </div>
         </div>
@@ -91,9 +128,9 @@ const Template: React.FC = () => {
         <div className="trezo-card mb-[25px]">
           <div className="trezo-card-content">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-[25px]">
-              {currentCreators.map((pkg) => (
+              {packages.map((pkg) => (
                 <div
-                  key={pkg.id}
+                  key={pkg.PackageId}
                   className="relative group bg-white/80 dark:bg-[#0b1220]/80 backdrop-blur-xl border border-blue-100 dark:border-blue-900/40 rounded-3xl shadow-md hover:shadow-2xl transition-all duration-300 p-6 flex flex-col min-w-[280px] max-w-[320px]"
                 >
                   {/* Top Glow */}
@@ -104,23 +141,29 @@ const Template: React.FC = () => {
                     <div className="relative">
                       <div className="absolute right-0 top-0 w-24 h-24 overflow-hidden">
                         <span className="absolute top-[22px] right-[-38px] w-40 rotate-45 bg-blue-600 text-white text-[11px] font-semibold tracking-wide text-center py-1 shadow-md">
-                          ACTIVE
+                          {pkg.Type}
                         </span>
                       </div>
                     </div>
                   </div>
-                  {/* Header */}
-                  <div className="text-lg font-semibold text-gray-900 dark:text-white tracking-tight leading-snug">
-                    {pkg.name}
+
+                  {/* Package Name */}
+                  <div className="text-lg font-semibold text-gray-900 dark:text-white tracking-tight leading-snug line-clamp-2">
+                    {pkg.PackageName}
                   </div>
 
                   {/* Image */}
                   <div className="mt-6 flex justify-center">
                     <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-[#111827] dark:to-[#020617] p-[2px] shadow-lg">
                       <img
-                        src={pkg.banner}
+                        src={`${imageBaseUrl}${pkg?.PackageImage}`} // adjust path
                         alt="package"
                         className="w-full h-full object-cover rounded-2xl bg-white"
+                        onError={(
+                          e: React.SyntheticEvent<HTMLImageElement>,
+                        ) => {
+                          e.currentTarget.src = `${imageBaseUrl}DefaultPackageImage.png`;
+                        }}
                       />
                     </div>
                   </div>
@@ -128,12 +171,12 @@ const Template: React.FC = () => {
                   {/* Investment Amount */}
                   <div className="mt-5 text-center">
                     <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
-                      ${pkg.items}
+                      {pkg.PackageAmount}
                     </p>
                   </div>
 
                   {/* Details Card */}
-                  <div className=" bg-blue-50/60 dark:bg-[#0f172a] border border-blue-100 dark:border-blue-900/40 rounded-2xl p-4 space-y-4 text-sm">
+                  <div className="bg-blue-50/60 dark:bg-[#0f172a] border border-blue-100 dark:border-blue-900/40 rounded-2xl p-4 space-y-4 text-sm">
                     {/* ROI Input */}
                     <div className="flex items-center justify-between">
                       <span className="text-gray-500 dark:text-gray-400">
@@ -142,8 +185,15 @@ const Template: React.FC = () => {
                       <input
                         type="number"
                         step="0.01"
-                        placeholder="0.30"
-                        className="w-24 text-right bg-white dark:bg-[#020617] border border-blue-200 dark:border-blue-800 rounded-xl px-3 py-1.5 text-sm font-semibold text-blue-700 dark:text-blue-400 focus:ring-2 focus:ring-blue-500 outline-none"
+                        value={roiMap[pkg.PackageId] ?? 0}
+                        onWheel={(e) => e.currentTarget.blur()}
+                        onChange={(e) =>
+                          setRoiMap({
+                            ...roiMap,
+                            [pkg.PackageId]: Number(e.target.value),
+                          })
+                        }
+                        className="appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none w-24 text-right bg-white dark:bg-[#020617] border border-blue-200 dark:border-blue-800 rounded-xl px-3 py-1.5 text-sm font-semibold text-blue-700 dark:text-blue-400 focus:ring-2 focus:ring-blue-500 outline-none"
                       />
                     </div>
 
@@ -153,22 +203,14 @@ const Template: React.FC = () => {
                         Duration
                       </span>
                       <span className="font-semibold text-gray-900 dark:text-gray-200">
-                        365 Days
+                        {pkg.Validity} Days
                       </span>
                     </div>
                   </div>
 
-                  {/* Investment Input (replacing button) */}
-                  {/* <div className="mt-6">
-                    <input
-                      type="number"
-                      placeholder="Enter investment amount"
-                      className="w-full rounded-2xl px-4 py-3 bg-white dark:bg-[#020617] border border-blue-200 dark:border-blue-800 text-sm font-medium text-gray-900 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none shadow-inner"
-                    />
-                  </div> */}
-                  {/* Footer Note */}
+                  {/* Footer */}
                   <p className="mt-4 text-[11px] text-gray-400 text-center tracking-wide">
-                    Smart returns start with smart investments.
+                    ROI updates apply instantly for new investments.
                   </p>
                 </div>
               ))}
