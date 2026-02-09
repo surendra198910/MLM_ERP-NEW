@@ -4,6 +4,7 @@ import * as Yup from "yup";
 import AutoCompleter from "../../../../components/CommonFormElements/InputTypes/AutoCompleter";
 import { ApiService } from "../../../../services/ApiService";
 import Swal from "sweetalert2";
+import { useCurrency } from "../../context/CurrencyContext";
 
 const today = new Date().toISOString().split("T")[0];
 const MemberWalletsElegant: React.FC = () => {
@@ -26,6 +27,7 @@ const MemberWalletsElegant: React.FC = () => {
           );
         }),
     });
+  const { currency } = useCurrency();
   const [users, setUsers] = useState<any[]>([]);
   const [selectedUser, setSelectedUser] = useState<any>(null);
   const [memberDetails, setMemberDetails] = useState<any>(null);
@@ -33,7 +35,7 @@ const MemberWalletsElegant: React.FC = () => {
   const { universalService } = ApiService();
   const [transactions, setTransactions] = useState<any[]>([]);
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize] = useState(7);
   const [totalCount, setTotalCount] = useState(0);
   const [investments, setInvestments] = useState<any[]>([]);
   const totalPages = Math.ceil(totalCount / pageSize);
@@ -108,6 +110,7 @@ const MemberWalletsElegant: React.FC = () => {
       const data = res?.data || res;
 
       if (Array.isArray(data) && data.length > 0) {
+        console.log(data[0]);
         setMemberDetails(data[0]); // single row
       } else {
         setMemberDetails(null);
@@ -131,7 +134,40 @@ const MemberWalletsElegant: React.FC = () => {
         Swal.fire("Error", "Please select a package!", "error");
         return;
       }
+      // ✅ Confirmation Popup
+      const confirm = await Swal.fire({
+        title: "Confirm Investment",
+        icon: "warning",
+        html: `
+  <div style="text-align:left; font-size:14px;">
+    <div style="background:#f9fafb; border-radius:10px; padding:12px; border:1px solid #e5e7eb;">
+      
+      <div style="display:flex; justify-content:space-between; padding:6px 0;">
+        <span style="color:#6b7280;">Member</span>
+        <span style="font-weight:600;">${memberDetails.Name} (${memberDetails.UserName})</span>
+      </div>
 
+      <div style="display:flex; justify-content:space-between; padding:6px 0;">
+        <span style="color:#6b7280;">Package</span>
+        <span style="font-weight:600; color:#2563eb;">${selectedPackage?.ProductName || "N/A"}</span>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; padding:6px 0; border-top:1px dashed #ddd; margin-top:6px; padding-top:10px;">
+        <span style="color:#6b7280;">Amount</span>
+        <span style="font-weight:700; color:#16a34a; font-size:16px;">${currency.symbol}${values.amount}</span>
+      </div>
+
+    </div>
+  </div>
+  `,
+        showCancelButton: true,
+        confirmButtonText: "Yes, Proceed",
+        cancelButtonText: "Cancel",
+        confirmButtonColor: "#16a34a",
+        cancelButtonColor: "#9ca3af",
+      });
+
+      if (!confirm.isConfirmed) return; // ❌ Stop if user cancels
       const payload = {
         procName: "MemberInvestmentByAdmin",
         Para: JSON.stringify({
@@ -156,6 +192,7 @@ const MemberWalletsElegant: React.FC = () => {
         }).then(() => {
           // Optional refresh actions
           fetchInvestmentTransactions(selectedUser, page, pageSize);
+          formikRef.current?.resetForm();
         });
       } else {
         Swal.fire({
@@ -245,7 +282,7 @@ const MemberWalletsElegant: React.FC = () => {
             form="walletForm"
             className="px-6 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded text-sm font-medium transition-colors flex items-center justify-center gap-2 "
           >
-            Submit
+            Make Investment
           </button>
         </div>
       </div>
@@ -282,6 +319,9 @@ flex items-center mx-4"
               <i className="material-symbols-outlined">search</i>
             </button>
           </div>
+          <p className="text-xs text-gray-400 mt-1 italic">
+            You can search using Name, Username, Email address, or Mobile number
+          </p>
         </div>
 
         {/* MEMBER INFO */}
@@ -449,7 +489,8 @@ flex items-center mx-4"
                 {/* Amount */}
                 <div>
                   <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">
-                    Amount($) <span className="text-red-500">*</span>
+                    Amount({currency.symbol}){" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <Field
                     type="number"
@@ -565,7 +606,8 @@ flex items-center mx-4"
                       </td>
 
                       <td className="px-4 py-3 font-semibold">
-                        ${item.Amount}
+                        {currency.symbol}
+                        {item.Amount}
                       </td>
 
                       <td className="px-4 py-3">

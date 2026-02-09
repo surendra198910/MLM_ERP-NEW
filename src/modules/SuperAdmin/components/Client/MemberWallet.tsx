@@ -4,6 +4,7 @@ import * as Yup from "yup";
 import AutoCompleter from "../../../../components/CommonFormElements/InputTypes/AutoCompleter";
 import { ApiService } from "../../../../services/ApiService";
 import Swal from "sweetalert2";
+import { useCurrency } from "../../context/CurrencyContext";
 /* ---------------- VALIDATION SCHEMA ---------------- */
 const validationSchema = Yup.object().shape({
   transactionType: Yup.string().required("Transaction Type is required"),
@@ -24,6 +25,7 @@ const MemberWalletsElegant: React.FC = () => {
     Balance: number;
     IsActive: boolean;
   }
+  const { currency } = useCurrency();
   const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
   const [walletList, setWalletList] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -33,7 +35,7 @@ const MemberWalletsElegant: React.FC = () => {
   const { universalService } = ApiService();
   const [transactions, setTransactions] = useState<any[]>([]);
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize] = useState(7);
   const [totalCount, setTotalCount] = useState(0);
   const totalPages = Math.ceil(totalCount / pageSize);
   const formikRef = useRef<any>(null);
@@ -131,7 +133,40 @@ const MemberWalletsElegant: React.FC = () => {
         Swal.fire("Error", "Please select a wallet first!", "error");
         return;
       }
+      // ✅ Confirmation Popup
+      const confirm = await Swal.fire({
+        title: "Confirm Wallet Trsansaction",
+        icon: "warning",
+        html: `
+  <div style="text-align:left; font-size:14px;">
+    <div style="background:#f9fafb; border-radius:10px; padding:12px; border:1px solid #e5e7eb;">
+      
+      <div style="display:flex; justify-content:space-between; padding:6px 0;">
+        <span style="color:#6b7280;">Member</span>
+        <span style="font-weight:600;">${memberDetails.Name} (${memberDetails.UserName})</span>
+      </div>
 
+      <div style="display:flex; justify-content:space-between; padding:6px 0;">
+        <span style="color:#6b7280;">Wallet</span>
+        <span style="font-weight:600; color:#2563eb;">${selectedWallet?.WalletDisplayName || "N/A"}</span>
+      </div>
+
+      <div style="display:flex; justify-content:space-between; padding:6px 0; border-top:1px dashed #ddd; margin-top:6px; padding-top:10px;">
+        <span style="color:#6b7280;">Amount</span>
+        <span style="font-weight:700; color:#16a34a; font-size:16px;">${currency.symbol}${values.amount}</span>
+      </div>
+
+    </div>
+  </div>
+  `,
+        showCancelButton: true,
+        confirmButtonText: "Yes, Proceed",
+        cancelButtonText: "Cancel",
+        confirmButtonColor: "#16a34a",
+        cancelButtonColor: "#9ca3af",
+      });
+
+      if (!confirm.isConfirmed) return; // ❌ Stop if user cancels
       const payload = {
         procName: "WalletTransaction_CRDR",
         Para: JSON.stringify({
@@ -158,7 +193,9 @@ const MemberWalletsElegant: React.FC = () => {
           confirmButtonColor: "#3b82f6",
         }).then((result) => {
           if (result.isConfirmed) {
-            //navigate("/superadmin/company/manage-company/branch");
+            fetchWalletTransactions(selectedUser, page, pageSize);
+            fetchWallets(selectedUser);
+            formikRef.current?.resetForm();
           }
         });
       } else {
@@ -250,7 +287,7 @@ const MemberWalletsElegant: React.FC = () => {
             form="walletForm"
             className="px-6 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded text-sm font-medium transition-colors flex items-center justify-center gap-2 "
           >
-            Submit
+            Process Transaction
           </button>
         </div>
       </div>
@@ -287,6 +324,9 @@ flex items-center mx-4"
               <i className="material-symbols-outlined">search</i>
             </button>
           </div>
+          <p className="text-xs text-gray-400 mt-1 italic">
+            You can search using Name, Username, Email address, or Mobile number
+          </p>
         </div>
 
         {/* MEMBER INFO */}
@@ -387,7 +427,7 @@ flex items-center mx-4"
               >
                 {/* Amount (Static for now) */}
                 <h2 className="text-xl font-bold text-gray-800">
-                  ${wallet.Balance}
+                  {currency.symbol}{wallet.Balance}
                 </h2>
 
                 {/* Wallet Name from API */}
@@ -439,7 +479,7 @@ flex items-center mx-4"
                 {/* Amount */}
                 <div>
                   <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">
-                    Amount($) <span className="text-red-500">*</span>
+                    Amount({currency.symbol}) <span className="text-red-500">*</span>
                   </label>
                   <Field
                     type="text"
@@ -604,7 +644,7 @@ flex items-center mx-4"
                           {item.TranType}
                         </span>
                       </td>
-                      <td className="px-4 py-3 font-semibold">{item.Amount}</td>
+                      <td className="px-4 py-3 font-semibold">{currency.symbol}{item.Amount}</td>
                       <td className="px-4 py-3">{item.PaymentMode}</td>
                       <td className="px-4 py-3 text-xs text-gray-500">
                         {item.ReferenceNo || "-"}
