@@ -188,55 +188,15 @@ const Template: React.FC = () => {
                 bg-gradient-to-br from-blue-50 to-indigo-50
                 dark:from-[#111827] dark:to-[#020617]
                 p-[2px] shadow-lg">
-                                    {pkg.DefaultImageURL ? (
+                                    <img
+                                        src={`${IMAGE_PREVIEW_URL}${pkg.DefaultImageURL || "DefaultPackageImage.png"}`}
+                                        alt={pkg.ProductName}
+                                        className="w-full h-full object-cover rounded-2xl bg-white"
+                                        onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                                            e.currentTarget.src = `${IMAGE_PREVIEW_URL}DefaultPackageImage.png`;
+                                        }}
+                                    />
 
-                                        <img
-                                            src={`${IMAGE_PREVIEW_URL}${pkg.DefaultImageURL}`}
-                                            alt={pkg.ProductName}
-                                            className="w-full h-full object-cover rounded-2xl bg-white"
-                                        />
-
-                                    ) : (
-
-                                        <div className="w-full h-full flex items-center justify-center">
-                                            <svg
-                                                viewBox="0 0 64 64"
-                                                className="w-14 h-14"
-                                                xmlns="http://www.w3.org/2000/svg"
-                                            >
-                                                <defs>
-                                                    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
-                                                        <stop offset="0%" stopColor="#60a5fa" />
-                                                        <stop offset="100%" stopColor="#6366f1" />
-                                                    </linearGradient>
-                                                    <linearGradient id="g2" x1="0" y1="0" x2="1" y2="1">
-                                                        <stop offset="0%" stopColor="#93c5fd" />
-                                                        <stop offset="100%" stopColor="#818cf8" />
-                                                    </linearGradient>
-                                                </defs>
-
-                                                {/* Top face */}
-                                                <polygon
-                                                    points="32,6 54,18 32,30 10,18"
-                                                    fill="url(#g2)"
-                                                />
-
-                                                {/* Left face */}
-                                                <polygon
-                                                    points="10,18 32,30 32,56 10,44"
-                                                    fill="url(#g1)"
-                                                />
-
-                                                {/* Right face */}
-                                                <polygon
-                                                    points="54,18 32,30 32,56 54,44"
-                                                    fill="#4f46e5"
-                                                />
-                                            </svg>
-                                        </div>
-
-
-                                    )}
 
 
 

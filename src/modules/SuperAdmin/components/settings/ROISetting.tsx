@@ -134,7 +134,7 @@ const Template: React.FC = () => {
                   className="relative group bg-white/80 dark:bg-[#0b1220]/80 backdrop-blur-xl border border-blue-100 dark:border-blue-900/40 rounded-3xl shadow-md hover:shadow-2xl transition-all duration-300 p-6 flex flex-col min-w-[280px] max-w-[320px]"
                 >
                   {/* Top Glow */}
-                  <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-blue-500/60 to-transparent"></div>
+                  <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-primary-button-bg/60 to-transparent"></div>
 
                   {/* Ribbon Badge */}
                   <div className="absolute top-0 right-0 z-20">
@@ -193,7 +193,7 @@ const Template: React.FC = () => {
                             [pkg.PackageId]: Number(e.target.value),
                           })
                         }
-                        className="appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none w-24 text-right bg-white dark:bg-[#020617] border border-blue-200 dark:border-blue-800 rounded-xl px-3 py-1.5 text-sm font-semibold text-primary-button-bg dark:text-primary-button-bg focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none w-24 text-right bg-white dark:bg-[#020617] border border-primary-button-bg dark:primary-button-bg rounded-xl px-3 py-1.5 text-sm font-semibold text-primary-button-bg dark:text-primary-button-bg focus:ring-2 focus:ring-blue-500 outline-none"
                       />
                     </div>
 
@@ -202,7 +202,7 @@ const Template: React.FC = () => {
                       <span className="text-gray-500 dark:text-gray-400">
                         Duration
                       </span>
-                      <span className="font-semibold text-gray-900 dark:text-gray-200">
+                      <span className="font-semibold text-primary-button-bg dark:text-gray-200">
                         {pkg.Validity} Days
                       </span>
                     </div>
