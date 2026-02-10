@@ -1881,20 +1881,20 @@ html[dir="rtl"] {
 /* SweetAlert2 Theme Integration */
 
 .swal2-confirm {
-  background-color: var(--color-primary-500) !important;
+  background-color: var(--color-primary-button-bg) !important;
   color: #fff !important;
   border: none !important;
   box-shadow: none !important;
 }
 
 .swal2-confirm:hover {
-  background-color: var(--color-primary-600, var(--color-primary-500)) !important;
+  background-color: var(--color-primary-button-bg-hover, var(--color-primary-button-bg)) !important;
 }
 
 .swal2-confirm:focus {
   box-shadow: 0 0 0 3px color-mix(
     in srgb,
-    var(--color-primary-500),
+    var(--color-primary-button-bg),
     transparent 70%
   ) !important;
 }

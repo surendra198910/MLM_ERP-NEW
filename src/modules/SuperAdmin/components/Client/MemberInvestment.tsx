@@ -168,37 +168,62 @@ const MemberWalletsElegant: React.FC = () => {
         return;
       }
       // ✅ Confirmation Popup
-      const confirm = await Swal.fire({
-        title: "Confirm Investment",
-        icon: "warning",
-        html: `
+     const confirm = await Swal.fire({
+  title: "Confirm Investment",
+  icon: "warning",
+  background: document.documentElement.classList.contains("dark")
+    ? "#0c1427"
+    : "#ffffff",
+  color: document.documentElement.classList.contains("dark")
+    ? "#e5e7eb"
+    : "#111827",
+  html: `
   <div style="text-align:left; font-size:14px;">
-    <div style="background:#f9fafb; border-radius:10px; padding:12px; border:1px solid #e5e7eb;">
+    <div style="
+      background:${document.documentElement.classList.contains("dark") ? "#111827" : "#f9fafb"};
+      border-radius:10px;
+      padding:12px;
+      border:1px solid ${document.documentElement.classList.contains("dark") ? "#1f2937" : "#e5e7eb"};
+    ">
       
       <div style="display:flex; justify-content:space-between; padding:6px 0;">
-        <span style="color:#6b7280;">Member</span>
-        <span style="font-weight:600;">${memberDetails.Name} (${memberDetails.UserName})</span>
+        <span style="color:#9ca3af;">Member</span>
+        <span style="font-weight:600;">
+          ${memberDetails.Name} (${memberDetails.UserName})
+        </span>
       </div>
 
       <div style="display:flex; justify-content:space-between; padding:6px 0;">
-        <span style="color:#6b7280;">Package</span>
-        <span style="font-weight:600; color:#2563eb;">${selectedPackage?.ProductName || "N/A"}</span>
+        <span style="color:#9ca3af;">Package</span>
+        <span style="font-weight:600; color:#3b82f6;">
+          ${selectedPackage?.ProductName || "N/A"}
+        </span>
       </div>
 
-      <div style="display:flex; justify-content:space-between; padding:6px 0; border-top:1px dashed #ddd; margin-top:6px; padding-top:10px;">
-        <span style="color:#6b7280;">Amount</span>
-        <span style="font-weight:700; color:#16a34a; font-size:16px;">${currency.symbol}${values.amount}</span>
+      <div style="
+        display:flex;
+        justify-content:space-between;
+        padding:6px 0;
+        border-top:1px dashed #6b7280;
+        margin-top:6px;
+        padding-top:10px;
+      ">
+        <span style="color:#9ca3af;">Amount</span>
+        <span style="font-weight:700; color:#22c55e; font-size:16px;">
+          ${currency.symbol}${values.amount}
+        </span>
       </div>
 
     </div>
   </div>
   `,
-        showCancelButton: true,
-        confirmButtonText: "Yes, Proceed",
-        cancelButtonText: "Cancel",
-        confirmButtonColor: "#16a34a",
-        cancelButtonColor: "#9ca3af",
-      });
+  showCancelButton: true,
+  confirmButtonText: "Yes, Proceed",
+  cancelButtonText: "Cancel",
+  confirmButtonColor: "#16a34a",
+  cancelButtonColor: "#9ca3af",
+});
+
 
       if (!confirm.isConfirmed) return; // ❌ Stop if user cancels
       const payload = {
