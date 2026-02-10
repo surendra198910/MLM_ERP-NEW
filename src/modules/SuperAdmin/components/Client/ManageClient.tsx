@@ -498,7 +498,7 @@ const CompanyList: React.FC = () => {
                                             setStatusFilter(e.target.value);
                                         }}
                                         className={`w-full h-[34px] text-xs rounded-md px-3 appearance-none outline-none border transition-all ${SmartActions.canAdvancedSearch(CURRENT_FORM_ID)
-                                            ? "bg-white text-black border-gray-300 focus:border-primary-500"
+                                            ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
                                             : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
                                             }`}
                                     >
@@ -532,7 +532,7 @@ const CompanyList: React.FC = () => {
                                             setCurrentPage(1);
                                         }}
                                         className={`w-full h-[34px] pl-8 pr-8 text-xs rounded-md appearance-none outline-none border transition-all ${SmartActions.canAdvancedSearch(CURRENT_FORM_ID)
-                                            ? "bg-white text-black border-gray-300 focus:border-primary-500"
+                                            ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
                                             : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
                                             }`}
                                     >
@@ -572,7 +572,7 @@ const CompanyList: React.FC = () => {
                                         onChange={(e) => setSearchInput(e.target.value)}
                                         onKeyDown={(e) => e.key === "Enter" && applySearch()}
                                         className={`h-[34px] w-full pl-8 pr-3 text-xs rounded-md outline-none border transition-all ${SmartActions.canSearch(CURRENT_FORM_ID)
-                                            ? "bg-white text-black border-gray-300 focus:border-primary-500"
+                                            ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
                                             : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
                                             }`}
                                     />
@@ -589,7 +589,7 @@ const CompanyList: React.FC = () => {
                                         type="button"
                                         onClick={applySearch}
                                         disabled={!SmartActions.canSearch(CURRENT_FORM_ID)}
-                                        className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-primary-500 text-primary-500 hover:bg-primary-500 hover:text-white transition-all disabled:opacity-50"
+                                        className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-primary-button-bg text-primary-button-bg hover:bg-primary-button-bg hover:text-white transition-all disabled:opacity-50"
                                     >
                                         <i className="material-symbols-outlined text-[20px]">
                                             search
@@ -623,7 +623,7 @@ const CompanyList: React.FC = () => {
                                         type="button"
                                         onClick={() => navigate("/superadmin/client/add-client")}
                                         disabled={!SmartActions.canAdd(CURRENT_FORM_ID)}
-                                        className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-white text-white bg-primary-500 hover:bg-primary-200 hover:text-primary-500 transition-all disabled:opacity-50"
+                                        className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-white text-white bg-primary-button-bg hover:bg-white hover:border-primary-button-bg hover:text-primary-button-bg transition-all disabled:opacity-50"
                                     >
                                         <i className="material-symbols-outlined text-[20px]">add</i>
                                     </button>
@@ -661,8 +661,8 @@ const CompanyList: React.FC = () => {
 
                             </h1>
                             <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-6 text-[15px]">
-                                Search companies by Name, Type, City or Email to manage records.
-                                <br /> OR <br /> Click below to add New Company.
+                                Search client by Name, Type, City or Email to manage records.
+                                <br /> OR <br /> Click below to add New Client.
                             </p>
                             <PermissionAwareTooltip
                                 allowed={SmartActions.canAdd(CURRENT_FORM_ID)}
@@ -673,7 +673,7 @@ const CompanyList: React.FC = () => {
                                     onClick={() => navigate("/superadmin/client/add-client")}
                                     disabled={!SmartActions.canAdd(CURRENT_FORM_ID)}
                                     className={`px-[26.5px] py-[12px] rounded-md transition-all ${SmartActions.canAdd(CURRENT_FORM_ID)
-                                        ? "bg-primary-500 text-white hover:bg-primary-400"
+                                        ? "bg-primary-button-bg text-white hover:bg-primary-400"
                                         : "bg-gray-300 text-gray-500 cursor-not-allowed"
                                         }`}
                                 >
@@ -688,14 +688,14 @@ const CompanyList: React.FC = () => {
                                 className="w-[320px] h-auto opacity-100 select-none"
                                 xmlns="http://www.w3.org/2000/svg"
                             >
-                                {/* Main Card Background - using primary-500 */}
+                                {/* Main Card Background - using primary-button-bg */}
                                 <rect
                                     x="40"
                                     y="80"
                                     width="432"
                                     height="340"
                                     rx="30"
-                                    className="fill-primary-500"
+                                    className="fill-primary-button-bg"
                                 />
 
                                 {/* Card Header - using primary-600 (darker) */}
@@ -724,7 +724,7 @@ const CompanyList: React.FC = () => {
                                     height="80"
                                     rx="5"
                                     transform="rotate(-45 430 420)"
-                                    className="fill-primary-600"
+                                    className="fill-primary-button-bg"
                                 />
 
                                 {/* Magnifying Glass Lens - using primary-50 (lightest) */}
@@ -774,7 +774,7 @@ const CompanyList: React.FC = () => {
                                         {/* Box Outline */}
                                         <path
                                             d="M96 220L256 300L416 220"
-                                            className="stroke-primary-500"
+                                            className="stroke-primary-button-bg"
                                             strokeWidth="10"
                                             strokeLinecap="round"
                                             strokeLinejoin="round"
@@ -783,7 +783,7 @@ const CompanyList: React.FC = () => {
                                         {/* Left Flap */}
                                         <path
                                             d="M96 220L150 160L256 200"
-                                            className="stroke-primary-500"
+                                            className="stroke-primary-button-bg"
                                             strokeWidth="10"
                                             strokeLinecap="round"
                                             strokeLinejoin="round"
@@ -792,7 +792,7 @@ const CompanyList: React.FC = () => {
                                         {/* Right Flap */}
                                         <path
                                             d="M416 220L362 160L256 200"
-                                            className="stroke-primary-500"
+                                            className="stroke-primary-button-bg"
                                             strokeWidth="10"
                                             strokeLinecap="round"
                                             strokeLinejoin="round"
@@ -801,7 +801,7 @@ const CompanyList: React.FC = () => {
                                         {/* Bottom Box */}
                                         <path
                                             d="M96 220V340C96 360 112 376 132 376H380C400 376 416 360 416 340V220"
-                                            className="stroke-primary-500"
+                                            className="stroke-primary-button-bg"
                                             strokeWidth="10"
                                             strokeLinecap="round"
                                             strokeLinejoin="round"
@@ -810,13 +810,13 @@ const CompanyList: React.FC = () => {
                                         {/* Inner Fill */}
                                         <path
                                             d="M150 220L256 260L362 220L256 190L150 220Z"
-                                            className="fill-primary-500"
+                                            className="fill-primary-button-bg"
                                         />
 
                                         {/* Floating Motion Path */}
                                         <path
                                             d="M256 110C300 90 340 110 340 140C340 165 300 175 256 200"
-                                            className="stroke-primary-500"
+                                            className="stroke-primary-button-bg"
                                             strokeWidth="8"
                                             strokeLinecap="round"
                                             strokeDasharray="12 14"
@@ -827,7 +827,7 @@ const CompanyList: React.FC = () => {
                                             cx="256"
                                             cy="90"
                                             r="26"
-                                            className="stroke-primary-500 fill-primary-50"
+                                            className="stroke-primary-button-bg fill-primary-50"
                                             strokeWidth="6"
                                         />
 
@@ -880,7 +880,7 @@ const CompanyList: React.FC = () => {
                                                 disabled={!SmartActions.canSearch(CURRENT_FORM_ID)}
                                                 onClick={exportPDF}
                                                 className={`h-8 px-3 inline-flex items-center justify-center text-xs font-semibold uppercase rounded-md transition-all ${SmartActions.canSearch(CURRENT_FORM_ID)
-                                                    ? "text-primary-500 border border-primary-500 hover:bg-primary-500 hover:text-white"
+                                                    ? "text-primary-button-bg border border-primary-button-bg hover:bg-primary-button-bg hover:text-white"
                                                     : "text-gray-300 border border-gray-300 cursor-not-allowed"
                                                     }`}
                                             >
@@ -896,7 +896,7 @@ const CompanyList: React.FC = () => {
                                                 disabled={!SmartActions.canSearch(CURRENT_FORM_ID)}
                                                 onClick={exportExcel}
                                                 className={`h-8 px-3 inline-flex items-center justify-center text-xs font-semibold uppercase rounded-md transition-all ${SmartActions.canSearch(CURRENT_FORM_ID)
-                                                    ? "text-primary-500 border border-primary-500 hover:bg-primary-500 hover:text-white"
+                                                    ? "text-primary-button-bg border border-primary-button-bg hover:bg-primary-button-bg hover:text-white"
                                                     : "text-gray-300 border border-gray-300 cursor-not-allowed"
                                                     }`}
                                             >
@@ -912,7 +912,7 @@ const CompanyList: React.FC = () => {
                                                 disabled={!SmartActions.canSearch(CURRENT_FORM_ID)}
                                                 onClick={exportCSV}
                                                 className={`h-8 px-3 inline-flex items-center justify-center text-xs font-semibold uppercase rounded-md transition-all ${SmartActions.canSearch(CURRENT_FORM_ID)
-                                                    ? "text-primary-500 border border-primary-500 hover:bg-primary-500 hover:text-white"
+                                                    ? "text-primary-button-bg border border-primary-button-bg hover:bg-primary-button-bg hover:text-white"
                                                     : "text-gray-300 border border-gray-300 cursor-not-allowed"
                                                     }`}
                                             >
@@ -928,7 +928,7 @@ const CompanyList: React.FC = () => {
                                                 disabled={!SmartActions.canSearch(CURRENT_FORM_ID)}
                                                 onClick={printTable}
                                                 className={`h-8 px-3 inline-flex items-center justify-center text-xs font-semibold uppercase rounded-md transition-all ${SmartActions.canSearch(CURRENT_FORM_ID)
-                                                    ? "text-primary-500 border border-primary-500 hover:bg-primary-500 hover:text-white"
+                                                    ? "text-primary-button-bg border border-primary-button-bg hover:bg-primary-button-bg hover:text-white"
                                                     : "text-gray-300 border border-gray-300 cursor-not-allowed"
                                                     }`}
                                             >
@@ -1003,7 +1003,7 @@ const CompanyList: React.FC = () => {
                                                                         )
                                                                     }
                                                                     className={`leading-none ${SmartActions.canEdit(CURRENT_FORM_ID)
-                                                                        ? "text-gray-500 hover:text-primary-500"
+                                                                        ? "text-gray-500 hover:text-primary-button-bg"
                                                                         : "text-gray-300 cursor-not-allowed"
                                                                         }`}
                                                                 >

@@ -365,8 +365,9 @@ const MemberWalletsElegant: React.FC = () => {
 
       {/* ================= MEMBER SECTION ================= */}
       <div
-        className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#f6f7f9bd] dark:bg-[#0c1427]
+        className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#f6f7f9bd] dark:bg-[#0c1410]
 px-4 py-5
+
 sm:px-6
 md:px-10
 min-h-[135px]
