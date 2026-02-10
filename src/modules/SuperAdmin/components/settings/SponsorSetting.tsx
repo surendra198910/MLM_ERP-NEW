@@ -17,80 +17,134 @@ export interface PackageSponsor {
 const Template: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const { universalService } = ApiService();
-    const [packages, setPackages] = useState<PackageROI[]>([]);
+    const [packages, setPackages] = useState<PackageSponsor[]>([]);
     const [sponsorMap, setSponsorMap] = useState<{
         [key: number]: { percentage: number; valueType: string };
     }>({});
 
+    const getIPLocation = async () => {
+        try {
+            const res = await fetch("https://ipapi.co/json/");
+            const data = await res.json();
 
-    const fetchPackages = async () => {
-  try {
-    setLoading(true);
-
-    const payload = {
-      procName: "SponsorSetting",
-      Para: JSON.stringify({ ActionMode: "GetPackages" }),
+            return {
+                IP: data.ip,
+                City: data.city,
+                State: data.region,
+                Country: data.country_name,
+                Latitude: data.latitude,
+                Longitude: data.longitude,
+                ISP: data.org,
+            };
+        } catch (e) {
+            console.error("IP fetch failed", e);
+            return {};
+        }
     };
 
-    const res = await universalService(payload);
-    const data = res?.data || res;
+    const getBrowserInfo = () => {
+        const ua = navigator.userAgent;
 
-    const pkgList: PackageSponsor[] = Array.isArray(data) ? data : [];
-    setPackages(pkgList);
+        let browser = "Unknown";
+        if (ua.includes("Chrome")) browser = "Chrome";
+        else if (ua.includes("Firefox")) browser = "Firefox";
+        else if (ua.includes("Safari")) browser = "Safari";
+        else if (ua.includes("Edge")) browser = "Edge";
 
-    // Bind into sponsorMap
-    const sponsorObj: any = {};
-    pkgList.forEach((p) => {
-      sponsorObj[p.PackageId] = {
-        percentage: p.SponsorPercentage ?? 0,
-        valueType: p.ValueType || "Percentage",
-      };
-    });
+        return {
+            UserAgent: ua,
+            Browser: browser,
+            Platform: navigator.platform,
+            Language: navigator.language,
+            Screen: `${window.screen.width}x${window.screen.height}`,
+        };
+    };
 
-    setSponsorMap(sponsorObj);
-  } catch (err) {
-    console.error("Failed to load packages", err);
-    setPackages([]);
-  } finally {
-    setLoading(false);
-  }
-};
+    const getClientInfo = async () => {
+        const ipInfo = await getIPLocation();
+        const browserInfo = getBrowserInfo();
+
+        return {
+            ...ipInfo,
+            ...browserInfo,
+            TimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+            DateTime: new Date().toISOString(),
+        };
+    };
+
+    const fetchPackages = async () => {
+        try {
+            setLoading(true);
+
+            const payload = {
+                procName: "SponsorSetting",
+                Para: JSON.stringify({ ActionMode: "GetPackages" }),
+            };
+
+            const res = await universalService(payload);
+            const data = res?.data || res;
+
+            const pkgList: PackageSponsor[] = Array.isArray(data) ? data : [];
+            setPackages(pkgList);
+
+            // Bind into sponsorMap
+            const sponsorObj: any = {};
+            pkgList.forEach((p) => {
+                sponsorObj[p.PackageId] = {
+                    percentage: p.SponsorPercentage ?? 0,
+                    valueType: p.ValueType || "Percentage",
+                };
+            });
+
+            setSponsorMap(sponsorObj);
+        } catch (err) {
+            console.error("Failed to load packages", err);
+            setPackages([]);
+        } finally {
+            setLoading(false);
+        }
+    };
 
 
     // Load on page load
     useEffect(() => {
         fetchPackages();
     }, []);
-   const saveSponsor = async () => {
-  try {
-    const payload = Object.keys(sponsorMap).map((id) => ({
-      PackageId: Number(id),
-      SponsorPercentage: sponsorMap[id].percentage,
-      ValueType: sponsorMap[id].valueType,
-    }));
+    const saveSponsor = async () => {
+        try {
+            const payload = Object.keys(sponsorMap).map((id) => ({
+                PackageId: Number(id),
+                SponsorPercentage: sponsorMap[id].percentage,
+                ValueType: sponsorMap[id].valueType,
+            }));
 
-    const response = await universalService({
-      procName: "SponsorSetting",
-      Para: JSON.stringify({
-        ActionMode: "UpdateSponsor",
-        Data: JSON.stringify(payload),
-      }),
-    });
+            // ✅ Get client info
+            const clientInfo = await getClientInfo();
 
-    const res = Array.isArray(response)
-      ? response[0]
-      : response?.data?.[0];
+            const response = await universalService({
+                procName: "SponsorSetting",
+                Para: JSON.stringify({
+                    ActionMode: "UpdateSponsor",
+                    Data: JSON.stringify(payload),
+                    ClientInfo: clientInfo, // 👈 send to API
+                }),
+            });
 
-    if (res?.StatusCode == "1") {
-      Swal.fire("Success", res?.Msg || "Saved successfully", "success");
-    } else {
-      Swal.fire("Error", res?.Msg || "Operation failed", "error");
-    }
-  } catch (err) {
-    console.error(err);
-    Swal.fire("Error", "Server error occurred", "error");
-  }
-};
+            const res = Array.isArray(response)
+                ? response[0]
+                : response?.data?.[0];
+
+            if (res?.StatusCode == "1") {
+                Swal.fire("Success", res?.Msg || "Saved successfully", "success");
+            } else {
+                Swal.fire("Error", res?.Msg || "Operation failed", "error");
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire("Error", "Server error occurred", "error");
+        }
+    };
+
 
 
     const imageBaseUrl = import.meta.env.VITE_IMAGE_PREVIEW_URL;
@@ -174,53 +228,53 @@ const Template: React.FC = () => {
                                     </div>
 
                                     {/* Details Card */}
-                                   {/* Sponsor Settings */}
-<div className="space-y-4">
-  {/* Value Type */}
-  <div className="flex items-center justify-between">
-    <span className="text-gray-500 dark:text-gray-400">
-      Value Type
-    </span>
-    <select
-      value={sponsorMap[pkg.PackageId]?.valueType || "Percentage"}
-      onChange={(e) =>
-        setSponsorMap({
-          ...sponsorMap,
-          [pkg.PackageId]: {
-            ...sponsorMap[pkg.PackageId],
-            valueType: e.target.value,
-          },
-        })
-      }
-      className="w-30 bg-white dark:bg-[#020617] border border-primary-button-bg dark:primary-button-bg rounded-xl px-2 py-1 text-sm"
-    >
-      <option value="Percentage">Percentage</option>
-      <option value="Value">Value</option>
-    </select>
-  </div>
+                                    {/* Sponsor Settings */}
+                                    <div className="space-y-4">
+                                        {/* Value Type */}
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-gray-500 dark:text-gray-400">
+                                                Value Type
+                                            </span>
+                                            <select
+                                                value={sponsorMap[pkg.PackageId]?.valueType || "Percentage"}
+                                                onChange={(e) =>
+                                                    setSponsorMap({
+                                                        ...sponsorMap,
+                                                        [pkg.PackageId]: {
+                                                            ...sponsorMap[pkg.PackageId],
+                                                            valueType: e.target.value,
+                                                        },
+                                                    })
+                                                }
+                                                className="w-30 bg-white dark:bg-[#020617] border border-primary-button-bg dark:primary-button-bg rounded-xl px-2 py-1 text-sm"
+                                            >
+                                                <option value="Percentage">Percentage</option>
+                                                <option value="Value">Value</option>
+                                            </select>
+                                        </div>
 
-  {/* Sponsor Percentage */}
-  <div className="flex items-center justify-between">
-    <span className="text-gray-500 dark:text-gray-400">
-      Sponsor Value
-    </span>
-    <input
-      type="number"
-      step="0.01"
-      value={sponsorMap[pkg.PackageId]?.percentage ?? 0}
-      onChange={(e) =>
-        setSponsorMap({
-          ...sponsorMap,
-          [pkg.PackageId]: {
-            ...sponsorMap[pkg.PackageId],
-            percentage: Number(e.target.value),
-          },
-        })
-      }
-      className="w-24 text-right bg-white dark:bg-[#020617] border border-primary-button-bg0 dark:primary-button-bg rounded-xl px-3 py-1.5 text-sm font-semibold text-primary-button-bg focus:ring-2 focus:ring-blue-500 outline-none"
-    />
-  </div>
-</div>
+                                        {/* Sponsor Percentage */}
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-gray-500 dark:text-gray-400">
+                                                Sponsor Value
+                                            </span>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                value={sponsorMap[pkg.PackageId]?.percentage ?? 0}
+                                                onChange={(e) =>
+                                                    setSponsorMap({
+                                                        ...sponsorMap,
+                                                        [pkg.PackageId]: {
+                                                            ...sponsorMap[pkg.PackageId],
+                                                            percentage: Number(e.target.value),
+                                                        },
+                                                    })
+                                                }
+                                                className="w-24 text-right bg-white dark:bg-[#020617] border border-primary-button-bg0 dark:primary-button-bg rounded-xl px-3 py-1.5 text-sm font-semibold text-primary-button-bg focus:ring-2 focus:ring-blue-500 outline-none"
+                                            />
+                                        </div>
+                                    </div>
 
 
                                     {/* Footer */}

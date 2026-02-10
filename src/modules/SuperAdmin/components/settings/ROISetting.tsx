@@ -51,6 +51,54 @@ const Template: React.FC = () => {
   useEffect(() => {
     fetchPackages();
   }, []);
+  const getIPLocation = async () => {
+    try {
+      const res = await fetch("https://ipapi.co/json/");
+      const data = await res.json();
+
+      return {
+        IP: data.ip,
+        City: data.city,
+        State: data.region,
+        Country: data.country_name,
+        Latitude: data.latitude,
+        Longitude: data.longitude,
+        ISP: data.org,
+      };
+    } catch (e) {
+      console.error("IP fetch failed", e);
+      return {};
+    }
+  };
+  const getBrowserInfo = () => {
+    const ua = navigator.userAgent;
+
+    let browser = "Unknown";
+    if (ua.includes("Chrome")) browser = "Chrome";
+    else if (ua.includes("Firefox")) browser = "Firefox";
+    else if (ua.includes("Safari")) browser = "Safari";
+    else if (ua.includes("Edge")) browser = "Edge";
+
+    return {
+      UserAgent: ua,
+      Browser: browser,
+      Platform: navigator.platform,
+      Language: navigator.language,
+      Screen: `${window.screen.width}x${window.screen.height}`,
+    };
+  };
+  const getClientInfo = async () => {
+    const ipInfo = await getIPLocation();
+    const browserInfo = getBrowserInfo();
+
+    return {
+      ...ipInfo,
+      ...browserInfo,
+      TimeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      DateTime: new Date().toISOString(),
+    };
+  };
+
   const saveROI = async () => {
     try {
       const payload = Object.keys(roiMap).map((id) => ({
@@ -58,40 +106,28 @@ const Template: React.FC = () => {
         ROIPercentage: roiMap[id],
       }));
 
+      // ✅ Get client info
+      const clientInfo = await getClientInfo();
+
       const response = await universalService({
         procName: "ROISetting",
         Para: JSON.stringify({
           ActionMode: "UpdateROI",
-          Data:  JSON.stringify(payload),
+          Data: JSON.stringify(payload),
+          ClientInfo: clientInfo, // 👈 SEND TO API
         }),
       });
 
       const res = Array.isArray(response) ? response[0] : response?.data?.[0];
 
       if (res?.StatusCode == "1") {
-        Swal.fire({
-          title: "Success!",
-          text: res?.Msg || "Action completed successfully.",
-          icon: "success",
-          confirmButtonText: "OK",
-          confirmButtonColor: "#3b82f6",
-        });
+        Swal.fire("Success!", res?.Msg, "success");
       } else {
-        Swal.fire({
-          title: "Error",
-          text: res?.Msg || "Operation failed",
-          icon: "error",
-          confirmButtonText: "OK",
-        });
+        Swal.fire("Error", res?.Msg || "Failed", "error");
       }
     } catch (err) {
       console.error(err);
-      Swal.fire({
-        title: "Error",
-        text: "Server error occurred",
-        icon: "error",
-        confirmButtonText: "OK",
-      });
+      Swal.fire("Error", "Server error occurred", "error");
     }
   };
 
@@ -134,7 +170,7 @@ const Template: React.FC = () => {
                   className="relative group bg-white/80 dark:bg-[#0b1220]/80 backdrop-blur-xl border border-blue-100 dark:border-blue-900/40 rounded-3xl shadow-md hover:shadow-2xl transition-all duration-300 p-6 flex flex-col min-w-[280px] max-w-[320px]"
                 >
                   {/* Top Glow */}
-                  <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-primary-button-bg/60 to-transparent"></div>
+                  <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-blue-500/60 to-transparent"></div>
 
                   {/* Ribbon Badge */}
                   <div className="absolute top-0 right-0 z-20">
@@ -193,7 +229,7 @@ const Template: React.FC = () => {
                             [pkg.PackageId]: Number(e.target.value),
                           })
                         }
-                        className="appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none w-24 text-right bg-white dark:bg-[#020617] border border-primary-button-bg dark:primary-button-bg rounded-xl px-3 py-1.5 text-sm font-semibold text-primary-button-bg dark:text-primary-button-bg focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none w-24 text-right bg-white dark:bg-[#020617] border border-blue-200 dark:border-blue-800 rounded-xl px-3 py-1.5 text-sm font-semibold text-primary-button-bg dark:text-primary-button-bg focus:ring-2 focus:ring-blue-500 outline-none"
                       />
                     </div>
 
@@ -202,7 +238,7 @@ const Template: React.FC = () => {
                       <span className="text-gray-500 dark:text-gray-400">
                         Duration
                       </span>
-                      <span className="font-semibold text-primary-button-bg dark:text-gray-200">
+                      <span className="font-semibold text-gray-900 dark:text-gray-200">
                         {pkg.Validity} Days
                       </span>
                     </div>
