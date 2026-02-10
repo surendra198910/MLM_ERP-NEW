@@ -541,9 +541,10 @@ export default function AddCompany() {
     // --- STYLES ---
     // UPDATED: Added dark mode classes for bg, border, text, placeholder
     const bigInputClasses =
-        "w-full border border-gray-200 rounded-md px-3 py-2 text-sm h-10 " +
+        "w-full border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2 text-sm h-10 " +
         "placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all " +
-        "bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500";
+        "bg-white dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500";
+
 
     const normalizeDDL = useCallback(
         (data: any[], idKey: string, nameKey: string): DropdownOption[] =>
@@ -985,134 +986,134 @@ export default function AddCompany() {
         });
     };
 
-const handleSubmit = async (
-    values: FormValues,
-    { resetForm, setSubmitting }: FormikHelpers<FormValues>
-) => {
+    const handleSubmit = async (
+        values: FormValues,
+        { resetForm, setSubmitting }: FormikHelpers<FormValues>
+    ) => {
 
-    const confirm = await Swal.fire({
-        title: isEditMode ? "Update Package?" : "Create Package?",
-        text: isEditMode
-            ? "Are you sure you want to update this package?"
-            : "Are you sure you want to create this package?",
-        icon: "question",
-        showCancelButton: true,
-        confirmButtonText: isEditMode ? "Yes, Update" : "Yes, Create",
-        cancelButtonText: "Cancel",
-        confirmButtonColor: "#3085d6",
-    });
+        const confirm = await Swal.fire({
+            title: isEditMode ? "Update Package?" : "Create Package?",
+            text: isEditMode
+                ? "Are you sure you want to update this package?"
+                : "Are you sure you want to create this package?",
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonText: isEditMode ? "Yes, Update" : "Yes, Create",
+            cancelButtonText: "Cancel",
+            confirmButtonColor: "#3085d6",
+        });
 
-    if (!confirm.isConfirmed) return;
+        if (!confirm.isConfirmed) return;
 
-    setLoading(true);
+        setLoading(true);
 
-    try {
+        try {
 
-        /* ================= PRICE LOGIC ================= */
+            /* ================= PRICE LOGIC ================= */
 
-        let minPrice: string | null = null;
-        let maxPrice: string | null = null;
+            let minPrice: string | null = null;
+            let maxPrice: string | null = null;
 
-        if (values.packageType === "Fixed") {
-            minPrice = values.amount || null;
-            maxPrice = values.amount || null;
-        }
-        else if (values.packageType === "Flexible") {
-            minPrice = values.minAmount || null;
-            maxPrice = values.maxAmount || null;
-        }
-
-        /* ================= IMAGES ================= */
-
-        const imagesPayload = images.map((img, index) => ({
-            ImageName: img.fileName,
-            IsDefault: img.isDefault ? 1 : 0,
-            Position: index + 1,
-        }));
-
-        /* ================= USER ================= */
-
-        const saved = localStorage.getItem("EmployeeDetails");
-        const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
-
-        /* ================= MODE ================= */
-
-        const actionMode = isEditMode ? "Update" : "Insert";
-
-        /* ================= BASE DATA ================= */
-
-        const packageData: any = {
-            ActionMode: actionMode,
-            CompanyId: 1,
-            CategoryId: 1,
-            Type: values.packageType,
-            ProductName: values.companyName,
-            MinAmount: minPrice,
-            MaxAmount: maxPrice,
-            SalePrice: minPrice,
-            Publish: values.isPublished ? 1 : 0,
-            ShortDesc: values.shortDesc,
-            LongDesc: values.longDesc,
-            Validity: values.validity,
-            EntryBy: employeeId,
-            ImagesJson: JSON.stringify(imagesPayload),
-        };
-
-        if (isEditMode) {
-            packageData.ProductId = Number(id);
-        }
-
-        const payload = {
-            procName: "CreatePackage",
-            Para: JSON.stringify(packageData),
-        };
-
-        const response = await universalService(payload);
-
-        const res = Array.isArray(response)
-            ? response[0]
-            : response?.data?.[0];
-
-        if (res?.StatusCode == 1 || res?.statuscode == 1) {
-
-            Swal.fire(
-                "Success",
-                res?.Msg || "Saved Successfully",
-                "success"
-            );
-
-            if (!isEditMode) {
-                resetForm();
-                setImages([]);
-                setTab(0);
+            if (values.packageType === "Fixed") {
+                minPrice = values.amount || null;
+                maxPrice = values.amount || null;
+            }
+            else if (values.packageType === "Flexible") {
+                minPrice = values.minAmount || null;
+                maxPrice = values.maxAmount || null;
             }
 
-            navigate("/superadmin/mlm-setting/manage-package");
+            /* ================= IMAGES ================= */
 
-        } else {
+            const imagesPayload = images.map((img, index) => ({
+                ImageName: img.fileName,
+                IsDefault: img.isDefault ? 1 : 0,
+                Position: index + 1,
+            }));
+
+            /* ================= USER ================= */
+
+            const saved = localStorage.getItem("EmployeeDetails");
+            const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
+
+            /* ================= MODE ================= */
+
+            const actionMode = isEditMode ? "Update" : "Insert";
+
+            /* ================= BASE DATA ================= */
+
+            const packageData: any = {
+                ActionMode: actionMode,
+                CompanyId: 1,
+                CategoryId: 1,
+                Type: values.packageType,
+                ProductName: values.companyName,
+                MinAmount: minPrice,
+                MaxAmount: maxPrice,
+                SalePrice: minPrice,
+                Publish: values.isPublished ? 1 : 0,
+                ShortDesc: values.shortDesc,
+                LongDesc: values.longDesc,
+                Validity: values.validity,
+                EntryBy: employeeId,
+                ImagesJson: JSON.stringify(imagesPayload),
+            };
+
+            if (isEditMode) {
+                packageData.ProductId = Number(id);
+            }
+
+            const payload = {
+                procName: "CreatePackage",
+                Para: JSON.stringify(packageData),
+            };
+
+            const response = await universalService(payload);
+
+            const res = Array.isArray(response)
+                ? response[0]
+                : response?.data?.[0];
+
+            if (res?.StatusCode == 1 || res?.statuscode == 1) {
+
+                Swal.fire(
+                    "Success",
+                    res?.Msg || "Saved Successfully",
+                    "success"
+                );
+
+                if (!isEditMode) {
+                    resetForm();
+                    setImages([]);
+                    setTab(0);
+                }
+
+                navigate("/superadmin/mlm-setting/manage-package");
+
+            } else {
+
+                Swal.fire(
+                    "Error",
+                    res?.Msg || "Operation Failed",
+                    "error"
+                );
+            }
+
+        } catch (err) {
+
+            console.error("Submit Error:", err);
 
             Swal.fire(
                 "Error",
-                res?.Msg || "Operation Failed",
+                "Server error. Please try again.",
                 "error"
             );
+
+        } finally {
+            setLoading(false);
+            setSubmitting(false);
         }
-
-    } catch (err) {
-
-        console.error("Submit Error:", err);
-
-        Swal.fire(
-            "Error",
-            "Server error. Please try again.",
-            "error"
-        );
-
-    } finally {
-        setLoading(false);
-        setSubmitting(false);
-    }
-};
+    };
 
 
 
