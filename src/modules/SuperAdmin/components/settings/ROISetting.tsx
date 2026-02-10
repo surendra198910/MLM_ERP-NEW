@@ -114,7 +114,7 @@ const Template: React.FC = () => {
               <button
                 type="button"
                 onClick={saveROI}
-                className="px-6 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                className="px-6 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover text-white rounded text-sm font-medium transition-colors flex items-center justify-center gap-2"
               >
                 Sumit
               </button>
@@ -140,7 +140,7 @@ const Template: React.FC = () => {
                   <div className="absolute top-0 right-0 z-20">
                     <div className="relative">
                       <div className="absolute right-0 top-0 w-24 h-24 overflow-hidden">
-                        <span className="absolute top-[22px] right-[-38px] w-40 rotate-45 bg-blue-600 text-white text-[11px] font-semibold tracking-wide text-center py-1 shadow-md">
+                        <span className="absolute top-[22px] right-[-38px] w-40 rotate-45 bg-primary-button-bg text-white text-[11px] font-semibold tracking-wide text-center py-1 shadow-md">
                           {pkg.Type}
                         </span>
                       </div>
@@ -170,7 +170,7 @@ const Template: React.FC = () => {
 
                   {/* Investment Amount */}
                   <div className="mt-5 text-center">
-                    <p className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                    <p className="text-3xl font-bold bg-gradient-to-r from-primary-button-bg to-primary-button-bg bg-clip-text text-transparent">
                       {pkg.PackageAmount}
                     </p>
                   </div>
@@ -193,7 +193,7 @@ const Template: React.FC = () => {
                             [pkg.PackageId]: Number(e.target.value),
                           })
                         }
-                        className="appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none w-24 text-right bg-white dark:bg-[#020617] border border-blue-200 dark:border-blue-800 rounded-xl px-3 py-1.5 text-sm font-semibold text-blue-700 dark:text-blue-400 focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="appearance-none [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none w-24 text-right bg-white dark:bg-[#020617] border border-blue-200 dark:border-blue-800 rounded-xl px-3 py-1.5 text-sm font-semibold text-primary-button-bg dark:text-primary-button-bg focus:ring-2 focus:ring-blue-500 outline-none"
                       />
                     </div>
 
