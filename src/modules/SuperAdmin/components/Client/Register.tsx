@@ -51,7 +51,10 @@ const positions = [
   { label: "Left", value: "1" },
   { label: "Right", value: "2" },
 ];
-
+const genders = [
+  { label: "Male", value: "Male" },
+  { label: "Female", value: "Female" },
+];
 // Register.tsx (TOP of the component file, outside the component if you want)
 
 // ----------------------------------------------------------------------
@@ -80,7 +83,10 @@ export default function MLMRegisterPage() {
     PasswordType: "Auto",
     PlacementType: "Manual",
     PlanType: "Binary",
+    GenderEnabled: true,
   });
+
+
   // --- KYC Document State ---
   const [docValues, setDocValues] = useState<Record<number, any>>({});
   const [uploadProgress, setUploadProgress] = useState<Record<number, number>>(
@@ -273,7 +279,7 @@ export default function MLMRegisterPage() {
     }
   }, [universalService]);
   const bigInputClasses =
-    "w-full border border-gray-200 rounded-md px-3 py-2 text-sm h-10 placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500";
+    "w-full border border-gray-200 rounded-md px-3 py-2 text-sm h-10 placeholder-gray-400 focus:outline-none focus:border-primary-button-bg focus:ring-1 focus:ring-primary-button-bg bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500";
 
   const initialValues: FormValues = {
     sponsorId: "",
@@ -737,16 +743,19 @@ export default function MLMRegisterPage() {
                     error={errors.lastName}
                     touched={touched.lastName}
                   />
-                   <RadioGroupField
-                    label="Gender"
-                    name="gender"
-                    options={[
-                      { label: "Male", value: "Male" },
-                      { label: "Female", value: "Female" },
-                    ]}
-                    values={values}
-                    setFieldValue={setFieldValue}
-                  />
+
+                  {settings?.GenderEnabled !== false && (
+                    <RadioBoxField
+                      label="Gender*"
+                      name="gender"
+                      options={genders}
+                      value={values.gender}
+                      setFieldValue={setFieldValue}
+                    />
+                  )}
+
+
+
                   {settings?.UserNameType === "Manual" && (
                     <InputField
                       label="Username*"
@@ -758,7 +767,7 @@ export default function MLMRegisterPage() {
                       touched={touched.username}
                     />
                   )}
-                 
+
 
                   <InputField
                     label="Email*"
@@ -790,11 +799,10 @@ export default function MLMRegisterPage() {
                     key={i}
                     type="button"
                     onClick={() => setTab(i)}
-                    className={`pb-2 text-sm font-medium transition-colors flex items-center gap-2 flex-shrink-0 ${
-                      tab === i
-                        ? "border-b-2 border-primary-500 text-primary-500"
-                        : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border-b-2 border-transparent"
-                    }`}
+                    className={`pb-2 text-sm font-medium transition-colors flex items-center gap-2 flex-shrink-0 ${tab === i
+                      ? "border-b-2 border-primary-button-bg text-primary-button-bg"
+                      : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border-b-2 border-transparent"
+                      }`}
                   >
                     {t.icon}
                     {t.label}
@@ -933,7 +941,7 @@ export default function MLMRegisterPage() {
                   </div>
 
                   <p className="text-sm text-gray-500 mt-2">
-                     Please ensure the wallet address is correct. Wrong
+                    Please ensure the wallet address is correct. Wrong
                     address may result in permanent loss of funds.
                   </p>
                 </div>

@@ -150,13 +150,13 @@ const Template: React.FC = () => {
                         <div
                             key={pkg.ProductId}
                             className="relative group bg-white/80 dark:bg-[#0b1220]/80
-              backdrop-blur-xl border border-blue-100 dark:border-blue-900/40
+              backdrop-blur-xl border border-primary-table-bg-hover dark:border-primary-button-bg/40
               rounded-3xl shadow-md hover:shadow-2xl transition-all duration-300
               p-6 flex flex-col min-w-[280px] max-w-[320px]"
                         >
 
                             {/* Top Glow Line */}
-                            <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-blue-500/60 to-transparent" />
+                            <div className="absolute inset-x-0 -top-px h-px bg-gradient-to-r from-transparent via-primary-button-bg/60 to-transparent" />
 
                             {/* Ribbon Status */}
                             <div className="absolute top-0 right-0 z-20">
@@ -166,7 +166,7 @@ const Template: React.FC = () => {
                                             className={`absolute top-[22px] right-[-38px] w-40 rotate-45
                       text-white text-[11px] font-semibold text-center py-1 shadow-md
                       ${pkg.IsActive === 1
-                                                    ? "bg-green-600"
+                                                    ? "bg-primary-button-bg"
                                                     : "bg-gray-500"
                                                 }`}
                                         >
@@ -249,7 +249,7 @@ const Template: React.FC = () => {
                             <div className="mt-5 text-center">
 
                                 <p className="text-3xl font-bold bg-gradient-to-r
-from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+from-primary-button-bg to-primary-button-bg bg-clip-text text-transparent">
 
                                     {pkg.MinAmount === pkg.MaxAmount
                                         ? `$${pkg.MinAmount}`
@@ -281,7 +281,7 @@ from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                                 </div>
 
                                 {/* Divider */}
-                                <div className="h-px bg-gradient-to-r from-transparent via-blue-200 dark:via-blue-800 to-transparent" />
+                                <div className="h-px bg-gradient-to-r from-transparent via-primary-button-bg dark:via-primary-button-bg to-transparent" />
 
                                 {/* Validity */}
                                 <div className="flex items-center justify-between">
@@ -308,7 +308,7 @@ from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                                         navigate(`/superadmin/mlm-setting/add-package/${pkg.ProductId}`)
                                     }
                                     className="flex items-center gap-1 px-3 py-1.5
-                  bg-blue-500 hover:bg-blue-600
+                  bg-primary-button-bg hover:bg-button-bg-hover
                   text-white text-xs rounded"
                                 >
                                     <FaEdit size={12} />
@@ -327,7 +327,7 @@ from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                                         className={`relative inline-flex h-6 w-11 items-center rounded-full
     transition-colors duration-300 focus:outline-none
     ${pkg.IsActive === 1
-                                                ? "bg-green-500"
+                                                ? "bg-primary-button-bg"
                                                 : "bg-gray-400"
                                             }`}
                                     >

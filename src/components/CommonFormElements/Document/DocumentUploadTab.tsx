@@ -99,7 +99,7 @@ const DocumentUploadTab: React.FC<DocumentUploadTabProps> = ({
                 </label>
 
                 <div className="flex flex-col md:flex-row md:items-center gap-3 w-full">
-                  <label className="shrink-0 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-xs font-medium rounded-md cursor-pointer transition shadow-sm whitespace-nowrap">
+                  <label className="shrink-0 px-4 py-2 bg-primary-button-bg hover:bg-primary-600 text-white text-xs font-medium rounded-md cursor-pointer transition shadow-sm whitespace-nowrap">
                     Choose file
                     <input
                       type="file"

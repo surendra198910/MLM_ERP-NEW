@@ -7,7 +7,7 @@ import { ApiService } from "../../../../services/ApiService";
 import { toast, ToastContainer } from "react-toastify";
 import Swal from "sweetalert2";
 import "react-toastify/dist/ReactToastify.css";
-import { FaEdit, FaSave, FaSitemap, FaShieldAlt, FaProjectDiagram } from "react-icons/fa";
+import { FaEdit, FaSave, FaSitemap, FaShieldAlt, FaProjectDiagram, FaBell, FaMoneyBillWave, FaWhatsapp, FaEnvelope, FaSms } from "react-icons/fa";
 import { PostService } from "../../../../services/PostService";
 import CropperModal from "../Cropper/Croppermodel";
 
@@ -26,7 +26,19 @@ const initialValues = {
   PlacementType: "",
   MaleDefaultIcon: "",
   FemaleDefaultIcon: "",
+
+  // Notification
+  whatsapp: false,
+  email: false,
+  sms: false,
+
+  // Wallet settings
+  SponsorIncomeWallet: "",
+  ROIWallet: "",
+  LevelIncomeWallet: "",
+  BinaryIncomeWallet: "",
 };
+
 
 // -------------------------------------
 // VALIDATION
@@ -40,7 +52,14 @@ const validationSchema = Yup.object().shape({
   PasswordType: Yup.string().required("Required"),
   PlanType: Yup.string().required("Required"),
   PlacementType: Yup.string().required("Required"),
+
+  // Payout wallet validation
+  SponsorIncomeWallet: Yup.string().required("Required"),
+  ROIWallet: Yup.string().required("Required"),
+  LevelIncomeWallet: Yup.string().required("Required"),
+  BinaryIncomeWallet: Yup.string().required("Required"),
 });
+
 
 // -------------------------------------
 // MAIN COMPONENT
@@ -60,13 +79,34 @@ export default function GlobalSetting() {
   const [showCropper, setShowCropper] = useState(false);
   const [rawImage, setRawImage] = useState("");
   const [cropTarget, setCropTarget] = useState<"male" | "female" | null>(null);
-
+  const [walletOptions, setWalletOptions] = useState([]);
 
   const [tab, setTab] = useState(0);
+
+
   const tabs = [
     { label: "Genealogy Settings", icon: <FaSitemap /> },
+    { label: "Notification Settings", icon: <FaBell /> },
+    { label: "Payout Wallet Settings", icon: <FaMoneyBillWave /> },
   ];
 
+  const notificationOptions = [
+    {
+      id: "whatsapp",
+      name: "WhatsApp",
+      icon: <FaWhatsapp className="text-green-500 text-xl" />,
+    },
+    {
+      id: "email",
+      name: "Email",
+      icon: <FaEnvelope className="text-blue-500 text-xl" />,
+    },
+    {
+      id: "sms",
+      name: "SMS",
+      icon: <FaSms className="text-yellow-500 text-xl" />,
+    },
+  ];
 
 
   // -------------------------------------
@@ -144,7 +184,27 @@ export default function GlobalSetting() {
       toast.success("Female icon removed. Click Update to save.");
     }
   };
+  const loadWallets = async () => {
+    try {
+      const payload = {
+        procName: "ManageGlobalSetting",
+        Para: JSON.stringify({
+          ActionMode: "GetWallet",
+        }),
+      };
 
+      const res = await universalService(payload);
+      const data = res?.data || res || [];
+      setWalletOptions(data);
+    } catch (err) {
+      console.error("Wallet load error", err);
+      toast.error("Failed to load wallets");
+    }
+  };
+  useEffect(() => {
+    loadSettings();
+    loadWallets();
+  }, []);
   const handleCroppedImage = async (croppedBase64: string) => {
     try {
       const res = await fetch(croppedBase64);
@@ -199,7 +259,6 @@ export default function GlobalSetting() {
       const data = res?.data?.[0] || res?.[0];
 
       if (!data) return;
-
       setForm({
         SettingId: data.SettingId,
         UsernamePrefix: data.UsernamePrefix || "",
@@ -211,7 +270,20 @@ export default function GlobalSetting() {
         PlacementType: data.PlacementType || "",
         MaleDefaultIcon: data.MaleDefaultIcon || "",
         FemaleDefaultIcon: data.FemaleDefaultIcon || "",
+
+        // Notification (DB → UI)
+        whatsapp: data.WhatsAppNotification || false,
+        email: data.EmailNotification || false,
+        sms: data.SMSNotification || false,
+
+        // Wallets (DB → UI)
+        SponsorIncomeWallet: data.SponsorIncomeWallet || "",
+        ROIWallet: data.ROIIncomeWallet || "",
+        LevelIncomeWallet: data.LevelIncomeWallet || "",
+        BinaryIncomeWallet: data.BinaryIncomeWallet || "",
       });
+
+
 
       // set icons for preview
       setMaleIcon(data.MaleDefaultIcon || "");
@@ -229,9 +301,7 @@ export default function GlobalSetting() {
   // LOAD ON MOUNT
   // -------------------------------------
 
-  useEffect(() => {
-    loadSettings();
-  }, []);
+
 
   // -------------------------------------
   // UPDATE
@@ -269,8 +339,20 @@ export default function GlobalSetting() {
 
           MaleDefaultIcon: maleIcon,
           FemaleDefaultIcon: femaleIcon,
+
+          // Notification (UI → DB)
+          WhatsAppNotification: values.whatsapp,
+          SMSNotification: values.sms,
+          EmailNotification: values.email,
+
+          // Wallet mapping (UI → DB)
+          SponsorIncomeWallet: values.SponsorIncomeWallet,
+          ROIIncomeWallet: values.ROIWallet,
+          LevelIncomeWallet: values.LevelIncomeWallet,
+          BinaryIncomeWallet: values.BinaryIncomeWallet,
         }),
       };
+
 
       const res = await universalService(payload);
 
@@ -370,7 +452,7 @@ export default function GlobalSetting() {
 
             {/* Username Prefix */}
             <div>
-              <label className="text-sm mb-1 block">Username Prefix</label>
+              <label className="text-sm mb-1 block">Username Prefix<span className="text-red-500">*</span></label>
               <input
                 name="UsernamePrefix"
                 value={values.UsernamePrefix}
@@ -385,7 +467,7 @@ export default function GlobalSetting() {
 
             {/* Start Series */}
             <div>
-              <label className="text-sm mb-1 block">Start Series</label>
+              <label className="text-sm mb-1 block">Start Series<span className="text-red-500">*</span></label>
               <input
                 type="number"
                 name="StartSeries"
@@ -399,7 +481,7 @@ export default function GlobalSetting() {
             {/* Series Type */}
             {/* Series Type */}
             <div>
-              <label className="text-sm mb-1 block">Series Type</label>
+              <label className="text-sm mb-1 block">Series Type<span className="text-red-500">*</span></label>
 
               <select
                 name="SeriesType"
@@ -420,7 +502,7 @@ export default function GlobalSetting() {
 
             {/* Username Type */}
             <div>
-              <label className="text-sm mb-1 block">Username Type</label>
+              <label className="text-sm mb-1 block">Username Type<span className="text-red-500">*</span></label>
 
               <select
                 name="UserNameType"
@@ -441,7 +523,7 @@ export default function GlobalSetting() {
 
             {/* Password Type */}
             <div>
-              <label className="text-sm mb-1 block">Password Type</label>
+              <label className="text-sm mb-1 block">Password Type<span className="text-red-500">*</span></label>
 
               <select
                 name="PasswordType"
@@ -462,7 +544,7 @@ export default function GlobalSetting() {
 
             {/* Plan Type */}
             <div>
-              <label className="text-sm mb-1 block">Plan Type</label>
+              <label className="text-sm mb-1 block">Plan Type<span className="text-red-500">*</span></label>
 
               <select
                 name="PlanType"
@@ -483,7 +565,7 @@ export default function GlobalSetting() {
 
             {/* Placement Type */}
             <div>
-              <label className="text-sm mb-1 block">Placement Type</label>
+              <label className="text-sm mb-1 block">Placement Type<span className="text-red-500">*</span></label>
 
               <select
                 name="PlacementType"
@@ -513,7 +595,7 @@ export default function GlobalSetting() {
                   onClick={() => setTab(i)}
                   className={`pb-2 text-sm font-medium transition-colors flex items-center gap-2
     ${tab === i
-                      ? "border-b-2 border-primary-500 text-primary-500"
+                      ? "border-b-2 border-primary-button-bg text-primary-button-bg"
                       : "text-gray-500 hover:text-gray-700 border-b-2 border-transparent"
                     }`}
                 >
@@ -558,7 +640,7 @@ export default function GlobalSetting() {
                     </div>
 
                     {/* Upload */}
-                    <label className="absolute -top-3 -right-3 w-9 h-9 flex items-center justify-center bg-white text-primary-500 rounded-full shadow-lg cursor-pointer border">
+                    <label className="absolute -top-3 -right-3 w-9 h-9 flex items-center justify-center bg-white text-primary-button-bg rounded-full shadow-lg cursor-pointer border">
                       ✎
                       <input
                         type="file"
@@ -608,7 +690,7 @@ export default function GlobalSetting() {
                     </div>
 
                     {/* Upload */}
-                    <label className="absolute -top-3 -right-3 w-9 h-9 flex items-center justify-center bg-white text-primary-500 rounded-full shadow-lg cursor-pointer border">
+                    <label className="absolute -top-3 -right-3 w-9 h-9 flex items-center justify-center bg-white text-primary-button-bg rounded-full shadow-lg cursor-pointer border">
                       ✎
                       <input
                         type="file"
@@ -637,57 +719,156 @@ export default function GlobalSetting() {
           )}
 
           {tab === 1 && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 animate-fadeIn">
-
-              <div>
-                <label className="text-sm mb-1 block">Password Type</label>
-                <select
-                  name="PasswordType"
-                  value={values.PasswordType}
-                  onChange={handleChange}
-                  className={inputClass}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fadeIn">
+              {notificationOptions.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between
+                   bg-white dark:bg-gray-800
+                   border border-gray-200 dark:border-gray-700
+                   rounded-md px-4 py-3"
                 >
-                  <option value="">Select Password Type</option>
-                  <option value="Manual">Manual</option>
-                  <option value="Auto">Auto</option>
-                </select>
-              </div>
+                  {/* Left: Icon + Name */}
+                  <div className="flex items-center gap-3">
+                    {item.icon}
+                    <span className="font-medium text-gray-700 dark:text-gray-200">
+                      {item.name}
+                    </span>
+                  </div>
 
-              <div>
-                <label className="text-sm mb-1 block">Placement Type</label>
-                <select
-                  name="PlacementType"
-                  value={values.PlacementType}
-                  onChange={handleChange}
-                  className={inputClass}
-                >
-                  <option value="">Select Placement Type</option>
-                  <option value="Manual">Manual</option>
-                  <option value="Auto">Auto</option>
-                </select>
-              </div>
-
+                  {/* Toggle Switch */}
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={values[item.id]}
+                      onChange={() =>
+                        handleChange({
+                          target: {
+                            name: item.id,
+                            value: !values[item.id],
+                          },
+                        })
+                      }
+                    />
+                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-primary-button-bg transition-colors"></div>
+                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
+                  </label>
+                </div>
+              ))}
             </div>
           )}
+
+
+
           {tab === 2 && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5 animate-fadeIn">
-
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-5 animate-fadeIn">
+              {/* Sponsor Income */}
               <div>
-                <label className="text-sm mb-1 block">Plan Type</label>
+                <label className="text-sm mb-1 block">
+                  Sponsor Income (Wallet)<span className="text-red-500">*</span>
+                </label>
                 <select
-                  name="PlanType"
-                  value={values.PlanType}
+                  name="SponsorIncomeWallet"
+                  value={values.SponsorIncomeWallet}
                   onChange={handleChange}
                   className={inputClass}
                 >
-                  <option value="">Select Plan Type</option>
-                  <option value="Generation">Generation</option>
-                  <option value="Binary">Binary</option>
+                  <option value="">Select Wallet</option>
+                  {walletOptions.map((wallet) => (
+                    <option key={wallet.Id} value={wallet.Id}>
+                      {wallet.Name}
+                    </option>
+                  ))}
                 </select>
+                {errors.SponsorIncomeWallet && touched.SponsorIncomeWallet && (
+                  <p className="text-xs text-red-500">
+                    {errors.SponsorIncomeWallet}
+                  </p>
+                )}
               </div>
 
+
+              {/* ROI */}
+              <div>
+                <label className="text-sm mb-1 block">
+                  ROI (Wallet)<span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="ROIWallet"
+                  value={values.ROIWallet}
+                  onChange={handleChange}
+                  className={inputClass}
+                >
+                  <option value="">Select Wallet</option>
+                  {walletOptions.map((wallet) => (
+                    <option key={wallet.Id} value={wallet.Id}>
+                      {wallet.Name}
+                    </option>
+                  ))}
+                </select>
+                {errors.ROIWallet && touched.ROIWallet && (
+                  <p className="text-xs text-red-500">
+                    {errors.ROIWallet}
+                  </p>
+                )}
+
+              </div>
+
+              {/* Level Income */}
+              <div>
+                <label className="text-sm mb-1 block">
+                  Level Income (Wallet)<span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="LevelIncomeWallet"
+                  value={values.LevelIncomeWallet}
+                  onChange={handleChange}
+                  className={inputClass}
+                >
+                  <option value="">Select Wallet</option>
+                  {walletOptions.map((wallet) => (
+                    <option key={wallet.Id} value={wallet.Id}>
+                      {wallet.Name}
+                    </option>
+                  ))}
+                </select>
+                {errors.LevelIncomeWallet && touched.LevelIncomeWallet && (
+                  <p className="text-xs text-red-500">
+                    {errors.LevelIncomeWallet}
+                  </p>
+                )}
+
+              </div>
+
+              {/* Binary Income */}
+              <div>
+                <label className="text-sm mb-1 block">
+                  Binary Income (Wallet)<span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="BinaryIncomeWallet"
+                  value={values.BinaryIncomeWallet}
+                  onChange={handleChange}
+                  className={inputClass}
+                >
+                  <option value="">Select Wallet</option>
+                  {walletOptions.map((wallet) => (
+                    <option key={wallet.Id} value={wallet.Id}>
+                      {wallet.Name}
+                    </option>
+                  ))}
+                </select>
+                {errors.BinaryIncomeWallet && touched.BinaryIncomeWallet && (
+                  <p className="text-xs text-red-500">
+                    {errors.BinaryIncomeWallet}
+                  </p>
+                )}
+
+              </div>
             </div>
           )}
+
 
           <ToastContainer position="top-right" autoClose={3000} />
           <CropperModal
