@@ -111,7 +111,7 @@ const ManageUserPermission: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [categorySearch, setCategorySearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<Category | null>(
-    null
+    null,
   );
   const [forms, setForms] = useState<FormItem[]>([]);
   const [permissions, setPermissions] = useState<Record<number, string>>({});
@@ -149,8 +149,8 @@ const ManageUserPermission: React.FC = () => {
         const rows = Array.isArray(res?.data)
           ? res.data
           : Array.isArray(res)
-          ? res
-          : [];
+            ? res
+            : [];
         if (rows[0]?.ModuleList) {
           const parsedModules: Module[] = JSON.parse(rows[0].ModuleList);
           setModules(parsedModules.filter((m) => m.IsActive));
@@ -172,8 +172,8 @@ const ManageUserPermission: React.FC = () => {
         const data = Array.isArray(res?.data)
           ? res.data
           : Array.isArray(res)
-          ? res
-          : [];
+            ? res
+            : [];
         if (data.length > 0) setUserProfile(data[0]);
       } catch (err) {
         console.error("Error loading profile:", err);
@@ -212,7 +212,7 @@ const ManageUserPermission: React.FC = () => {
         setCategories(data);
         if (silent && selectedCategory) {
           const updated = data.find(
-            (c) => c.FormCategoryId === selectedCategory.FormCategoryId
+            (c) => c.FormCategoryId === selectedCategory.FormCategoryId,
           );
           if (updated) setSelectedCategory(updated);
         }
@@ -257,7 +257,7 @@ const ManageUserPermission: React.FC = () => {
   // --- Filter and Group ---
   const groupedCategories = useMemo(() => {
     const filtered = categories.filter((c) =>
-      c.FormCategoryName.toLowerCase().includes(categorySearch.toLowerCase())
+      c.FormCategoryName.toLowerCase().includes(categorySearch.toLowerCase()),
     );
     const groups: Record<string, Category[]> = {};
     filtered.forEach((cat) => {
@@ -303,6 +303,9 @@ const ManageUserPermission: React.FC = () => {
         }),
       });
       ShowSuccessAlert("Permissions updated successfully!");
+      setTimeout(() => {
+        window.location.reload();
+      }, 800);
       if (selectedModule) await loadCategories(Number(selectedModule), true);
     } catch (err) {
       console.error(err);

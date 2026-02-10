@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Formik, Form, Field, ErrorMessage } from "formik";
+import { useLocation } from "react-router-dom";
 import * as Yup from "yup";
 import AutoCompleter from "../../../../components/CommonFormElements/InputTypes/AutoCompleter";
 import { ApiService } from "../../../../services/ApiService";
 import Swal from "sweetalert2";
 import { useCurrency } from "../../context/CurrencyContext";
+import { SmartActions } from "../Security/SmartActionWithFormName";
+import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
 /* ---------------- VALIDATION SCHEMA ---------------- */
 const validationSchema = Yup.object().shape({
   transactionType: Yup.string().required("Transaction Type is required"),
@@ -15,6 +18,7 @@ const validationSchema = Yup.object().shape({
   paymentMode: Yup.string().required("Payment Mode is required"),
   paymentDate: Yup.string().required("Payment Date is required"),
   referenceNo: Yup.string().max(30, "Max 30 characters allowed"),
+  remarks: Yup.string().max(250, "Max 250 characters allowed"),
 });
 const today = new Date().toISOString().split("T")[0];
 const MemberWalletsElegant: React.FC = () => {
@@ -265,6 +269,68 @@ const MemberWalletsElegant: React.FC = () => {
     fetchWallets("0");
   };
   const imageBaseUrl = import.meta.env.VITE_IMAGE_PREVIEW_URL;
+
+  //PERMISSION API CALL
+  const [permissionsLoading, setPermissionsLoading] = useState(true);
+  const [hasPageAccess, setHasPageAccess] = useState(true);
+  const location = useLocation();
+  const path = location.pathname;
+  const formName = path.split("/").pop();
+  const fetchFormPermissions = async () => {
+    try {
+      setPermissionsLoading(true);
+
+      const saved = localStorage.getItem("EmployeeDetails");
+      const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
+
+      const payload = {
+        procName: "AssignForm",
+        Para: JSON.stringify({
+          ActionMode: "GetForms",
+          FormName: formName, // 👈 category for this page
+          EmployeeId: employeeId,
+        }),
+      };
+
+      const response = await universalService(payload);
+      const data = response?.data ?? response;
+
+      // ❌ Invalid or empty response → deny access
+      if (!Array.isArray(data)) {
+        setHasPageAccess(false);
+        return;
+      }
+
+      // 🔍 Find permission for THIS form/page
+      const pagePermission = data.find(
+        (p) =>
+          String(p.FormNameWithExt).trim().toLowerCase() ===
+          formName?.trim().toLowerCase(),
+      );
+
+      // ❌ No permission OR empty Action
+      if (
+        !pagePermission ||
+        !pagePermission.Action ||
+        pagePermission.Action.trim() === ""
+      ) {
+        setHasPageAccess(false);
+        return;
+      }
+
+      // ✅ Permission allowed → load SmartActions
+      SmartActions.load(data);
+      setHasPageAccess(true);
+    } catch (error) {
+      console.error("Form permission fetch failed:", error);
+      setHasPageAccess(false);
+    } finally {
+      setPermissionsLoading(false);
+    }
+  };
+  useEffect(() => {
+    fetchFormPermissions();
+  }, []);
   return (
     <div className="trezo-card bg-white dark:bg-[#0c1427] rounded-2xl shadow-lg">
       {/* ================= HEADER ================= */}
@@ -281,20 +347,25 @@ const MemberWalletsElegant: React.FC = () => {
           >
             Reset Form
           </button>
-
-          <button
-            type="submit"
-            form="walletForm"
-            className="px-6 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded text-sm font-medium transition-colors flex items-center justify-center gap-2 "
+          <PermissionAwareTooltip
+            allowed={SmartActions.canAdd(formName)}
+            allowedText="Process Transaction"
+            deniedText="Permission required"
           >
-            Process Transaction
-          </button>
+            <button
+              type="submit"
+              form="walletForm"
+              className="px-6 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover text-white rounded text-sm font-medium transition-colors flex items-center justify-center gap-2 "
+            >
+              Process Transaction
+            </button>
+          </PermissionAwareTooltip>
         </div>
       </div>
 
       {/* ================= MEMBER SECTION ================= */}
       <div
-        className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#f6f7f9bd]
+        className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#f6f7f9bd] dark:bg-[#0c1427]
 px-4 py-5
 sm:px-6
 md:px-10
@@ -304,7 +375,7 @@ flex items-center mx-4"
       >
         {/* SEARCH MEMBER */}
         <div>
-          <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block text-gray-600 dark:text-gray-300">
+          <label className="text-sm text-gray-700 dark:text-white mb-1 block">
             Select Member (Type First 3 Letters)
           </label>
 
@@ -324,7 +395,7 @@ flex items-center mx-4"
               <i className="material-symbols-outlined">search</i>
             </button>
           </div>
-          <p className="text-xs text-gray-400 mt-1 italic">
+          <p className="text-xs text-gray-400 dark:text-white mt-1 italic">
             You can search using Name, Username, Email address, or Mobile number
           </p>
         </div>
@@ -418,7 +489,7 @@ flex items-center mx-4"
               <div
                 key={wallet.WalletId}
                 onClick={() => setSelectedWallet(wallet)}
-                className={`w-[170px] p-5 rounded-xl cursor-pointer transition-all shadow-sm
+                className={`w-[170px] p-5 rounded-xl cursor-pointer transition-all shadow-sm dark:bg-[#0c1427]
         ${
           selectedWallet?.WalletId === wallet.WalletId
             ? "bg-blue-50 border-2 border-primary-button-bg scale-[1.03]"
@@ -427,7 +498,8 @@ flex items-center mx-4"
               >
                 {/* Amount (Static for now) */}
                 <h2 className="text-xl font-bold text-gray-800">
-                  {currency.symbol}{wallet.Balance}
+                  {currency.symbol}
+                  {wallet.Balance}
                 </h2>
 
                 {/* Wallet Name from API */}
@@ -479,7 +551,8 @@ flex items-center mx-4"
                 {/* Amount */}
                 <div>
                   <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">
-                    Amount({currency.symbol}) <span className="text-red-500">*</span>
+                    Amount({currency.symbol}){" "}
+                    <span className="text-red-500">*</span>
                   </label>
                   <Field
                     type="text"
@@ -551,12 +624,20 @@ flex items-center mx-4"
                   <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">
                     Description / Remarks
                   </label>
-                  <Field
-                    as="textarea"
-                    name="remarks"
-                    placeholder="Enter remarks..."
-                    className="w-full h-[90px] w-full border border-gray-200 rounded-md px-3 py-2 text-sm h-10 placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500  "
-                  />
+                  <Field name="remarks">
+                    {({ field }) => (
+                      <div>
+                        <textarea
+                          {...field}
+                          maxLength={250}
+                          className="w-full h-[90px] border border-gray-200 rounded-md px-3 py-2"
+                        />
+                        <p className="text-xs text-gray-500">
+                          {field.value?.length || 0}/250 characters
+                        </p>
+                      </div>
+                    )}
+                  </Field>
                 </div>
               </Form>
             )}
@@ -564,7 +645,7 @@ flex items-center mx-4"
         </div>
 
         {/* ================= RIGHT TABLE ================= */}
-        <div className="rounded-2xl shadow-sm p-5 bg-white dark:bg-[#f6f7f9bd]">
+        <div className="rounded-2xl shadow-sm p-5 bg-white dark:bg-[#0c1427]">
           {/* Header */}
           <div className="flex items-center justify-between mb-4">
             <div className="text-lg font-bold text-gray-800 dark:text-white">
@@ -579,30 +660,30 @@ flex items-center mx-4"
           {/* Table */}
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 rounded-lg shadow-sm">
-              <thead className="bg-gray-50 dark:bg-gray-800">
+              <thead className="bg-primary-table-bg dark:bg-gray-800">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-primary-table-text dark:text-gray-300 uppercase tracking-wider">
                     #
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-primary-table-text dark:text-gray-300 uppercase tracking-wider">
                     Date
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-primary-table-text dark:text-gray-300 uppercase tracking-wider">
                     Wallet
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-primary-table-text dark:text-gray-300 uppercase tracking-wider">
                     Type
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-primary-table-text dark:text-gray-300 uppercase tracking-wider">
                     Amount
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-primary-table-text dark:text-gray-300 uppercase tracking-wider">
                     Mode
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-primary-table-text dark:text-gray-300 uppercase tracking-wider">
                     Ref No
                   </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-primary-table-text dark:text-gray-300 uppercase tracking-wider">
                     Remarks
                   </th>
                 </tr>
@@ -644,7 +725,10 @@ flex items-center mx-4"
                           {item.TranType}
                         </span>
                       </td>
-                      <td className="px-4 py-3 font-semibold">{currency.symbol}{item.Amount}</td>
+                      <td className="px-4 py-3 font-semibold">
+                        {currency.symbol}
+                        {item.Amount}
+                      </td>
                       <td className="px-4 py-3">{item.PaymentMode}</td>
                       <td className="px-4 py-3 text-xs text-gray-500">
                         {item.ReferenceNo || "-"}

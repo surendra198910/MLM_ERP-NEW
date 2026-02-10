@@ -152,7 +152,7 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
     setPermissionsLoading(false);
   }
 };
-
+ 
 
   const fetchExportData = async () => {
     const filters = getFilterPayload(filterColumn, searchQuery);
