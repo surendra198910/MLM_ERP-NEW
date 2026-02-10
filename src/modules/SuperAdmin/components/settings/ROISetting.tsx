@@ -99,37 +99,53 @@ const Template: React.FC = () => {
     };
   };
 
-  const saveROI = async () => {
-    try {
-      const payload = Object.keys(roiMap).map((id) => ({
-        PackageId: Number(id),
-        ROIPercentage: roiMap[id],
-      }));
+ const saveROI = async () => {
+  const confirm = await Swal.fire({
+    title: "Confirm Save",
+    text: "Do you want to save ROI settings?",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonColor: "#3b82f6",
+    cancelButtonColor: "#d33",
+    confirmButtonText: "Yes, Save",
+    cancelButtonText: "Cancel",
+  });
 
-      // ✅ Get client info
-      const clientInfo = await getClientInfo();
+  if (!confirm.isConfirmed) return;
 
-      const response = await universalService({
-        procName: "ROISetting",
-        Para: JSON.stringify({
-          ActionMode: "UpdateROI",
-          Data: JSON.stringify(payload),
-          ClientInfo: clientInfo, // 👈 SEND TO API
-        }),
-      });
+  try {
+    const payload = Object.keys(roiMap).map((id) => ({
+      PackageId: Number(id),
+      ROIPercentage: roiMap[id],
+    }));
 
-      const res = Array.isArray(response) ? response[0] : response?.data?.[0];
+    const clientInfo = await getClientInfo();
 
-      if (res?.StatusCode == "1") {
-        Swal.fire("Success!", res?.Msg, "success");
-      } else {
-        Swal.fire("Error", res?.Msg || "Failed", "error");
-      }
-    } catch (err) {
-      console.error(err);
-      Swal.fire("Error", "Server error occurred", "error");
+    const response = await universalService({
+      procName: "ROISetting",
+      Para: JSON.stringify({
+        ActionMode: "UpdateROI",
+        Data: JSON.stringify(payload),
+        ClientInfo: clientInfo,
+      }),
+    });
+
+    const res = Array.isArray(response)
+      ? response[0]
+      : response?.data?.[0];
+
+    if (res?.StatusCode == "1") {
+      Swal.fire("Success!", res?.Msg, "success");
+    } else {
+      Swal.fire("Error", res?.Msg || "Failed", "error");
     }
-  };
+  } catch (err) {
+    console.error(err);
+    Swal.fire("Error", "Server error occurred", "error");
+  }
+};
+
+
 
   const imageBaseUrl = import.meta.env.VITE_IMAGE_PREVIEW_URL;
   return (
@@ -152,7 +168,7 @@ const Template: React.FC = () => {
                 onClick={saveROI}
                 className="px-6 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover text-white rounded text-sm font-medium transition-colors flex items-center justify-center gap-2"
               >
-                Sumit
+                Save Setting
               </button>
             </div>
           </div>

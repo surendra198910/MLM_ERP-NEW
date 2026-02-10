@@ -126,6 +126,7 @@ const MemberWalletsElegant: React.FC = () => {
   const submitWalletTransaction = async (values: any) => {
     try {
       console.log(memberDetails);
+
       // ✅ Client Validation
       if (!memberDetails?.ClientId) {
         Swal.fire("Error", "Please select a member first!", "error");
@@ -137,32 +138,55 @@ const MemberWalletsElegant: React.FC = () => {
         Swal.fire("Error", "Please select a wallet first!", "error");
         return;
       }
+
+      const isDark = document.documentElement.classList.contains("dark");
+
       // ✅ Confirmation Popup
       const confirm = await Swal.fire({
-        title: "Confirm Wallet Trsansaction",
+        title: "Confirm Wallet Transaction",
         icon: "warning",
+        background: isDark ? "#0c1427" : "#ffffff",
+        color: isDark ? "#e5e7eb" : "#111827",
         html: `
-  <div style="text-align:left; font-size:14px;">
-    <div style="background:#f9fafb; border-radius:10px; padding:12px; border:1px solid #e5e7eb;">
-      
-      <div style="display:flex; justify-content:space-between; padding:6px 0;">
-        <span style="color:#6b7280;">Member</span>
-        <span style="font-weight:600;">${memberDetails.Name} (${memberDetails.UserName})</span>
-      </div>
+        <div style="text-align:left; font-size:14px;">
+          <div style="
+            background:${isDark ? "#111827" : "#f9fafb"};
+            border-radius:10px;
+            padding:12px;
+            border:1px solid ${isDark ? "#1f2937" : "#e5e7eb"};
+          ">
+            
+            <div style="display:flex; justify-content:space-between; padding:6px 0;">
+              <span style="color:#9ca3af;">Member</span>
+              <span style="font-weight:600;">
+                ${memberDetails.Name} (${memberDetails.UserName})
+              </span>
+            </div>
 
-      <div style="display:flex; justify-content:space-between; padding:6px 0;">
-        <span style="color:#6b7280;">Wallet</span>
-        <span style="font-weight:600; color:#2563eb;">${selectedWallet?.WalletDisplayName || "N/A"}</span>
-      </div>
+            <div style="display:flex; justify-content:space-between; padding:6px 0;">
+              <span style="color:#9ca3af;">Wallet</span>
+              <span style="font-weight:600; color:#3b82f6;">
+                ${selectedWallet?.WalletDisplayName || "N/A"}
+              </span>
+            </div>
 
-      <div style="display:flex; justify-content:space-between; padding:6px 0; border-top:1px dashed #ddd; margin-top:6px; padding-top:10px;">
-        <span style="color:#6b7280;">Amount</span>
-        <span style="font-weight:700; color:#16a34a; font-size:16px;">${currency.symbol}${values.amount}</span>
-      </div>
+            <div style="
+              display:flex;
+              justify-content:space-between;
+              padding:6px 0;
+              border-top:1px dashed #6b7280;
+              margin-top:6px;
+              padding-top:10px;
+            ">
+              <span style="color:#9ca3af;">Amount</span>
+              <span style="font-weight:700; color:#22c55e; font-size:16px;">
+                ${currency.symbol}${values.amount}
+              </span>
+            </div>
 
-    </div>
-  </div>
-  `,
+          </div>
+        </div>
+      `,
         showCancelButton: true,
         confirmButtonText: "Yes, Proceed",
         cancelButtonText: "Cancel",
@@ -170,24 +194,29 @@ const MemberWalletsElegant: React.FC = () => {
         cancelButtonColor: "#9ca3af",
       });
 
-      if (!confirm.isConfirmed) return; // ❌ Stop if user cancels
+      if (!confirm.isConfirmed) return;
+
       const payload = {
         procName: "WalletTransaction_CRDR",
         Para: JSON.stringify({
           ClientId: memberDetails?.ClientId,
           WalletId: selectedWallet.WalletId,
-          TranType: values.transactionType, // CR or DR
+          TranType: values.transactionType,
           Amount: values.amount,
           PaymentMode: values.paymentMode,
           PaymentDate: values.paymentDate,
           ReferenceNo: values.referenceNo || "",
           Remarks: values.remarks || "",
-          EntryBy: 1, // Admin UserId,
+          EntryBy: 1,
           ActionMode: "WalletTransaction",
         }),
       };
+
       const response = await universalService(payload);
-      const res = Array.isArray(response) ? response[0] : response?.data?.[0];
+      const res = Array.isArray(response)
+        ? response[0]
+        : response?.data?.[0];
+
       if (res?.StatusCode == "1") {
         Swal.fire({
           title: "Success!",
@@ -212,9 +241,10 @@ const MemberWalletsElegant: React.FC = () => {
       }
     } catch (error) {
       console.error("Transaction Failed", error);
-      alert("Something went wrong!");
+      Swal.fire("Error", "Something went wrong!", "error");
     }
   };
+
   const fetchWalletTransactions = async (
     clientId: number,
     pageNumber: number,
@@ -438,11 +468,10 @@ flex items-center mx-4"
                   {/* Paid Tag */}
                   <span
                     className={`px-2 py-[2px] text-[11px] rounded-md font-semibold
-              ${
-                memberDetails.PaidStatus === "Paid"
-                  ? "bg-green-100 text-green-700"
-                  : "bg-red-100 text-red-600"
-              }`}
+              ${memberDetails.PaidStatus === "Paid"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-red-100 text-red-600"
+                      }`}
                   >
                     {memberDetails.PaidStatus}
                   </span>
@@ -469,11 +498,10 @@ flex items-center mx-4"
             {/* RIGHT SIDE STATUS */}
             <span
               className={`px-4 py-[6px] rounded-xl text-xs font-semibold
-        ${
-          memberDetails.Status == "1"
-            ? "bg-green-500 text-white"
-            : "bg-red-500 text-white"
-        }`}
+        ${memberDetails.Status == "1"
+                  ? "bg-green-500 text-white"
+                  : "bg-red-500 text-white"
+                }`}
             >
               {memberDetails.Status == "1" ? "Active" : "Inactive"}
             </span>
@@ -491,11 +519,10 @@ flex items-center mx-4"
                 key={wallet.WalletId}
                 onClick={() => setSelectedWallet(wallet)}
                 className={`w-[170px] p-5 rounded-xl cursor-pointer transition-all shadow-sm dark:bg-[#0c1427]
-        ${
-          selectedWallet?.WalletId === wallet.WalletId
-            ? "bg-blue-50 border-2 border-primary-button-bg scale-[1.03]"
-            : "bg-gray-50 border border-gray-200 hover:scale-[1.02]"
-        }`}
+        ${selectedWallet?.WalletId === wallet.WalletId
+                    ? "bg-blue-50 border-2 border-primary-button-bg scale-[1.03]"
+                    : "bg-gray-50 border border-gray-200 hover:scale-[1.02]"
+                  }`}
               >
                 {/* Amount (Static for now) */}
                 <h2 className="text-xl font-bold text-gray-800">
@@ -717,11 +744,10 @@ flex items-center mx-4"
                       <td className="px-4 py-3">{item.WalletDisplayName}</td>
                       <td className="px-4 py-3">
                         <span
-                          className={`px-2 py-1 rounded text-xs font-semibold ${
-                            item.TranType === "CR"
+                          className={`px-2 py-1 rounded text-xs font-semibold ${item.TranType === "CR"
                               ? "bg-green-100 text-green-700"
                               : "bg-red-100 text-red-700"
-                          }`}
+                            }`}
                         >
                           {item.TranType}
                         </span>

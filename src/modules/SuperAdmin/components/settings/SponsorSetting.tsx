@@ -111,6 +111,19 @@ const Template: React.FC = () => {
         fetchPackages();
     }, []);
     const saveSponsor = async () => {
+        const confirm = await Swal.fire({
+            title: "Confirm Save",
+            text: "Do you want to save Sponsor settings?",
+            icon: "question",
+            showCancelButton: true,
+            confirmButtonColor: "#3b82f6",
+            cancelButtonColor: "#d33",
+            confirmButtonText: "Yes, Save",
+            cancelButtonText: "Cancel",
+        });
+
+        if (!confirm.isConfirmed) return;
+
         try {
             const payload = Object.keys(sponsorMap).map((id) => ({
                 PackageId: Number(id),
@@ -126,7 +139,7 @@ const Template: React.FC = () => {
                 Para: JSON.stringify({
                     ActionMode: "UpdateSponsor",
                     Data: JSON.stringify(payload),
-                    ClientInfo: clientInfo, // 👈 send to API
+                    ClientInfo: clientInfo,
                 }),
             });
 
@@ -144,6 +157,7 @@ const Template: React.FC = () => {
             Swal.fire("Error", "Server error occurred", "error");
         }
     };
+
 
 
 
@@ -168,7 +182,7 @@ const Template: React.FC = () => {
                                 onClick={saveSponsor}
                                 className="px-6 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover text-white rounded text-sm font-medium transition-colors flex items-center justify-center gap-2"
                             >
-                                Sumit
+                                Save Setting
                             </button>
                         </div>
                     </div>
