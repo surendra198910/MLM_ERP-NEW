@@ -47,6 +47,7 @@ import CropperModal from "../Cropper/Croppermodel";
 import { PostService } from "../../../../services/PostService";
 import { SmartActions } from "../Security/SmartAction";
 import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
+import { useCurrency } from "../../context/CurrencyContext";
 
 // ----------------------------------------------------------------------
 // TYPES
@@ -149,7 +150,7 @@ const FormObserver: React.FC<ObserverProps> = ({
     shipToManuallyEdited,
 }) => {
     const { values, setFieldValue } = useFormikContext<FormValues>();
-
+const { currency } = useCurrency();
     useEffect(() => {
         if (!values.country) {
             setStates([]);

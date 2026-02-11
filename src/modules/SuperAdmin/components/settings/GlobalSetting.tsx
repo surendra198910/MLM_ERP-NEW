@@ -26,7 +26,7 @@ const initialValues = {
   PlacementType: "",
   MaleDefaultIcon: "",
   FemaleDefaultIcon: "",
-
+  ROICappingMultiplier: "",
   // Notification
   whatsapp: false,
   email: false,
@@ -52,7 +52,10 @@ const validationSchema = Yup.object().shape({
   PasswordType: Yup.string().required("Required"),
   PlanType: Yup.string().required("Required"),
   PlacementType: Yup.string().required("Required"),
-
+  ROICappingMultiplier: Yup.number()
+    .typeError("Must be a number")
+    .positive("Must be greater than 0")
+    .required("Required"),
   // Payout wallet validation
   SponsorIncomeWallet: Yup.string().required("Required"),
   ROIWallet: Yup.string().required("Required"),
@@ -270,7 +273,7 @@ export default function GlobalSetting() {
         PlacementType: data.PlacementType || "",
         MaleDefaultIcon: data.MaleDefaultIcon || "",
         FemaleDefaultIcon: data.FemaleDefaultIcon || "",
-
+        ROICappingMultiplier: data.ROICappingMultiplier || "",
         // Notification (DB → UI)
         whatsapp: data.WhatsAppNotification || false,
         email: data.EmailNotification || false,
@@ -336,7 +339,7 @@ export default function GlobalSetting() {
           PasswordType: values.PasswordType,
           PlanType: values.PlanType,
           PlacementType: values.PlacementType,
-
+          ROICappingMultiplier: Number(values.ROICappingMultiplier),
           MaleDefaultIcon: maleIcon,
           FemaleDefaultIcon: femaleIcon,
 
@@ -866,6 +869,31 @@ export default function GlobalSetting() {
                 )}
 
               </div>
+
+              {/* ROI Capping Multiplier */}
+              <div>
+                <label className="text-sm mb-1 block">
+                  ROI Capping<span className="text-red-500">*</span>
+                </label>
+
+                <input
+                  type="number"
+                  step="0.01"
+                  name="ROICappingMultiplier"
+                  value={values.ROICappingMultiplier}
+                  onChange={handleChange}
+                  className={inputClass}
+                  placeholder="Enter multiplier (e.g. 2.5)"
+                />
+
+                {errors.ROICappingMultiplier && touched.ROICappingMultiplier && (
+                  <p className="text-xs text-red-500">
+                    {errors.ROICappingMultiplier}
+                  </p>
+                )}
+              </div>
+
+
             </div>
           )}
 
