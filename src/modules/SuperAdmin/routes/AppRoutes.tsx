@@ -63,6 +63,7 @@ import PackageMaster from "../components/settings/PackageMaster.js";
 import ROISetting from "../components/settings/ROISetting.js";
 import ManagePackage from "../components/settings/ManagePackage.js";
 import SponsorSetting from "../components/settings/SponsorSetting.js"
+import APIManager from "../components/settings/APIManager.js"
 
 const AppRoutes = () => {
   const [active, setActive] = useState(false);
@@ -261,6 +262,7 @@ const AppRoutes = () => {
             <Route path="/superadmin/mlm-setting/roi-setting" element={<ROISetting />} />
             <Route path="/superadmin/mlm-setting/sponsor-setting" element={<SponsorSetting />} />
             <Route path="/superadmin/mlm-setting/manage-package" element={<ManagePackage />} />
+            <Route path="/superadmin/mlm-setting/api-manager" element={<APIManager />} />
           </Routes>
 
           {/* Footer */}
