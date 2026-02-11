@@ -1,19 +1,13 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
-import type { ChangeEvent } from "react";
 import {
-    FaUserCircle,
-    FaTrash,
     FaUpload,
-    FaEdit,
     FaTimes,
-    FaPencilAlt,
     FaRegAddressCard,
     FaFile,
     FaUser,
-    FaBuilding,
-    FaBriefcase,
+
 } from "react-icons/fa";
 import {
     Editor,
@@ -36,7 +30,7 @@ import {
 
 import type { ContentEditableEvent } from "react-simple-wysiwyg";
 import { useNavigate, useParams } from "react-router-dom";
-import { Formik, useFormikContext } from "formik";
+import { Formik} from "formik";
 import type { FormikHelpers } from "formik";
 import * as Yup from "yup";
 import { toast, ToastContainer } from "react-toastify";
@@ -46,22 +40,11 @@ import { ApiService } from "../../../../services/ApiService";
 import CropperModal from "../Cropper/Croppermodel";
 import { PostService } from "../../../../services/PostService";
 import { SmartActions } from "../Security/SmartAction";
-import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
-import { useCurrency } from "../../context/CurrencyContext";
+
 
 // ----------------------------------------------------------------------
 // TYPES
 // ----------------------------------------------------------------------
-
-interface DropdownOption {
-    value: string | number;
-    label: string;
-}
-
-interface MasterDocument {
-    DocumentId: number;
-    DocumentName: string;
-}
 
 interface DocumentValue {
     number?: string;
@@ -89,145 +72,6 @@ interface FormValues {
 }
 
 
-
-// ----------------------------------------------------------------------
-// FORM OBSERVER
-// ----------------------------------------------------------------------
-
-interface ObserverProps {
-    setStates: React.Dispatch<React.SetStateAction<DropdownOption[]>>;
-    setCities: React.Dispatch<React.SetStateAction<DropdownOption[]>>;
-    setLoadingStates: React.Dispatch<React.SetStateAction<boolean>>;
-    setLoadingCities: React.Dispatch<React.SetStateAction<boolean>>;
-    fetchDDL: (params: any) => Promise<any[]>;
-    normalizeDDL: (
-        data: any[],
-        idKey: string,
-        nameKey: string,
-    ) => DropdownOption[];
-    countries: DropdownOption[];
-    states: DropdownOption[];
-    cities: DropdownOption[];
-
-    billToManuallyEdited: boolean;
-    shipToManuallyEdited: boolean;
-}
-
-const buildFullAddress = (
-    values: FormValues,
-    countries: DropdownOption[],
-    states: DropdownOption[],
-    cities: DropdownOption[],
-) => {
-    const getLabel = (options: DropdownOption[], value: any) =>
-        options.find((o) => String(o.value) === String(value))?.label || "";
-
-    const countryName = getLabel(countries, values.country);
-    const stateName = getLabel(states, values.state);
-    const cityName = getLabel(cities, values.city);
-
-    return [
-        values.companyName,
-        values.address,
-        cityName && stateName ? `${cityName}, ${stateName}` : "",
-        countryName && values.zip ? `${countryName} - ${values.zip}` : countryName,
-    ]
-        .filter(Boolean)
-        .join(",\n");
-};
-
-const FormObserver: React.FC<ObserverProps> = ({
-    setStates,
-    setCities,
-    setLoadingStates,
-    setLoadingCities,
-    fetchDDL,
-    normalizeDDL,
-    countries,
-    states,
-    cities,
-    billToManuallyEdited,
-    shipToManuallyEdited,
-}) => {
-    const { values, setFieldValue } = useFormikContext<FormValues>();
-const { currency } = useCurrency();
-    useEffect(() => {
-        if (!values.country) {
-            setStates([]);
-            setCities([]);
-            return;
-        }
-        let isActive = true;
-        const loadStates = async () => {
-            setLoadingStates(true);
-            const data = await fetchDDL({
-                tbl: "master.state",
-                searchField: "statename",
-                filterCTL: "countryid",
-                filterCTLvalue: values.country,
-            });
-            if (isActive) {
-                setStates(normalizeDDL(data, "id", "name"));
-                setLoadingStates(false);
-            }
-        };
-        loadStates();
-        return () => {
-            isActive = false;
-        };
-    }, [values.country, normalizeDDL, setStates, setCities, setLoadingStates]);
-
-    useEffect(() => {
-        if (!values.state) {
-            setCities([]);
-            return;
-        }
-        let isActive = true;
-        const loadCities = async () => {
-            setLoadingCities(true);
-            const data = await fetchDDL({
-                tbl: "master.city",
-                searchField: "cityname",
-                filterCTL: "stateid",
-                filterCTLvalue: values.state,
-            });
-            if (isActive) {
-                setCities(normalizeDDL(data, "id", "name"));
-                setLoadingCities(false);
-            }
-        };
-        loadCities();
-        return () => {
-            isActive = false;
-        };
-    }, [values.state, normalizeDDL, setCities, setLoadingCities]);
-
-    useEffect(() => {
-        const autoAddress = buildFullAddress(values, countries, states, cities);
-
-        if (!billToManuallyEdited) {
-            setFieldValue("billTo", autoAddress);
-        }
-
-        if (!shipToManuallyEdited) {
-            setFieldValue("shipTo", autoAddress);
-        }
-    }, [
-        values.companyName,
-        values.address,
-        values.country,
-        values.state,
-        values.city,
-        values.zip,
-        countries,
-        states,
-        cities,
-        billToManuallyEdited,
-        shipToManuallyEdited,
-    ]);
-
-    return null;
-};
 
 // ----------------------------------------------------------------------
 // VALIDATION SCHEMA
@@ -275,48 +119,15 @@ export default function AddCompany() {
 
     const [tab, setTab] = useState<number>(0);
     const [loading, setLoading] = useState<boolean>(false);
-    const [loadingDocs, setLoadingDocs] = useState<boolean>(false);
-
-    // Loaders
-    const [loadingStates, setLoadingStates] = useState<boolean>(false);
-    const [loadingCities, setLoadingCities] = useState<boolean>(false);
-    const [loadingParent, setLoadingParent] = useState<boolean>(false);
-    const [loadingLogo, setLoadingLogo] = useState<boolean>(false);
     const [initialLoading, setInitialLoading] = useState<boolean>(false);
     const [permissionLoading, setPermissionLoading] = useState(true);
     const [hasPageAccess, setHasPageAccess] = useState<boolean>(false);
-
-    // Data
-    const [countries, setCountries] = useState<DropdownOption[]>([]);
-    const [states, setStates] = useState<DropdownOption[]>([]);
-    const [cities, setCities] = useState<DropdownOption[]>([]);
-    const [parentCompanies, setParentCompanies] = useState<DropdownOption[]>([]);
-
-    // Images & Docs
     const [showCropper, setShowCropper] = useState<boolean>(false);
     const [rawImage, setRawImage] = useState<string>("");
     const [companyLogo, setCompanyLogo] = useState<string>("");
-    const [masterDocuments, setMasterDocuments] = useState<MasterDocument[]>([]);
     const [docValues, setDocValues] = useState<Record<number, DocumentValue>>({});
-
-    // Progress
-    const [uploadProgress, setUploadProgress] = useState<Record<number, number>>(
-        {},
-    );
-
-    const [currencies, setCurrencies] = useState<DropdownOption[]>([]);
-    const [loadingCurrency, setLoadingCurrency] = useState(false);
-
-    const [billToManuallyEdited, setBillToManuallyEdited] = useState(false);
-    const [shipToManuallyEdited, setShipToManuallyEdited] = useState(false);
-
-    // Multiple Images
     const [images, setImages] = useState([]);
-    const [cropIndex, setCropIndex] = useState<number | null>(null);
 
-    // { file, preview, fileName, isDefault, uploading }
-
-    const [uploadingIndex, setUploadingIndex] = useState(null);
     // Handle multiple images
     const handleImagesUpload = async (e) => {
         const files = Array.from(e.target.files);
@@ -409,9 +220,6 @@ export default function AddCompany() {
             Position: index + 1,
         }));
 
-
-    // Remove image
-    // Remove image with confirmation
     const removeImage = (index) => {
         Swal.fire({
             title: "Delete this image?",
@@ -449,9 +257,6 @@ export default function AddCompany() {
     };
 
 
-
-    // Set default image
-    // Set default image with confirmation
     const setDefaultImage = (index) => {
         Swal.fire({
             title: "Set as Default Image?",
@@ -485,19 +290,7 @@ export default function AddCompany() {
 
 
 
-    const editDisabled = {
-        email: isEditMode,
-        companyType: isEditMode,
-        parentCompanyId: isEditMode,
-        companyCodePrefix: isEditMode,
-        employeeCodePrefix: isEditMode,
-        companyStartSeries: isEditMode,
-        employeeStartSeries: isEditMode,
-        defaultCurrency: isEditMode,
-        billPrefix: isEditMode,
-        invoiceTerms: isEditMode,
-        isTaxApplicable: isEditMode,
-    };
+
     const initialValues: FormValues = {
         companyName: "",
         isPublished: false,
@@ -513,32 +306,9 @@ export default function AddCompany() {
         shortDesc: "", // ✅
         longDesc: "",  // ✅
     };
-
-
-
     const [form, setForm] = useState<FormValues>(initialValues);
     const IMAGE_PREVIEW_URL = import.meta.env.VITE_IMAGE_PREVIEW_URL;
-    const DOCUMENT_PREVIEW_URL = import.meta.env.VITE_IMAGE_PREVIEW_URL;
-
     const CURRENT_FORM_ID = 20;
-    const canAddCompany = SmartActions.canAddCompany(CURRENT_FORM_ID);
-    const canEditCompany = SmartActions.canEditCompany(CURRENT_FORM_ID);
-
-    const openDocument = (fileName?: string) => {
-        if (!fileName) return;
-        const url = `${DOCUMENT_PREVIEW_URL}${fileName}`;
-        window.open(url, "_blank", "noopener,noreferrer");
-    };
-
-    const openLogoInNewTab = () => {
-        if (!companyLogo) return;
-        const url = IMAGE_PREVIEW_URL
-            ? `${IMAGE_PREVIEW_URL}${companyLogo}`
-            : companyLogo;
-
-        window.open(url, "_blank", "noopener,noreferrer");
-    };
-
     // --- STYLES ---
     // UPDATED: Added dark mode classes for bg, border, text, placeholder
     const bigInputClasses =
@@ -546,12 +316,6 @@ export default function AddCompany() {
         "placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all " +
         "bg-white dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500";
 
-
-    const normalizeDDL = useCallback(
-        (data: any[], idKey: string, nameKey: string): DropdownOption[] =>
-            data.map((x) => ({ value: x[idKey], label: x[nameKey] })),
-        [],
-    );
 
     const fetchCompanyPermissions = async () => {
         try {
@@ -602,108 +366,6 @@ export default function AddCompany() {
         }
     };
 
-    const fetchDDL = useCallback(
-        async ({ tbl, searchField, filterCTL = "", filterCTLvalue = "" }: any) => {
-            try {
-                const payload = {
-                    procName: "GetDDLData",
-                    Para: JSON.stringify({
-                        tbl,
-                        searchField,
-                        filterCTL,
-                        filterCTLvalue,
-                        filterData: "",
-                    }),
-                };
-                const response = await universalService(payload);
-                return Array.isArray(response?.data) ? response.data : response || [];
-            } catch (err) {
-                console.log("DDL Error:", err);
-                return [];
-            }
-        },
-        [universalService],
-    );
-
-    const fetchMasterDocuments = useCallback(async () => {
-        try {
-            setLoadingDocs(true);
-            const payload = {
-                procName: "CompanyDocuments",
-                Para: JSON.stringify({ ActionMode: "Select" }),
-            };
-            const res = await universalService(payload);
-            const data = res?.data || res;
-            if (Array.isArray(data)) setMasterDocuments(data);
-        } catch (err) {
-            console.error("Error fetching documents:", err);
-        } finally {
-            setLoadingDocs(false);
-        }
-    }, [universalService]);
-
-    const fetchParentCompanies = useCallback(async () => {
-        try {
-            setLoadingParent(true);
-            const data = await fetchDDL({
-                tbl: "Package.CompanyMaster",
-                searchField: "CompanyName",
-            });
-            setParentCompanies(normalizeDDL(data, "id", "name"));
-        } catch (err) {
-            console.error("Error fetching companies", err);
-        } finally {
-            setLoadingParent(false);
-        }
-    }, [normalizeDDL]);
-
-    const fetchCurrencies = useCallback(async () => {
-        try {
-            setLoadingCurrency(true);
-
-            const payload = {
-                procName: "Package",
-                Para: JSON.stringify({
-                    ActionMode: "GetCurrency",
-                }),
-            };
-
-            const res = await universalService(payload);
-            const data = res?.data || res;
-
-            if (Array.isArray(data)) {
-                setCurrencies(
-                    data.map((x: any) => ({
-                        value: x.id,
-                        label: x.name,
-                    })),
-                );
-            }
-        } catch (err) {
-            console.error("Currency DDL error", err);
-        } finally {
-            setLoadingCurrency(false);
-        }
-    }, [universalService]);
-
-
-
-    useEffect(() => {
-        // 🔥 SWITCHED TO ADD MODE (Edit → Add)
-        if (!id) {
-            setForm(initialValues); // Reset Formik values
-            setCompanyLogo(""); // Clear logo
-            setRawImage("");
-            setDocValues({}); // Clear documents
-            setTab(0); // Reset tab
-            setBillToManuallyEdited(false);
-            setShipToManuallyEdited(false);
-
-            // Clear dependent dropdowns
-            setStates([]);
-            setCities([]);
-        }
-    }, [id]);
 
     useEffect(() => {
         if (!id) return;
@@ -817,175 +479,6 @@ export default function AddCompany() {
         fetchCompanyPermissions();
     }, []);
 
-    const onLogoChange = (e: ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (!file) return;
-        if (file.size > 2 * 1024 * 1024) {
-            toast.error("Logo must be under 2MB");
-            return;
-        }
-        const reader = new FileReader();
-        reader.onload = () => {
-            setRawImage(reader.result as string);
-            setShowCropper(true);
-        };
-        reader.readAsDataURL(file);
-    };
-
-    const uploadLogo = async (base64Image: string) => {
-        try {
-            setLoadingLogo(true);
-            const res = await fetch(base64Image);
-            const blob = await res.blob();
-            const mime = blob.type;
-            const ext = mime === "image/png" ? ".png" : ".jpg";
-            const file = new File([blob], `company_logo${ext}`, { type: mime });
-            const fd = new FormData();
-            fd.append("UploadedImage", file);
-            fd.append("pagename", "EmpDoc");
-
-            const response = await postDocument(fd);
-            const fileName = response?.fileName || response?.Message;
-            if (fileName) setCompanyLogo(fileName);
-        } catch (err) {
-            console.error(err);
-            toast.error("Logo upload failed");
-        } finally {
-            setLoadingLogo(false);
-        }
-    };
-
-    const deleteLogo = () => {
-        Swal.fire({
-            title: "Remove company logo?",
-            text: "This action will remove the company logo.",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonText: "Yes, remove it",
-            cancelButtonText: "Cancel",
-            confirmButtonColor: "#ef4444", // red
-            cancelButtonColor: "#9ca3af", // gray
-            reverseButtons: true,
-        }).then((result) => {
-            if (result.isConfirmed) {
-                setCompanyLogo("");
-                setRawImage("");
-
-                Swal.fire({
-                    title: "Removed!",
-                    text: "Package logo has been removed.",
-                    icon: "success",
-                    timer: 1500,
-                    showConfirmButton: false,
-                });
-            }
-        });
-    };
-
-    // --- HANDLE FILE UPLOAD USING POSTSERVICE (WITH PROGRESS) ---
-    const handleFileUpload = async (docId: number, file?: File) => {
-        if (!file) return;
-
-        // Reset progress
-        setUploadProgress((prev) => ({ ...prev, [docId]: 0 }));
-
-        // Set temporary file for UI while uploading
-        setDocValues((prev) => ({
-            ...prev,
-            [docId]: {
-                ...prev[docId],
-                file,
-                isExisting: false,
-            }, // Store file object to show name
-        }));
-
-        try {
-            const fd = new FormData();
-            fd.append("UploadedImage", file);
-            fd.append("pagename", "EmpDoc");
-
-            // Use PostService, passing the onProgress callback as second arg
-            const response = await postDocument(fd, (percent) => {
-                setUploadProgress((prev) => ({ ...prev, [docId]: percent }));
-            });
-
-            const fileName = response?.fileName || response?.Message;
-
-            if (fileName) {
-                setDocValues((prev) => ({
-                    ...prev,
-                    [docId]: { ...prev[docId], fileName }, // Save real filename
-                }));
-
-                // Ensure progress is 100%
-                setUploadProgress((prev) => ({ ...prev, [docId]: 100 }));
-
-                // Clear progress after delay
-                setTimeout(() => {
-                    setUploadProgress((prev) => {
-                        const newState = { ...prev };
-                        delete newState[docId];
-                        return newState;
-                    });
-                }, 1000);
-            } else {
-                toast.error("Upload failed: No filename received");
-                // Revert UI if failed
-                setDocValues((prev) => ({
-                    ...prev,
-                    [docId]: { ...prev[docId], file: undefined },
-                }));
-            }
-        } catch (error) {
-            console.error("Document upload failed:", error);
-            toast.error("Document upload failed");
-            // Revert UI if failed
-            setDocValues((prev) => ({
-                ...prev,
-                [docId]: { ...prev[docId], file: undefined },
-            }));
-        }
-    };
-
-    const removeFileOnly = (
-        docId: number,
-        docName?: string,
-        fileName?: string,
-    ) => {
-        Swal.fire({
-            title: "Remove document?",
-            text: docName
-                ? `Are you sure you want to remove "${docName}"?`
-                : "Are you sure you want to remove this document?",
-            icon: "warning",
-            showCancelButton: true,
-            confirmButtonText: "Yes, remove it",
-            cancelButtonText: "Cancel",
-            confirmButtonColor: "#ef4444",
-            cancelButtonColor: "#9ca3af",
-            reverseButtons: true,
-        }).then((result) => {
-            if (!result.isConfirmed) return;
-
-            setDocValues((prev) => ({
-                ...prev,
-                [docId]: {
-                    ...prev[docId],
-                    file: undefined,
-                    fileName: "",
-                    isDeleted: true, // 🔥 backend delete flag
-                },
-            }));
-
-            Swal.fire({
-                title: "Removed!",
-                text: "Document will be removed after saving.",
-                icon: "success",
-                timer: 1400,
-                showConfirmButton: false,
-            });
-        });
-    };
 
     const handleSubmit = async (
         values: FormValues,
@@ -1169,103 +662,6 @@ export default function AddCompany() {
         </div>
     );
 
-
-    // UPDATED: Added dark mode text color for labels
-    const SelectField = ({
-        label,
-        name,
-        options,
-        touched,
-        errors,
-        handleChange,
-        values,
-        loading,
-        disabled,
-        className,
-        onCustomChange,
-    }: any) => {
-        const cleanLabel = label ? label.replace("*", "").trim() : "Option";
-        const placeholder = `Select ${cleanLabel}`;
-
-        return (
-            <div className={`flex flex-col ${className} dark:text-gray-100`}>
-                <label className="text-sm text-gray-700 dark:text-gray-300 mb-1">
-                    {label?.includes("*") ? (
-                        <>
-                            {label.replace("*", "")}
-                            <span className="text-red-500 ml-0.5">*</span>
-                        </>
-                    ) : (
-                        label
-                    )}
-                </label>
-                <div className="relative">
-                    <select
-                        name={name}
-                        value={values[name] || ""}
-                        onChange={(e) => {
-                            handleChange(e);
-                            if (onCustomChange) onCustomChange(e);
-                        }}
-                        disabled={disabled || loading}
-                        className={`${bigInputClasses} ${disabled || loading
-                            ? "bg-gray-100 cursor-not-allowed opacity-70 dark:bg-gray-800 dark:text-gray-400"
-                            : ""
-                            } ${errors[name] && touched[name] ? "border-red-500" : ""}`}
-                    >
-                        <option value="">{placeholder}</option>
-                        {options.map((o: DropdownOption, i: number) => (
-                            <option key={i} value={o.value}>
-                                {o.label}
-                            </option>
-                        ))}
-                    </select>
-                    {loading && (
-                        <div className="absolute right-3 top-3 w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
-                    )}
-                </div>
-                {errors[name] && touched[name] && (
-                    <span className="text-xs text-red-600 mt-1">{errors[name]}</span>
-                )}
-            </div>
-        );
-    };
-
-    const TextAreaField = ({
-        label,
-        name,
-        placeholder,
-        touched,
-        errors,
-        handleChange,
-        values,
-        className,
-    }: any) => (
-        <div className={`flex flex-col ${className}`}>
-            <label className="text-sm text-gray-700 dark:text-gray-300 mb-1">
-                {label?.includes("*") ? (
-                    <>
-                        {label.replace("*", "")}
-                        <span className="text-red-500 ml-0.5">*</span>
-                    </>
-                ) : (
-                    label
-                )}
-            </label>
-            <textarea
-                name={name}
-                rows={3}
-                placeholder={placeholder}
-                value={values[name] || ""}
-                onChange={handleChange}
-                className={`${bigInputClasses.replace("h-10", "h-auto")} ${errors[name] && touched[name] ? "border-red-500" : ""
-                    }`}
-            ></textarea>
-            {errors[name] && touched[name] && (
-                <span className="text-xs text-red-600 mt-1">{errors[name]}</span>
-            )}
-        </div>
-    );
     // ---------------- TOGGLE SWITCH ----------------
     const ToggleSwitch = ({ name, value, onChange }) => {
         return (
@@ -1620,7 +1016,7 @@ export default function AddCompany() {
                         )}
 
 
-                        {/* TAB: Images */}
+
                         {/* TAB: Images */}
                         {tab === 1 && (
                             <div className="space-y-6 animate-fadeIn">
