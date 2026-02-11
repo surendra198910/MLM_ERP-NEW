@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ApiService } from "../../../../services/ApiService";
 import Swal from "sweetalert2";
+import { useCurrency } from "../../context/CurrencyContext";
 // Define the data structure for creators
 export interface PackageSponsor {
     PackageId: number;
@@ -21,7 +22,7 @@ const Template: React.FC = () => {
     const [sponsorMap, setSponsorMap] = useState<{
         [key: number]: { percentage: number; valueType: string };
     }>({});
-
+    const { currency } = useCurrency();
     const getIPLocation = async () => {
         try {
             const res = await fetch("https://ipapi.co/json/");
@@ -237,8 +238,17 @@ const Template: React.FC = () => {
                                     {/* Investment Amount */}
                                     <div className="mt-5 text-center">
                                         <p className="text-3xl font-bold bg-gradient-to-r from-primary-button-bg to-primary-button-bg bg-clip-text text-transparent">
-                                            {pkg.PackageAmount}
+                                            {pkg.PackageAmount?.includes("-")
+                                                ? pkg.PackageAmount.split("-").map((amt, index) => (
+                                                    <React.Fragment key={index}>
+                                                        {index > 0 && " - "}
+                                                        {currency.symbol}
+                                                        {amt.trim()}
+                                                    </React.Fragment>
+                                                ))
+                                                : `${currency.symbol}${pkg.PackageAmount}`}
                                         </p>
+
                                     </div>
 
                                     {/* Details Card */}

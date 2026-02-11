@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ApiService } from "../../../../services/ApiService";
 import Swal from "sweetalert2";
+import { useCurrency } from "../../context/CurrencyContext";
 // Define the data structure for creators
 export interface PackageROI {
   PackageId: number;
@@ -17,7 +18,7 @@ const Template: React.FC = () => {
   const { universalService } = ApiService();
   const [packages, setPackages] = useState<PackageROI[]>([]);
   const [roiMap, setRoiMap] = useState<{ [key: number]: number }>({});
-
+  const { currency } = useCurrency();
   const fetchPackages = async () => {
     try {
       setLoading(true);
@@ -99,51 +100,51 @@ const Template: React.FC = () => {
     };
   };
 
- const saveROI = async () => {
-  const confirm = await Swal.fire({
-    title: "Confirm Save",
-    text: "Do you want to save ROI settings?",
-    icon: "question",
-    showCancelButton: true,
-    confirmButtonColor: "#3b82f6",
-    cancelButtonColor: "#d33",
-    confirmButtonText: "Yes, Save",
-    cancelButtonText: "Cancel",
-  });
-
-  if (!confirm.isConfirmed) return;
-
-  try {
-    const payload = Object.keys(roiMap).map((id) => ({
-      PackageId: Number(id),
-      ROIPercentage: roiMap[id],
-    }));
-
-    const clientInfo = await getClientInfo();
-
-    const response = await universalService({
-      procName: "ROISetting",
-      Para: JSON.stringify({
-        ActionMode: "UpdateROI",
-        Data: JSON.stringify(payload),
-        ClientInfo: clientInfo,
-      }),
+  const saveROI = async () => {
+    const confirm = await Swal.fire({
+      title: "Confirm Save",
+      text: "Do you want to save ROI settings?",
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#3b82f6",
+      cancelButtonColor: "#d33",
+      confirmButtonText: "Yes, Save",
+      cancelButtonText: "Cancel",
     });
 
-    const res = Array.isArray(response)
-      ? response[0]
-      : response?.data?.[0];
+    if (!confirm.isConfirmed) return;
 
-    if (res?.StatusCode == "1") {
-      Swal.fire("Success!", res?.Msg, "success");
-    } else {
-      Swal.fire("Error", res?.Msg || "Failed", "error");
+    try {
+      const payload = Object.keys(roiMap).map((id) => ({
+        PackageId: Number(id),
+        ROIPercentage: roiMap[id],
+      }));
+
+      const clientInfo = await getClientInfo();
+
+      const response = await universalService({
+        procName: "ROISetting",
+        Para: JSON.stringify({
+          ActionMode: "UpdateROI",
+          Data: JSON.stringify(payload),
+          ClientInfo: clientInfo,
+        }),
+      });
+
+      const res = Array.isArray(response)
+        ? response[0]
+        : response?.data?.[0];
+
+      if (res?.StatusCode == "1") {
+        Swal.fire("Success!", res?.Msg, "success");
+      } else {
+        Swal.fire("Error", res?.Msg || "Failed", "error");
+      }
+    } catch (err) {
+      console.error(err);
+      Swal.fire("Error", "Server error occurred", "error");
     }
-  } catch (err) {
-    console.error(err);
-    Swal.fire("Error", "Server error occurred", "error");
-  }
-};
+  };
 
 
 
@@ -223,8 +224,17 @@ const Template: React.FC = () => {
                   {/* Investment Amount */}
                   <div className="mt-5 text-center">
                     <p className="text-3xl font-bold bg-gradient-to-r from-primary-button-bg to-primary-button-bg bg-clip-text text-transparent">
-                      {pkg.PackageAmount}
+                      {pkg.PackageAmount?.includes("-")
+                        ? pkg.PackageAmount.split("-").map((amt, index) => (
+                          <React.Fragment key={index}>
+                            {index > 0 && " - "}
+                            {currency.symbol}
+                            {amt.trim()}
+                          </React.Fragment>
+                        ))
+                        : `${currency.symbol}${pkg.PackageAmount}`}
                     </p>
+
                   </div>
 
                   {/* Details Card */}

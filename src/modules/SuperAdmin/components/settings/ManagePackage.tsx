@@ -5,6 +5,7 @@ import { useNavigate } from "react-router-dom";
 import { FaEdit } from "react-icons/fa";
 import { ApiService } from "../../../../services/ApiService";
 import Swal from "sweetalert2";
+import { useCurrency } from "../../context/CurrencyContext";
 
 /* ================= TYPES ================= */
 
@@ -31,7 +32,7 @@ const Template: React.FC = () => {
     /* Pagination */
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 8;
-
+    const { currency } = useCurrency();
     /* ================= FETCH PACKAGES ================= */
 
     const fetchPackages = async () => {
@@ -211,9 +212,10 @@ const Template: React.FC = () => {
                                 <p className="text-3xl font-bold bg-gradient-to-r
 from-primary-button-bg to-primary-button-bg bg-clip-text text-transparent">
 
-                                    {pkg.MinAmount === pkg.MaxAmount
-                                        ? `$${pkg.MinAmount}`
-                                        : `$${pkg.MinAmount} - $${pkg.MaxAmount}`}
+                                    {Number(pkg.MinAmount) === Number(pkg.MaxAmount)
+                                        ? `${currency.symbol}${pkg.MinAmount}`
+                                        : `${currency.symbol}${pkg.MinAmount} - ${currency.symbol}${pkg.MaxAmount}`}
+
 
                                 </p>
 
