@@ -16,6 +16,7 @@ const BinaryTreeComponent = () => {
       left_child_id: itm?.left_child_id,
       right_child_id: itm?.right_child_id,
       username: itm?.username,
+      paidstatus:itm.paidstatus,
       description: {
         userName: itm?.userName,
         Reg_Date: itm?.Reg_Date,
@@ -134,6 +135,7 @@ const BinaryTreeComponent = () => {
               bgSideBar={"#00b6eb"}
               colorText={"#333"}
               colorSideBar={"#fff"}
+              //onClick={onClickUser} // Pass onClick handler to BinaryTree
             />
           </div>
         ) : (
