@@ -26,11 +26,6 @@ const initialValues = {
   PlacementType: "",
   MaleDefaultIcon: "",
   FemaleDefaultIcon: "",
-  ROICappingMultiplier: "",
-  // Notification
-  whatsapp: false,
-  email: false,
-  sms: false,
 
   // Wallet settings
   SponsorIncomeWallet: "",
@@ -52,11 +47,6 @@ const validationSchema = Yup.object().shape({
   PasswordType: Yup.string().required("Required"),
   PlanType: Yup.string().required("Required"),
   PlacementType: Yup.string().required("Required"),
-  ROICappingMultiplier: Yup.number()
-    .typeError("Must be a number")
-    .positive("Must be greater than 0")
-    .required("Required"),
-  // Payout wallet validation
   SponsorIncomeWallet: Yup.string().required("Required"),
   ROIWallet: Yup.string().required("Required"),
   LevelIncomeWallet: Yup.string().required("Required"),
@@ -83,6 +73,7 @@ export default function GlobalSetting() {
   const [rawImage, setRawImage] = useState("");
   const [cropTarget, setCropTarget] = useState<"male" | "female" | null>(null);
   const [walletOptions, setWalletOptions] = useState([]);
+  const [notificationEvents, setNotificationEvents] = useState([]);
 
   const [tab, setTab] = useState(0);
 
@@ -93,23 +84,7 @@ export default function GlobalSetting() {
     { label: "Payout Wallet Settings", icon: <FaMoneyBillWave /> },
   ];
 
-  const notificationOptions = [
-    {
-      id: "whatsapp",
-      name: "WhatsApp",
-      icon: <FaWhatsapp className="text-green-500 text-xl" />,
-    },
-    {
-      id: "email",
-      name: "Email",
-      icon: <FaEnvelope className="text-blue-500 text-xl" />,
-    },
-    {
-      id: "sms",
-      name: "SMS",
-      icon: <FaSms className="text-yellow-500 text-xl" />,
-    },
-  ];
+
 
 
   // -------------------------------------
@@ -136,6 +111,23 @@ export default function GlobalSetting() {
       setShowCropper(true);
     };
     reader.readAsDataURL(file);
+  };
+  const loadNotificationEvents = async () => {
+    try {
+      const payload = {
+        procName: "ManageGlobalSetting",
+        Para: JSON.stringify({
+          ActionMode: "GetNotificationEvents",
+        }),
+      };
+
+      const res = await universalService(payload);
+      const data = res?.data || res || [];
+      setNotificationEvents(data);
+    } catch (err) {
+      console.error("Notification load error", err);
+      toast.error("Failed to load notification events");
+    }
   };
 
   const onFemaleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -207,6 +199,7 @@ export default function GlobalSetting() {
   useEffect(() => {
     loadSettings();
     loadWallets();
+    loadNotificationEvents();
   }, []);
   const handleCroppedImage = async (croppedBase64: string) => {
     try {
@@ -273,11 +266,6 @@ export default function GlobalSetting() {
         PlacementType: data.PlacementType || "",
         MaleDefaultIcon: data.MaleDefaultIcon || "",
         FemaleDefaultIcon: data.FemaleDefaultIcon || "",
-        ROICappingMultiplier: data.ROICappingMultiplier || "",
-        // Notification (DB → UI)
-        whatsapp: data.WhatsAppNotification || false,
-        email: data.EmailNotification || false,
-        sms: data.SMSNotification || false,
 
         // Wallets (DB → UI)
         SponsorIncomeWallet: data.SponsorIncomeWallet || "",
@@ -325,7 +313,6 @@ export default function GlobalSetting() {
 
     try {
       setLoading(true);
-
       const payload = {
         procName: "ManageGlobalSetting",
         Para: JSON.stringify({
@@ -339,20 +326,16 @@ export default function GlobalSetting() {
           PasswordType: values.PasswordType,
           PlanType: values.PlanType,
           PlacementType: values.PlacementType,
-          ROICappingMultiplier: Number(values.ROICappingMultiplier),
           MaleDefaultIcon: maleIcon,
           FemaleDefaultIcon: femaleIcon,
 
-          // Notification (UI → DB)
-          WhatsAppNotification: values.whatsapp,
-          SMSNotification: values.sms,
-          EmailNotification: values.email,
-
-          // Wallet mapping (UI → DB)
           SponsorIncomeWallet: values.SponsorIncomeWallet,
           ROIIncomeWallet: values.ROIWallet,
           LevelIncomeWallet: values.LevelIncomeWallet,
           BinaryIncomeWallet: values.BinaryIncomeWallet,
+
+          JsonData: JSON.stringify(notificationEvents),
+          EntryBy: 1,
         }),
       };
 
@@ -442,7 +425,7 @@ export default function GlobalSetting() {
             <div className="flex gap-2">
               <button
                 type="submit"
-                className="flex items-center gap-2 px-4 py-1.5 bg-primary-button-bg text-white rounded text-sm"
+                className="flex items-center gap-2 px-4 py-1.5 bg-primary-button-bg hover:bg-primary-button-bg-hover text-white rounded text-sm"
               >
                 <FaSave /> Update
               </button>
@@ -720,48 +703,97 @@ export default function GlobalSetting() {
 
             </div>
           )}
-
           {tab === 1 && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fadeIn">
-              {notificationOptions.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center justify-between
-                   bg-white dark:bg-gray-800
-                   border border-gray-200 dark:border-gray-700
-                   rounded-md px-4 py-3"
-                >
-                  {/* Left: Icon + Name */}
-                  <div className="flex items-center gap-3">
-                    {item.icon}
-                    <span className="font-medium text-gray-700 dark:text-gray-200">
-                      {item.name}
-                    </span>
-                  </div>
+            <div className="overflow-x-auto animate-fadeIn">
+              <table className="w-full border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden text-sm">
 
-                  {/* Toggle Switch */}
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={values[item.id]}
-                      onChange={() =>
-                        handleChange({
-                          target: {
-                            name: item.id,
-                            value: !values[item.id],
-                          },
-                        })
-                      }
-                    />
-                    <div className="w-11 h-6 bg-gray-200 rounded-full peer peer-checked:bg-primary-button-bg transition-colors"></div>
-                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform peer-checked:translate-x-5"></div>
-                  </label>
-                </div>
-              ))}
+                {/* Header */}
+                <thead className="bg-primary-table-bg text-primary-table-text dark:bg-gray-800">
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="px-6 py-4 text-left font-semibold tracking-wide">
+                      <div className="flex items-center gap-2">
+                        <FaBell className="text-primary-button-bg text-lg" />
+                        Event
+                      </div>
+                    </th>
+
+                    <th className="px-6 py-4 text-center font-semibold">
+                      <div className="flex items-center justify-center gap-2">
+                        <FaWhatsapp className="text-green-500 text-lg" />
+                        WhatsApp
+                      </div>
+                    </th>
+
+                    <th className="px-6 py-4 text-center font-semibold">
+                      <div className="flex items-center justify-center gap-2">
+                        <FaSms className="text-yellow-500 text-lg" />
+                        SMS
+                      </div>
+                    </th>
+
+                    <th className="px-6 py-4 text-center font-semibold">
+                      <div className="flex items-center justify-center gap-2">
+                        <FaEnvelope className="text-blue-500 text-lg" />
+                        Email
+                      </div>
+                    </th>
+                  </tr>
+                </thead>
+
+                {/* Body */}
+                <tbody>
+                  {notificationEvents.map((event, index) => (
+                    <tr
+                      key={event.EventTriggerId}
+                      className="
+              border-b border-gray-100 dark:border-gray-700
+              hover:bg-gray-50 dark:hover:bg-[#172036]
+              transition-colors duration-200
+            "
+                    >
+                      {/* Event Name */}
+                      <td className="px-6 py-4 text-gray-700 dark:text-gray-200 font-medium">
+                        {event.EventTriggerType}
+                      </td>
+
+                      {/* Toggles */}
+                      {["IsWhatsApp", "IsSMS", "IsEmail"].map((field) => (
+                        <td key={field} className="px-6 py-4 text-center align-middle">
+                          <label className="relative inline-flex items-center cursor-pointer">
+                            <input
+                              type="checkbox"
+                              className="sr-only peer"
+                              checked={event[field]}
+                              onChange={(e) => {
+                                const updated = [...notificationEvents];
+                                updated[index][field] = e.target.checked;
+                                setNotificationEvents(updated);
+                              }}
+                            />
+
+                            <div className="
+                    w-11 h-6 bg-gray-300 dark:bg-gray-700
+                    rounded-full
+                    peer-checked:bg-primary-button-bg
+                    transition-colors duration-300
+                  "></div>
+
+                            <div className="
+                    absolute left-1 top-1 w-4 h-4
+                    bg-white rounded-full shadow-sm
+                    transition-transform duration-300
+                    peer-checked:translate-x-5
+                  "></div>
+                          </label>
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+
+              </table>
             </div>
           )}
-
 
 
           {tab === 2 && (
@@ -869,30 +901,6 @@ export default function GlobalSetting() {
                 )}
 
               </div>
-
-              {/* ROI Capping Multiplier */}
-              <div>
-                <label className="text-sm mb-1 block">
-                  ROI Capping<span className="text-red-500">*</span>
-                </label>
-
-                <input
-                  type="number"
-                  step="0.01"
-                  name="ROICappingMultiplier"
-                  value={values.ROICappingMultiplier}
-                  onChange={handleChange}
-                  className={inputClass}
-                  placeholder="Enter multiplier (e.g. 2.5)"
-                />
-
-                {errors.ROICappingMultiplier && touched.ROICappingMultiplier && (
-                  <p className="text-xs text-red-500">
-                    {errors.ROICappingMultiplier}
-                  </p>
-                )}
-              </div>
-
 
             </div>
           )}

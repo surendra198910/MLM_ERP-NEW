@@ -854,7 +854,7 @@ export default function AddCompany() {
                                     <InputField
                                         label="Package Name:*"
                                         name="companyName"
-                                        placeholder="Enter company name"
+                                        placeholder="Enter package name"
                                         values={values}
                                         handleChange={handleChange}
                                         errors={errors}
