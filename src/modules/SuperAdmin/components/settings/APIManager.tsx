@@ -1,11 +1,10 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import { ApiService } from "../../../../services/ApiService";
-import { useNavigate } from "react-router-dom";
 import Swal from "sweetalert2";
 import Pagination from "../../common/Pagination";
 import AddProviderModal from "./AddProviderModal";
-import { FaSms, FaWhatsapp, FaEnvelope } from "react-icons/fa";
+import { FaSms, FaWhatsapp, FaEnvelope, FaEdit, FaTrash } from "react-icons/fa";
 
 
 type Provider = {
@@ -14,13 +13,11 @@ type Provider = {
     BaseURL: string;
     SenderId: string;
     IsDefault: boolean;
-    IsActive: boolean;
     TotalRecords?: number;
 };
 
 export default function ApiManager() {
     const { universalService } = ApiService();
-    const navigate = useNavigate();
     const [showModal, setShowModal] = useState(false);
 
     const [providers, setProviders] = useState<Provider[]>([]);
@@ -105,9 +102,9 @@ export default function ApiManager() {
                     BaseUrl: provider.BaseURL,
                     SenderId: provider.SenderId,
                     IsDefault: newValue,
-                    IsActive: provider.IsActive,
                 }),
             });
+
 
             fetchProviders();
         } catch (err) {
@@ -117,26 +114,59 @@ export default function ApiManager() {
     };
 
 
-    const handleDelete = async (id: number) => {
-        const confirm = await Swal.fire({
+    const handleDelete = async (provider: Provider) => {
+        const result = await Swal.fire({
             title: "Delete Provider?",
-            text: "Are you sure you want to delete this provider?",
+            html: `
+      <div style="font-size:14px">
+        Are you sure you want to delete <b>${provider.Name}</b>?<br/>
+        This action will deactivate the provider.
+      </div>
+    `,
             icon: "warning",
             showCancelButton: true,
             confirmButtonText: "Yes, Delete",
+            cancelButtonText: "Cancel",
+            confirmButtonColor: "#ef4444",
+            cancelButtonColor: "#6b7280",
+            reverseButtons: true,
+            focusCancel: true,
         });
 
-        if (!confirm.isConfirmed) return;
+        if (!result.isConfirmed) return;
 
-        await universalService({
-            procName: "ApiManager",
-            Para: JSON.stringify({
-                ActionMode: "Delete",
-                ProviderId: id,
-            }),
-        });
+        try {
+            Swal.fire({
+                title: "Deleting...",
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                didOpen: () => {
+                    Swal.showLoading();
+                },
+            });
 
-        fetchProviders();
+            const response = await universalService({
+                procName: "ApiManager",
+                Para: JSON.stringify({
+                    ActionMode: "Delete",
+                    ProviderId: provider.ProviderId,
+                }),
+            });
+
+            Swal.close();
+
+            const res = response?.data?.[0] || response?.[0] || response;
+
+            if (res?.Status === "SUCCESS") {
+                Swal.fire("Deleted!", "Provider deleted successfully.", "success");
+                fetchProviders();
+            } else {
+                Swal.fire("Error", res?.Message || "Delete failed", "error");
+            }
+        } catch (err) {
+            console.error(err);
+            Swal.fire("Error", "Something went wrong while deleting.", "error");
+        }
     };
 
     const totalPages = Math.ceil(totalCount / itemsPerPage);
@@ -163,120 +193,194 @@ export default function ApiManager() {
             </div>
 
             {/* TABS */}
-            <div className="flex border-b border-gray-200 mb-4 gap-10 mb-2 -mx-7 px-10">
-                {tabs.map((t) => (
-                    <button
-                        key={t.label}
-                        onClick={() => {
-                            setTab(t.label);
+            <div className="flex flex-wrap items-center justify-between gap-4 
+    dark:border-[#1f2a44] 
+    mb-5 -mx-6 px-6 pb-4">
+
+                {/* LEFT SIDE — TABS */}
+                <div className="flex items-center gap-3 overflow-x-auto">
+                    {tabs.map((t) => {
+                        const isActive = tab === t.label;
+
+                        return (
+                            <button
+                                key={t.label}
+                                onClick={() => {
+                                    setTab(t.label);
+                                    setCurrentPage(1);
+                                }}
+                                className={`
+            flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium
+            transition-all duration-200 whitespace-nowrap
+            ${isActive
+                                        ? "bg-primary-button-bg text-white shadow-sm"
+                                        : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#1c2742] hover:text-gray-800 dark:hover:text-white"
+                                    }
+          `}
+                            >
+                                <span className="text-base">{t.icon}</span>
+                                {t.label}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                {/* RIGHT SIDE — SEARCH + PAGE SIZE */}
+                <div className="flex items-center gap-3">
+
+                    {/* Search */}
+                    {/* <div className="relative">
+                        <input
+                            type="text"
+                            placeholder="Search provider..."
+                            value={searchInput}
+                            onChange={(e) => setSearchInput(e.target.value)}
+                            onKeyDown={(e) => e.key === "Enter" && applySearch()}
+                            className="
+          h-9 w-[240px] pl-3 pr-3 text-sm
+          border border-gray-300 dark:border-gray-600
+          rounded-md bg-white dark:bg-[#111c34]
+          focus:outline-none focus:ring-1 focus:ring-primary-button-bg
+          focus:border-primary-button-bg
+          transition-all
+        "
+                        />
+                    </div> */}
+
+                    {/* Page Size */}
+                    <select
+                        value={itemsPerPage}
+                        onChange={(e) => {
+                            setItemsPerPage(Number(e.target.value));
                             setCurrentPage(1);
                         }}
-                        className={`pb-2 text-sm font-medium flex items-center gap-2 transition-colors ${tab === t.label
-                            ? "border-b-2 border-primary-button-bg text-primary-button-bg"
-                            : "text-gray-500 hover:text-gray-700"
-                            }`}
+                        className="
+        h-9 px-3 text-sm
+        border border-gray-300 dark:border-gray-600
+        rounded-md bg-white dark:bg-[#111c34]
+        focus:outline-none focus:ring-1 focus:ring-primary-button-bg
+        focus:border-primary-button-bg
+        transition-all
+      "
                     >
-                        <span className="text-base">{t.icon}</span>
-                        {t.label}
-                    </button>
-                ))}
+                        <option value={10}>10 / page</option>
+                        <option value={25}>25 / page</option>
+                        <option value={50}>50 / page</option>
+                    </select>
+
+                </div>
             </div>
 
 
-            {/* SEARCH */}
-            <div className="flex justify-between items-center mb-4">
-                <input
-                    type="text"
-                    placeholder="Search..."
-                    value={searchInput}
-                    onChange={(e) => setSearchInput(e.target.value)}
-                    onKeyDown={(e) => e.key === "Enter" && applySearch()}
-                    className="h-9 w-[250px] px-3 text-sm border rounded-md"
-                />
 
-                <select
-                    value={itemsPerPage}
-                    onChange={(e) => {
-                        setItemsPerPage(Number(e.target.value));
-                        setCurrentPage(1);
-                    }}
-                    className="h-9 px-3 text-sm border rounded-md"
-                >
-                    <option value={10}>10 / page</option>
-                    <option value={25}>25 / page</option>
-                    <option value={50}>50 / page</option>
-                </select>
-            </div>
+
 
             {/* TABLE */}
-            <div className="table-responsive overflow-x-auto -mx-8">
-                <table className="w-full">
+            <div className="overflow-x-auto -mx-7.5">
+                <table className="w-full text-sm overflow-hidden">
+
+                    {/* ================= HEADER ================= */}
                     <thead>
                         <tr className="bg-primary-table-bg text-primary-table-text dark:bg-[#15203c]">
-                            <th className="px-10 py-3 text-left">Name</th>
-                            <th className="px-4 py-3 text-left">BaseURL</th>
-                            <th className="px-4 py-3 text-left">Sender ID</th>
-                            <th className="px-4 py-3 text-left">Default</th>
-                            <th className="px-4 py-3 text-left">Status</th>
-                            <th className="px-4 py-3 text-left">Action</th>
+                            <th className="px-4 py-3 text-left font-semibold">
+                                Name
+                            </th>
+                            <th className="px-4 py-3 text-left font-semibold">
+                                Base URL
+                            </th>
+                            <th className="px-4 py-3 text-left font-semibold w-[140px]">
+                                Sender ID
+                            </th>
+                            <th className="px-4 py-3 text-center font-semibold w-[120px]">
+                                Default
+                            </th>
+                            <th className="px-4 py-3 text-center font-semibold w-[130px]">
+                                Action
+                            </th>
                         </tr>
                     </thead>
-                    <tbody>
+
+                    {/* ================= BODY ================= */}
+                    <tbody className="bg-white dark:bg-[#0c1427]">
                         {loading ? (
                             <tr>
-                                <td colSpan={6} className="text-center py-6">
+                                <td colSpan={5} className="text-center py-8 text-gray-500">
                                     Loading...
                                 </td>
                             </tr>
                         ) : providers.length === 0 ? (
                             <tr>
-                                <td colSpan={6} className="text-center py-6">
+                                <td colSpan={5} className="text-center py-8 text-gray-500">
                                     No providers found.
                                 </td>
                             </tr>
                         ) : (
-                            providers.map((p) => (
+                            providers.map((p, index) => (
                                 <tr
                                     key={p.ProviderId}
-                                    className="border-b border-gray-100 dark:border-[#172036]"
+                                    className={`
+              border-b border-gray-100 dark:border-[#172036]
+              hover:bg-gray-50 dark:hover:bg-[#172036]
+              transition-colors duration-200
+            `}
                                 >
-                                    <td className="px-4 py-4">{p.Name}</td>
-                                    <td className="px-4 py-4">{p.BaseURL}</td>
-                                    <td className="px-4 py-4">{p.SenderId}</td>
+                                    {/* Name */}
+                                    <td className="px-4 py-3 font-medium text-gray-800 dark:text-gray-100">
+                                        {p.Name}
+                                    </td>
 
-                                    <td className="px-4 py-4">
-                                        <label className="relative inline-flex items-center cursor-pointer">
+                                    {/* Base URL */}
+                                    <td className="px-4 py-3 max-w-[220px] truncate text-gray-600 dark:text-gray-300">
+                                        {p.BaseURL}
+                                    </td>
+
+                                    {/* Sender ID */}
+                                    <td className="px-4 py-3 text-gray-700 dark:text-gray-300">
+                                        {p.SenderId}
+                                    </td>
+
+                                    {/* Default Toggle */}
+                                    <td className="px-4 py-3 text-center">
+                                        <label className="relative inline-flex items-center cursor-pointer group">
                                             <input
                                                 type="checkbox"
                                                 className="sr-only peer"
                                                 checked={p.IsDefault}
                                                 onChange={() => handleDefaultToggle(p)}
                                             />
-                                            <div className="w-11 h-6 bg-gray-300 rounded-full peer 
-            peer-checked:bg-primary-button-bg 
-            transition-colors duration-300">
-                                            </div>
-                                            <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full 
-            transition-transform duration-300 
-            peer-checked:translate-x-5">
-                                            </div>
+
+                                            {/* Track */}
+                                            <div
+                                                className="
+        w-12 h-6 rounded-full
+        bg-gray-300 dark:bg-gray-600
+        transition-all duration-300 ease-in-out
+        peer-checked:bg-primary-button-bg
+        shadow-inner
+        peer-focus:ring-2 peer-focus:ring-primary-button-bg/40
+      "
+                                            ></div>
+
+                                            {/* Thumb */}
+                                            <div
+                                                className="
+        absolute left-1 top-1
+        w-4 h-4 rounded-full
+        bg-white
+        shadow-md
+        transition-all duration-300 ease-in-out
+        peer-checked:translate-x-6
+        group-hover:shadow-lg
+      "
+                                            ></div>
                                         </label>
                                     </td>
 
 
-                                    <td className="px-4 py-4">
-                                        <span
-                                            className={`px-3 py-1 rounded-full text-xs ${p.IsActive
-                                                ? "bg-green-100 text-green-600"
-                                                : "bg-red-100 text-red-600"
-                                                }`}
-                                        >
-                                            {p.IsActive ? "Active" : "Inactive"}
-                                        </span>
-                                    </td>
+                                    {/* Action */}
+                                    <td className="px-4 py-3 text-center">
+                                        <div className="flex justify-center items-center gap-2">
 
-                                    <td className="px-4 py-4">
-                                        <div className="flex gap-3">
                                             <button
                                                 onClick={async () => {
                                                     try {
@@ -289,10 +393,8 @@ export default function ApiManager() {
                                                         });
 
                                                         const data = res?.data?.[0] || res?.[0];
-
                                                         if (!data) return;
 
-                                                        // 🔥 Parse Parameters JSON string
                                                         const parsedParams = data.Parameters
                                                             ? JSON.parse(data.Parameters)
                                                             : [];
@@ -303,33 +405,41 @@ export default function ApiManager() {
                                                         });
 
                                                         setShowModal(true);
-
                                                     } catch (err) {
                                                         console.error(err);
                                                         Swal.fire("Error", "Failed to load provider details", "error");
                                                     }
                                                 }}
-
-                                                className="text-primary-button-bg hover:underline text-sm"
+                                                className="w-9 h-9 flex items-center justify-center rounded-md 
+                     text-primary-button-bg 
+                    hover:bg-primary-button-bg hover:text-white 
+                    transition-all duration-200"
                                             >
-                                                Edit
+                                                <FaEdit size={14} />
                                             </button>
-
 
                                             <button
-                                                onClick={() => handleDelete(p.ProviderId)}
-                                                className="text-red-500 hover:underline text-sm"
+                                                onClick={() => handleDelete(p)}
+                                                className="w-9 h-9 flex items-center justify-center rounded-md 
+                     text-red-500 
+                    hover:bg-red-500 hover:text-white 
+                    transition-all duration-200"
                                             >
-                                                Delete
+                                                <FaTrash size={14} />
                                             </button>
+
                                         </div>
                                     </td>
+
                                 </tr>
                             ))
                         )}
                     </tbody>
                 </table>
             </div>
+
+
+
             <AddProviderModal
                 open={showModal}
                 editData={editData}

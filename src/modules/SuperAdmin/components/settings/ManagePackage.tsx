@@ -17,6 +17,7 @@ interface PackageItem {
     MaxAmount: number;
     Validity: number;
     IsActive: number;
+    ShortDesprition:string;
     DefaultImageURL?: string;
 }
 
@@ -131,7 +132,7 @@ const Template: React.FC = () => {
                     onClick={() => navigate("/superadmin/mlm-setting/add-package")}
                     className="px-6 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover text-white rounded text-sm font-medium"
                 >
-                    + Add Package
+                    Add Package
                 </button>
 
             </div>
@@ -312,7 +313,7 @@ from-primary-button-bg to-primary-button-bg bg-clip-text text-transparent">
 
                             {/* Footer */}
                             <p className="mt-4 text-[11px] text-gray-400 text-center tracking-wide">
-                                Smart returns start with smart investments.
+                                {pkg.ShortDescription}
                             </p>
 
                         </div>

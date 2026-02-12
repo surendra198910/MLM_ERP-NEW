@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from "react";
 import Swal from "sweetalert2";
 import { ApiService } from "../../../../services/ApiService";
+import * as Yup from "yup";
+
 import {
     FaTimes,
     FaPlus,
@@ -33,41 +35,83 @@ export default function AddProviderModal({
     const { universalService } = ApiService();
     const [loading, setLoading] = useState(false);
     const isEdit = !!editData;
-  useEffect(() => {
-    if (editData) {
-        // EDIT MODE
-        setForm({
-            providerType: editData.ProviderType,
-            providerName: editData.Name,
-            baseUrl: editData.BaseURL,
-            senderId: editData.SenderId,
-        });
+    useEffect(() => {
+        if (!open) return;   // 👈 important
 
-        if (editData.Parameters) {
-            setParameters(
-                editData.Parameters.map((p: any) => ({
-                    key: p.ParamKey,
-                    value: p.ParamValue,
-                    isRequired: p.IsRequired,
-                }))
-            );
+        if (editData) {
+            // EDIT MODE
+            setForm({
+                providerType: editData.ProviderType,
+                providerName: editData.Name,
+                baseUrl: editData.BaseURL,
+                senderId: editData.SenderId,
+            });
+
+            if (editData.Parameters) {
+                setParameters(
+                    editData.Parameters.map((p: any) => ({
+                        key: p.ParamKey,
+                        value: p.ParamValue,
+                        isRequired: p.IsRequired,
+                    }))
+                );
+            }
+        } else {
+            // ADD MODE RESET (Always clean)
+            setForm({
+                providerType: "SMS",
+                providerName: "",
+                baseUrl: "",
+                senderId: "",
+            });
+
+            setParameters([
+                { key: "ApiKey", value: "", isRequired: true },
+            ]);
         }
-    } else {
-        // 🔥 ADD MODE RESET
-        setForm({
-            providerType: "SMS",
-            providerName: "",
-            baseUrl: "",
-            senderId: "",
-        });
-
-        setParameters([
-            { key: "ApiKey", value: "", isRequired: true },
-        ]);
-    }
-}, [editData]);
+    }, [editData, open]);   // 👈 added open here
 
 
+
+    const validationSchema = Yup.object().shape({
+        providerType: Yup.string().required("Provider Type is required"),
+
+        providerName: Yup.string()
+            .trim()
+            .min(3, "Provider Name must be at least 3 characters")
+            .required("Provider Name is required"),
+
+        baseUrl: Yup.string()
+            .trim()
+            .url("Enter a valid URL (https://...)")
+            .required("Base URL is required"),
+
+        senderId: Yup.string().when("providerType", {
+            is: (val: string) => val === "SMS" || val === "WhatsApp",
+            then: (schema) =>
+                schema.required("Sender ID is required for SMS & WhatsApp"),
+            otherwise: (schema) => schema.notRequired(),
+        }),
+
+        parameters: Yup.array()
+            .of(
+                Yup.object().shape({
+                    key: Yup.string().trim().required("Parameter Key is required"),
+                    value: Yup.string().trim().required("Parameter Value is required"),
+                    isRequired: Yup.boolean(),
+                })
+            )
+            .min(1, "At least one parameter is required")
+            .test(
+                "unique-keys",
+                "Parameter keys must be unique",
+                (params) => {
+                    if (!params) return true;
+                    const keys = params.map((p) => p.key.trim());
+                    return new Set(keys).size === keys.length;
+                }
+            ),
+    });
 
     const [form, setForm] = useState({
         providerType: "SMS",   // ✅ MUST exist
@@ -100,47 +144,65 @@ export default function AddProviderModal({
         updated.splice(index, 1);
         setParameters(updated);
     };
-
     const handleSave = async () => {
-        if (!form.providerName || !form.baseUrl) {
-            Swal.fire("Error", "Please fill required fields", "error");
+        try {
+            await validationSchema.validate(
+                { ...form, parameters },
+                { abortEarly: false }
+            );
+        } catch (validationError: any) {
+            const messages = validationError.inner
+                .map((err: any) => `• ${err.message}`)
+                .join("<br/>");
+
+            Swal.fire({
+                icon: "error",
+                title: "Validation Error",
+                html: `<div style="text-align:left">${messages}</div>`,
+            });
+
             return;
         }
 
         try {
             setLoading(true);
+
             const payload = {
                 procName: "ApiManager",
                 Para: JSON.stringify({
                     ActionMode: isEdit ? "Update" : "Insert",
                     ProviderId: editData?.ProviderId,
-                    ProviderType: form.providerType,   // ✅ ADD THIS
+                    ProviderType: form.providerType,
                     ProviderName: form.providerName,
                     BaseUrl: form.baseUrl,
                     SenderId: form.senderId,
                     CreatedBy: 1,
                     Parameters: JSON.stringify(
-                        parameters.map(p => ({
+                        parameters.map((p) => ({
                             ParamKey: p.key,
                             ParamValue: p.value,
                             IsRequired: p.isRequired,
-                            IsEncrypted: false
+                            IsEncrypted: false,
                         }))
-                    )
+                    ),
                 }),
             };
-
-
 
             const res = await universalService(payload);
             const result = res?.data?.[0] || res?.[0] || res;
 
             if (result?.Status === "SUCCESS") {
-                Swal.fire("Success", "Provider added successfully", "success");
+                Swal.fire(
+                    "Success",
+                    isEdit
+                        ? "Provider updated successfully"
+                        : "Provider added successfully",
+                    "success"
+                );
                 onSuccess();
                 onClose();
             } else {
-                Swal.fire("Error", result?.Message || "Insert failed", "error");
+                Swal.fire("Error", result?.Message || "Operation failed", "error");
             }
         } catch (err) {
             console.error(err);
@@ -149,8 +211,6 @@ export default function AddProviderModal({
             setLoading(false);
         }
     };
-
-
 
     return (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 animate-fadeIn">
@@ -179,7 +239,7 @@ export default function AddProviderModal({
                     <div className="grid grid-cols-2 gap-5">
                         <div>
                             <label className="text-xs text-gray-500 mb-2 block">
-                                Provider Type
+                                Provider Type<span className="text-red-500 ml-0.5">*</span>
                             </label>
                             <select
                                 className={inputClass}
@@ -196,7 +256,7 @@ export default function AddProviderModal({
 
                         <div>
                             <label className="text-xs text-gray-500 mb-2 block">
-                                Provider Name
+                                Provider Name<span className="text-red-500 ml-0.5">*</span>
                             </label>
                             <input
                                 className={inputClass}
@@ -210,7 +270,7 @@ export default function AddProviderModal({
 
                         <div>
                             <label className="text-xs text-gray-500 mb-2 block">
-                                Base URL
+                                Base URL<span className="text-red-500 ml-0.5">*</span>
                             </label>
                             <input
                                 className={inputClass}
@@ -224,7 +284,7 @@ export default function AddProviderModal({
 
                         <div>
                             <label className="text-xs text-gray-500 mb-2 block">
-                                Sender ID
+                                Sender ID<span className="text-red-500 ml-0.5">*</span>
                             </label>
                             <input
                                 className={inputClass}

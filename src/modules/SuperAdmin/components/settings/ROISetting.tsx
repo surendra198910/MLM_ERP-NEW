@@ -52,6 +52,143 @@ const Template: React.FC = () => {
   useEffect(() => {
     fetchPackages();
   }, []);
+
+  const handleROICapping = async () => {
+    try {
+      // 🔹 Fetch existing ROI values
+      const getResponse = await universalService({
+        procName: "ManageGlobalSetting",
+        Para: JSON.stringify({ ActionMode: "GetROICapping" }),
+      });
+
+      const existing =
+        getResponse?.data?.[0] ||
+        getResponse?.[0] ||
+        {};
+
+      const investorValue =
+        existing?.ROICappingMultiplierInvestor ?? "";
+
+      const leaderValue =
+        existing?.ROICappingMultiplierLeader ?? "";
+
+      // 🔹 Get primary color dynamically
+      const tempBtn = document.createElement("button");
+      tempBtn.className = "bg-primary-button-bg";
+      document.body.appendChild(tempBtn);
+      const primaryColor =
+        window.getComputedStyle(tempBtn).backgroundColor;
+      document.body.removeChild(tempBtn);
+
+      const { value: formValues } = await Swal.fire({
+        title: "ROI Capping",
+        html: `
+        <div style="display:flex; flex-direction:column; gap:18px; text-align:left; margin-top:10px;">
+          
+          <div>
+            <label style="font-size:13px; font-weight:500; display:block; margin-bottom:6px;">
+              Investor ROI Cap (%)
+            </label>
+            <input 
+              id="minCap" 
+              type="number" 
+              step="0.01"
+              value="${investorValue}"
+              placeholder="Enter Investor ROI Cap"
+              style="
+                width:100%;
+                border:1px solid #e5e7eb;
+                border-radius:6px;
+                padding:8px 12px;
+                font-size:14px;
+                outline:none;
+                transition:all 0.2s ease;
+              "
+              onfocus="this.style.borderColor='${primaryColor}'; this.style.boxShadow='0 0 0 1px ${primaryColor}';"
+              onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none';"
+            />
+          </div>
+
+          <div>
+            <label style="font-size:13px; font-weight:500; display:block; margin-bottom:6px;">
+              Leader ROI Cap (%)
+            </label>
+            <input 
+              id="maxCap" 
+              type="number" 
+              step="0.01"
+              value="${leaderValue}"
+              placeholder="Enter Leader ROI Cap"
+              style="
+                width:100%;
+                border:1px solid #e5e7eb;
+                border-radius:6px;
+                padding:8px 12px;
+                font-size:14px;
+                outline:none;
+                transition:all 0.2s ease;
+              "
+              onfocus="this.style.borderColor='${primaryColor}'; this.style.boxShadow='0 0 0 1px ${primaryColor}';"
+              onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none';"
+            />
+          </div>
+
+        </div>
+      `,
+        showCancelButton: true,
+        confirmButtonText: "Save",
+        confirmButtonColor: primaryColor,
+        width: 420,
+        preConfirm: () => {
+          const investor = (
+            document.getElementById("minCap") as HTMLInputElement
+          ).value;
+          const leader = (
+            document.getElementById("maxCap") as HTMLInputElement
+          ).value;
+
+          if (!investor || !leader) {
+            Swal.showValidationMessage("Both fields are required");
+            return;
+          }
+
+          return {
+            InvestorCap: parseFloat(investor),
+            LeaderCap: parseFloat(leader),
+          };
+        },
+      });
+
+      if (!formValues) return;
+
+      const response = await universalService({
+        procName: "ManageGlobalSetting",
+        Para: JSON.stringify({
+          ActionMode: "UpdateROICapping",
+          SettingId: existing?.SettingId,
+          ROICappingMultiplierInvestor: formValues.InvestorCap,
+          ROICappingMultiplierLeader: formValues.LeaderCap,
+        }),
+      });
+
+      const res =
+        response?.data?.[0] ||
+        response?.[0] ||
+        response;
+
+      if (res?.Status === "SUCCESS") {
+        Swal.fire("Success!", res?.Message, "success");
+      } else {
+        Swal.fire("Error", res?.Message || "Failed", "error");
+      }
+
+    } catch (error) {
+      console.error(error);
+      Swal.fire("Error", "Server error occurred", "error");
+    }
+  };
+
+
   const getIPLocation = async () => {
     try {
       const res = await fetch("https://ipapi.co/json/");
@@ -164,6 +301,13 @@ const Template: React.FC = () => {
             {/* 3. BUTTONS GROUP (Exactly from your design) */}
             <div className="flex items-center gap-2">
               {/* ADD BUTTON */}
+              <button
+                type="button"
+                onClick={handleROICapping}
+                className="px-6 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover text-white rounded text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                ROI Capping
+              </button>
               <button
                 type="button"
                 onClick={saveROI}
