@@ -385,7 +385,8 @@ const MemberWalletsElegant: React.FC = () => {
             <button
               type="submit"
               form="walletForm"
-              className="px-6 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover text-white rounded text-sm font-medium transition-colors flex items-center justify-center gap-2 "
+              disabled={!SmartActions.canAdd(formName)}
+              className="px-6 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover text-white rounded text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
             >
               Process Transaction
             </button>

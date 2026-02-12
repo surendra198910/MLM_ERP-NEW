@@ -40,6 +40,7 @@ class SmartAction {
 
   /* Helper Methods */
   canAdd = (form: string) => this.can(form, "add");
+  canSave = (form: string) => this.can(form, "save");
   canEdit = (form: string) => this.can(form, "edit");
   canDelete = (form: string) => this.can(form, "delete");
   canSearch = (form: string) => this.can(form, "search");

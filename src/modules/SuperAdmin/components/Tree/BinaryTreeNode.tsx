@@ -18,6 +18,7 @@ interface User {
   id: string | number;
   username: string;
   image: string;
+  paidstatus:string,
   left_child_id?: string | number | null;
   right_child_id?: string | number | null;
   description?: UserDescription;
@@ -52,8 +53,9 @@ export default class BinaryTreeNode extends React.Component<BinaryTreeNodeProps>
     } = this.props;
 
     const fakeUser: User = {
-      id: "null",
+      id: null,
       username: nameFake,
+      paidstatus:null,
       left_child_id: null,
       right_child_id: null,
       image: imageFake,
@@ -69,6 +71,7 @@ export default class BinaryTreeNode extends React.Component<BinaryTreeNodeProps>
         {colorText && (
           <a
             onClick={() => {
+              //alert(user.id)
               onClick && onClick(user.id);
             }}
             href="javascript:void(0)"
@@ -77,12 +80,12 @@ export default class BinaryTreeNode extends React.Component<BinaryTreeNodeProps>
               renderNode(user)
             ) : (
               <div className="distributor-wrap">
-                <div className="avatar">
+                <div className={`avatar ${user.id ? (user.paidstatus === 'Paid' ? 'paid' : 'unpaid') : ''}`}>
                   <img
                     src={`${imageBaseUrl}${user.image}`}
                     alt="User"
                     onError={(e: any) => {
-                      e.target.src = `${imageBaseUrl}default.jpg`;
+                      e.target.src = `${imageBaseUrl}plus.png`;
                     }}
                   />
                 </div>
