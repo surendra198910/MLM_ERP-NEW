@@ -17,7 +17,7 @@ interface PackageItem {
     MaxAmount: number;
     Validity: number;
     IsActive: number;
-    ShortDesprition:string;
+    ShortDesprition: string;
     DefaultImageURL?: string;
 }
 
@@ -179,9 +179,15 @@ const Template: React.FC = () => {
                             </div>
 
                             {/* Header */}
-                            <div className="text-lg font-semibold text-gray-900 dark:text-white tracking-tight leading-snug">
+                            <div
+                                className="text-lg font-semibold text-gray-900 dark:text-white 
+             tracking-tight leading-snug
+             truncate max-w-[220px]"
+                                title={pkg.ProductName}
+                            >
                                 {pkg.ProductName}
                             </div>
+
 
                             {/* Image */}
                             <div className="mt-6 flex justify-center">

@@ -191,7 +191,20 @@ const Template: React.FC = () => {
             </div>
 
             {/* --- CONTENT CONTAINER --- */}
-            <div className="min-h-[500px] flex items-center justify-center">
+            <div className="relative min-h-[500px]">
+                {loading && (
+                    <div className="absolute inset-0 
+                  bg-white/60 dark:bg-black/40 
+                  backdrop-blur-sm
+                  flex items-center justify-center 
+                  z-20 rounded-lg">
+                        <div className="animate-spin w-10 h-10 
+                    border-4 border-primary-button-bg 
+                    border-t-transparent 
+                    rounded-full" />
+                    </div>
+                )}
+
                 <div className="trezo-card mb-[25px]">
                     <div className="trezo-card-content">
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-[25px]">
@@ -215,10 +228,14 @@ const Template: React.FC = () => {
                                     </div>
 
                                     {/* Package Name */}
-                                    <div className="text-lg font-semibold text-gray-900 dark:text-white tracking-tight leading-snug line-clamp-2">
+                                    <div
+                                        className="text-lg font-semibold text-gray-900 dark:text-white
+             tracking-tight leading-snug
+             line-clamp-2 break-words"
+                                        title={pkg.PackageName}
+                                    >
                                         {pkg.PackageName}
                                     </div>
-
                                     {/* Image */}
                                     <div className="mt-6 flex justify-center">
                                         <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-[#111827] dark:to-[#020617] p-[2px] shadow-lg">
@@ -251,7 +268,7 @@ const Template: React.FC = () => {
 
                                     </div>
 
-                                    {/* Details Card */}
+                                   
                                     {/* Sponsor Settings */}
                                     <div className="space-y-4">
                                         {/* Value Type */}

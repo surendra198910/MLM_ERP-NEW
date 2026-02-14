@@ -2,6 +2,10 @@ import React, { useState, useEffect } from "react";
 import { ApiService } from "../../../../services/ApiService";
 import Swal from "sweetalert2";
 import { useCurrency } from "../../context/CurrencyContext";
+import { Dialog, DialogBackdrop, DialogPanel } from "@headlessui/react";
+import { Formik, Form, Field, ErrorMessage } from "formik";
+import * as Yup from "yup";
+
 // Define the data structure for creators
 export interface PackageROI {
   PackageId: number;
@@ -18,6 +22,12 @@ const Template: React.FC = () => {
   const { universalService } = ApiService();
   const [packages, setPackages] = useState<PackageROI[]>([]);
   const [roiMap, setRoiMap] = useState<{ [key: number]: number }>({});
+  const [openROICap, setOpenROICap] = useState(false);
+  const [investorCap, setInvestorCap] = useState<number | "">("");
+  const [leaderCap, setLeaderCap] = useState<number | "">("");
+  const [roiCapSaving, setRoiCapSaving] = useState(false);
+  const [roiCapSettingId, setRoiCapSettingId] = useState<number | null>(null);
+
   const { currency } = useCurrency();
   const fetchPackages = async () => {
     try {
@@ -52,10 +62,22 @@ const Template: React.FC = () => {
   useEffect(() => {
     fetchPackages();
   }, []);
+  const roiCappingSchema = Yup.object().shape({
+    InvestorCap: Yup.number()
+      .typeError("Investor ROI Cap must be a number")
+      .required("Investor ROI Cap is required")
+      .min(0, "Cannot be negative")
+      .max(1000, "Value too large"),
+
+    LeaderCap: Yup.number()
+      .typeError("Leader ROI Cap must be a number")
+      .required("Leader ROI Cap is required")
+      .min(0, "Cannot be negative")
+      .max(1000, "Value too large"),
+  });
 
   const handleROICapping = async () => {
     try {
-      // 🔹 Fetch existing ROI values
       const getResponse = await universalService({
         procName: "ManageGlobalSetting",
         Para: JSON.stringify({ ActionMode: "GetROICapping" }),
@@ -66,125 +88,13 @@ const Template: React.FC = () => {
         getResponse?.[0] ||
         {};
 
-      const investorValue =
-        existing?.ROICappingMultiplierInvestor ?? "";
+      setInvestorCap(existing?.ROICappingMultiplierInvestor ?? "");
+      setLeaderCap(existing?.ROICappingMultiplierLeader ?? "");
+      setRoiCapSettingId(existing?.SettingId ?? null);
 
-      const leaderValue =
-        existing?.ROICappingMultiplierLeader ?? "";
-
-      // 🔹 Get primary color dynamically
-      const tempBtn = document.createElement("button");
-      tempBtn.className = "bg-primary-button-bg";
-      document.body.appendChild(tempBtn);
-      const primaryColor =
-        window.getComputedStyle(tempBtn).backgroundColor;
-      document.body.removeChild(tempBtn);
-
-      const { value: formValues } = await Swal.fire({
-        title: "ROI Capping",
-        html: `
-        <div style="display:flex; flex-direction:column; gap:18px; text-align:left; margin-top:10px;">
-          
-          <div>
-            <label style="font-size:13px; font-weight:500; display:block; margin-bottom:6px;">
-              Investor ROI Cap (%)
-            </label>
-            <input 
-              id="minCap" 
-              type="number" 
-              step="0.01"
-              value="${investorValue}"
-              placeholder="Enter Investor ROI Cap"
-              style="
-                width:100%;
-                border:1px solid #e5e7eb;
-                border-radius:6px;
-                padding:8px 12px;
-                font-size:14px;
-                outline:none;
-                transition:all 0.2s ease;
-              "
-              onfocus="this.style.borderColor='${primaryColor}'; this.style.boxShadow='0 0 0 1px ${primaryColor}';"
-              onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none';"
-            />
-          </div>
-
-          <div>
-            <label style="font-size:13px; font-weight:500; display:block; margin-bottom:6px;">
-              Leader ROI Cap (%)
-            </label>
-            <input 
-              id="maxCap" 
-              type="number" 
-              step="0.01"
-              value="${leaderValue}"
-              placeholder="Enter Leader ROI Cap"
-              style="
-                width:100%;
-                border:1px solid #e5e7eb;
-                border-radius:6px;
-                padding:8px 12px;
-                font-size:14px;
-                outline:none;
-                transition:all 0.2s ease;
-              "
-              onfocus="this.style.borderColor='${primaryColor}'; this.style.boxShadow='0 0 0 1px ${primaryColor}';"
-              onblur="this.style.borderColor='#e5e7eb'; this.style.boxShadow='none';"
-            />
-          </div>
-
-        </div>
-      `,
-        showCancelButton: true,
-        confirmButtonText: "Save",
-        confirmButtonColor: primaryColor,
-        width: 420,
-        preConfirm: () => {
-          const investor = (
-            document.getElementById("minCap") as HTMLInputElement
-          ).value;
-          const leader = (
-            document.getElementById("maxCap") as HTMLInputElement
-          ).value;
-
-          if (!investor || !leader) {
-            Swal.showValidationMessage("Both fields are required");
-            return;
-          }
-
-          return {
-            InvestorCap: parseFloat(investor),
-            LeaderCap: parseFloat(leader),
-          };
-        },
-      });
-
-      if (!formValues) return;
-
-      const response = await universalService({
-        procName: "ManageGlobalSetting",
-        Para: JSON.stringify({
-          ActionMode: "UpdateROICapping",
-          SettingId: existing?.SettingId,
-          ROICappingMultiplierInvestor: formValues.InvestorCap,
-          ROICappingMultiplierLeader: formValues.LeaderCap,
-        }),
-      });
-
-      const res =
-        response?.data?.[0] ||
-        response?.[0] ||
-        response;
-
-      if (res?.Status === "SUCCESS") {
-        Swal.fire("Success!", res?.Message, "success");
-      } else {
-        Swal.fire("Error", res?.Message || "Failed", "error");
-      }
-
+      setOpenROICap(true);
     } catch (error) {
-      console.error(error);
-      Swal.fire("Error", "Server error occurred", "error");
+      Swal.fire("Error", "Failed to load ROI Capping", "error");
     }
   };
 
@@ -321,7 +231,20 @@ const Template: React.FC = () => {
       </div>
 
       {/* --- CONTENT CONTAINER --- */}
-      <div className="min-h-[500px] flex items-center justify-center">
+      <div className="relative min-h-[500px]">
+        {loading && (
+          <div className="absolute inset-0 
+                  bg-white/60 dark:bg-black/40 
+                  backdrop-blur-sm
+                  flex items-center justify-center 
+                  z-20 rounded-lg">
+            <div className="animate-spin w-10 h-10 
+                    border-4 border-primary-button-bg 
+                    border-t-transparent 
+                    rounded-full" />
+          </div>
+        )}
+
         <div className="trezo-card mb-[25px]">
           <div className="trezo-card-content">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-[25px]">
@@ -345,9 +268,15 @@ const Template: React.FC = () => {
                   </div>
 
                   {/* Package Name */}
-                  <div className="text-lg font-semibold text-gray-900 dark:text-white tracking-tight leading-snug line-clamp-2">
+                  <div
+                    className="text-lg font-semibold text-gray-900 dark:text-white
+             tracking-tight leading-snug
+             line-clamp-2 break-words"
+                    title={pkg.PackageName}
+                  >
                     {pkg.PackageName}
                   </div>
+
 
                   {/* Image */}
                   <div className="mt-6 flex justify-center">
@@ -420,10 +349,225 @@ const Template: React.FC = () => {
                   </p>
                 </div>
               ))}
+
             </div>
+
+          </div>
+
+        </div>
+
+
+      </div>
+      <Dialog
+        open={openROICap}
+        onClose={() => setOpenROICap(false)}
+        className="relative z-60"
+      >
+        <DialogBackdrop
+          transition
+          className="fixed inset-0 bg-gray-500/75 transition-opacity 
+    data-[closed]:opacity-0 
+    data-[enter]:duration-300 
+    data-[leave]:duration-200 
+    data-[enter]:ease-out 
+    data-[leave]:ease-in"
+        />
+
+        <div className="fixed inset-0 z-60 w-screen overflow-y-auto">
+          <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
+
+            <DialogPanel
+              transition
+              className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all
+        data-[closed]:translate-y-4 data-[closed]:opacity-0 
+        data-[enter]:duration-300 data-[leave]:duration-200
+        data-[enter]:ease-out data-[leave]:ease-in 
+        sm:my-8 sm:w-full sm:max-w-[550px]
+        data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
+            >
+              <div className="trezo-card w-full bg-white dark:bg-[#0c1427] p-[20px] md:p-[25px] rounded-md">
+
+                {/* Header */}
+                <div
+                  className="trezo-card-header bg-gray-50 dark:bg-[#15203c] 
+            mb-[20px] md:mb-[25px]
+            flex items-center justify-between 
+            -mx-[20px] md:-mx-[25px] 
+            -mt-[20px] md:-mt-[25px]
+            p-[20px] md:p-[25px] rounded-t-md"
+                >
+                  <div className="trezo-card-title">
+                    <h5 className="!mb-0 font-bold text-black dark:text-white">
+                      ROI Capping
+                    </h5>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="text-[23px] transition-all leading-none 
+              text-black dark:text-white hover:text-primary-button-bg"
+                    onClick={() => setOpenROICap(false)}
+                  >
+                    <i className="ri-close-fill"></i>
+                  </button>
+                </div>
+
+                <Formik
+                  initialValues={{
+                    InvestorCap: investorCap,
+                    LeaderCap: leaderCap,
+                  }}
+                  enableReinitialize
+                  validationSchema={roiCappingSchema}
+                  onSubmit={async (values) => {
+                    const confirm = await Swal.fire({
+                      title: "Confirm ROI Capping Update",
+                      text: "Are you sure you want to update ROI Capping settings?",
+                      icon: "question",
+                      showCancelButton: true,
+                      confirmButtonColor: "#3b82f6",
+                      cancelButtonColor: "#d33",
+                      confirmButtonText: "Yes, Save",
+                      cancelButtonText: "Cancel",
+                    });
+
+                    if (!confirm.isConfirmed) return;
+
+                    try {
+                      setRoiCapSaving(true);
+
+                      const response = await universalService({
+                        procName: "ManageGlobalSetting",
+                        Para: JSON.stringify({
+                          ActionMode: "UpdateROICapping",
+                          SettingId: roiCapSettingId,
+                          ROICappingMultiplierInvestor: values.InvestorCap,
+                          ROICappingMultiplierLeader: values.LeaderCap,
+                        }),
+                      });
+
+                      const res =
+                        response?.data?.[0] ||
+                        response?.[0] ||
+                        response;
+
+                      if (res?.Status === "SUCCESS") {
+                        Swal.fire("Success!", res?.Message, "success");
+                        setOpenROICap(false);
+                      } else {
+                        Swal.fire("Error", res?.Message || "Failed", "error");
+                      }
+
+                    } catch (error) {
+                      Swal.fire("Error", "Server error occurred", "error");
+                    } finally {
+                      setRoiCapSaving(false);
+                    }
+                  }}
+
+                >
+                  {({ handleSubmit }) => (
+                    <Form onSubmit={handleSubmit} className="space-y-6">
+
+                      {/* Investor */}
+                      <div>
+                        <label className="mb-[10px] text-black dark:text-white font-medium block">
+                          Investor ROI Cap (%)
+                          <span className="text-red-500">*</span>
+                        </label>
+
+                        <Field
+                          type="number"
+                          step="0.01"
+                          name="InvestorCap"
+                          placeholder="Enter Investor ROI Cap"
+                          className="h-[55px] rounded-md text-black dark:text-white 
+          border border-gray-200 dark:border-[#172036] 
+          bg-white dark:bg-[#0c1427] 
+          px-[17px] block w-full outline-0
+          transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
+          focus:border-primary-button-bg"
+                        />
+
+                        <ErrorMessage
+                          name="InvestorCap"
+                          component="p"
+                          className="text-red-500 text-sm mt-1"
+                        />
+                      </div>
+
+                      {/* Leader */}
+                      <div>
+                        <label className="mb-[10px] text-black dark:text-white font-medium block">
+                          Leader ROI Cap (%)
+                          <span className="text-red-500">*</span>
+                        </label>
+
+                        <Field
+                          type="number"
+                          step="0.01"
+                          name="LeaderCap"
+                          placeholder="Enter Leader ROI Cap"
+                          className="h-[55px] rounded-md text-black dark:text-white 
+          border border-gray-200 dark:border-[#172036] 
+          bg-white dark:bg-[#0c1427] 
+          px-[17px] block w-full outline-0
+          transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
+          focus:border-primary-button-bg"
+                        />
+
+                        <ErrorMessage
+                          name="LeaderCap"
+                          component="p"
+                          className="text-red-500 text-sm mt-1"
+                        />
+                      </div>
+
+                      <hr className="border-0 border-t border-gray-200 dark:border-gray-700 my-6 -mx-[20px] md:-mx-[25px]" />
+
+                      {/* Footer */}
+                      <div className="text-right">
+
+                        <button
+                          type="button"
+                          className="mr-[15px] px-[26.5px] py-[12px] rounded-md 
+          bg-danger-500 text-white hover:bg-danger-400"
+                          onClick={() => setOpenROICap(false)}
+                        >
+                          Cancel
+                        </button>
+
+                        <button
+                          type="submit"
+                          disabled={roiCapSaving}
+                          className="px-[26.5px] py-[12px] rounded-md 
+          bg-primary-button-bg text-white 
+          hover:bg-primary-button-bg-hover"
+                        >
+                          {roiCapSaving ? (
+                            <div className="flex items-center gap-2">
+                              <div className="theme-loader"></div>
+                              <span>Processing...</span>
+                            </div>
+                          ) : (
+                            "Save ROI Capping"
+                          )}
+                        </button>
+
+                      </div>
+
+                    </Form>
+                  )}
+                </Formik>
+
+
+              </div>
+            </DialogPanel>
+
           </div>
         </div>
-      </div>
+      </Dialog>
+
     </div>
   );
 };
