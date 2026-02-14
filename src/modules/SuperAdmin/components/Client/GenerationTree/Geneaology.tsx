@@ -4,7 +4,7 @@ import { ApiService } from "../../../../../services/ApiService";
 import AutoCompleter from "../../../../../components/CommonFormElements/InputTypes/AutoCompleter";
 
 const BinaryTreeComponent = () => {
-  const { universalService} = ApiService();
+  const { universalService } = ApiService();
   const [firstNode, setfirstNode] = useState<any>(null);
   const [treeData, settreeData] = useState<any>([]);
   const [ClientID, setClientID] = useState(1);
@@ -16,7 +16,7 @@ const BinaryTreeComponent = () => {
       left_child_id: itm?.left_child_id,
       right_child_id: itm?.right_child_id,
       username: itm?.username,
-      paidstatus:itm.paidstatus,
+      paidstatus: itm.paidstatus,
       description: {
         userName: itm?.userName,
         Reg_Date: itm?.Reg_Date,
@@ -89,6 +89,10 @@ const BinaryTreeComponent = () => {
       setLoading(false);
     }
   };
+  const onClickUser = (userId: any) => {
+    // Load more data dynamically based on clicked user
+    FetchNodeData(userId);
+  };
   useEffect(() => {
     FetchNodeData(ClientID);
   }, [ClientID]);
@@ -110,7 +114,7 @@ const BinaryTreeComponent = () => {
                 <AutoCompleter
                   memberList={users}
                   loading={loading}
-                  onSearch={fetchManagers} // ✅ Parent API Passed Here
+                  onSearch={fetchManagers} // Parent API Passed Here
                   onSelect={(member) => {
                     FetchNodeData(member.id);
                     console.log("Selected Member:", member);
@@ -118,6 +122,20 @@ const BinaryTreeComponent = () => {
                 />
                 <button className="w-[55px] ml-2 rounded-md border flex items-center justify-center bg-primary-button-bg text-white hover:bg-primary-button-bg-hover transition">
                   <i className="material-symbols-outlined">search</i>
+                </button>
+
+                {/* Reload Button */}
+                <button
+                  onClick={() => {
+                    // Reset to the main (root) node
+                    setClientID(1); // Assuming 1 is the root ID
+                    FetchNodeData(1); // Fetch the data for the root node
+                    console.log("Reloaded to Main ID");
+                  }}
+                  className="w-[55px] ml-2 rounded-md border flex items-center justify-center bg-primary-button-bg text-white hover:bg-primary-button-bg-hover transition"
+                >
+                  <i className="material-symbols-outlined">refresh</i>{" "}
+                  {/* Refresh Icon */}
                 </button>
               </div>
             </div>
@@ -135,7 +153,8 @@ const BinaryTreeComponent = () => {
               bgSideBar={"#00b6eb"}
               colorText={"#333"}
               colorSideBar={"#fff"}
-              //onClick={onClickUser} // Pass onClick handler to BinaryTree
+              // Pass onClick handler to BinaryTree
+              onClickUser={onClickUser} // Pass onClick handler here
             />
           </div>
         ) : (
