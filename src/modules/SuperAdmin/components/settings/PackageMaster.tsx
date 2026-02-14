@@ -30,7 +30,7 @@ import {
 
 import type { ContentEditableEvent } from "react-simple-wysiwyg";
 import { useNavigate, useParams } from "react-router-dom";
-import { Formik} from "formik";
+import { Formik } from "formik";
 import type { FormikHelpers } from "formik";
 import * as Yup from "yup";
 import { toast, ToastContainer } from "react-toastify";
@@ -313,7 +313,7 @@ export default function AddCompany() {
     // UPDATED: Added dark mode classes for bg, border, text, placeholder
     const bigInputClasses =
         "w-full border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2 text-sm h-10 " +
-        "placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all " +
+        "placeholder-gray-400 focus:outline-none focus:border-primary-button-bg focus:ring-1 focus:ring-primary-button-bg transition-all " +
         "bg-white dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500";
 
 
@@ -874,11 +874,13 @@ export default function AddCompany() {
                                             onChange={handleChange}
                                             onBlur={() => setFieldValue("packageType", values.packageType)}
                                             className={`border rounded px-3 py-2 text-sm h-10
-      bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200
-      ${errors.packageType && touched.packageType
-                                                    ? "border-red-500 focus:ring-red-500"
-                                                    : "border-gray-300 dark:border-gray-700"
+  bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200
+  focus:outline-none focus:ring-1 focus:ring-primary-button-bg focus:border-primary-button-bg
+  ${errors.packageType && touched.packageType
+                                                    ? "border-red-500 focus:ring-red-500 focus:border-red-500"
+                                                    : "border-gray-300 dark:border-primary-button-bg"
                                                 }`}
+
                                         >
                                             <option value="">Select Package Type</option>
                                             <option value="Flexible">Flexible</option>
@@ -907,7 +909,6 @@ export default function AddCompany() {
                                         touched={touched}
                                     />
 
-                                    {/* Publish Toggle */}
                                     {/* Publish Toggle */}
                                     <div className="flex flex-col">
                                         {/* Fake label to match height */}

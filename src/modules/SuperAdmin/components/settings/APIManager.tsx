@@ -5,6 +5,8 @@ import Swal from "sweetalert2";
 import Pagination from "../../common/Pagination";
 import AddProviderModal from "./AddProviderModal";
 import { FaSms, FaWhatsapp, FaEnvelope, FaEdit, FaTrash } from "react-icons/fa";
+import { toast, ToastContainer } from "react-toastify";
+
 
 
 type Provider = {
@@ -13,6 +15,7 @@ type Provider = {
     BaseURL: string;
     SenderId: string;
     IsDefault: boolean;
+    HttpMethod?: string;
     TotalRecords?: number;
 };
 
@@ -24,7 +27,7 @@ export default function ApiManager() {
     const [loading, setLoading] = useState(false);
     const [tab, setTab] = useState("SMS");
 
-    const [searchInput, setSearchInput] = useState("");
+   
     const [searchQuery, setSearchQuery] = useState("");
     const [editData, setEditData] = useState<any>(null);
 
@@ -78,40 +81,39 @@ export default function ApiManager() {
         fetchProviders();
     }, [tab, currentPage, itemsPerPage, searchQuery]);
 
-    const applySearch = () => {
-        setCurrentPage(1);
-        setSearchQuery(searchInput.trim());
-    };
-    const handleDefaultToggle = async (provider: Provider) => {
-        try {
-            const newValue = !provider.IsDefault;
+const handleDefaultToggle = async (provider: Provider) => {
+    try {
+        const newValue = !provider.IsDefault;
 
-            // If already default and user tries to disable it → prevent
-            if (!newValue) {
-                Swal.fire("Info", "At least one provider must remain default.", "info");
-                return;
-            }
-
-            await universalService({
-                procName: "ApiManager",
-                Para: JSON.stringify({
-                    ActionMode: "Update",
-                    ProviderId: provider.ProviderId,
-                    ProviderType: tab,
-                    ProviderName: provider.Name,
-                    BaseUrl: provider.BaseURL,
-                    SenderId: provider.SenderId,
-                    IsDefault: newValue,
-                }),
-            });
-
-
-            fetchProviders();
-        } catch (err) {
-            console.error(err);
-            Swal.fire("Error", "Failed to update default provider", "error");
+        // Prevent disabling the only default
+        if (!newValue) {
+            toast.info("At least one provider must remain default.");
+            return;
         }
-    };
+
+        await universalService({
+            procName: "ApiManager",
+            Para: JSON.stringify({
+                ActionMode: "Update",
+                ProviderId: provider.ProviderId,
+                ProviderType: tab,
+                ProviderName: provider.Name,
+                BaseUrl: provider.BaseURL,
+                SenderId: provider.SenderId,
+                IsDefault: newValue,
+            }),
+        });
+
+        toast.success(`${provider.Name} is now Default ${tab} Provider`);
+
+        fetchProviders();
+    } catch (err) {
+        console.error(err);
+        toast.error("Failed to update default provider");
+    }
+};
+
+
 
 
     const handleDelete = async (provider: Provider) => {
@@ -193,83 +195,60 @@ export default function ApiManager() {
             </div>
 
             {/* TABS */}
-            <div className="flex flex-wrap items-center justify-between gap-4 
-    dark:border-[#1f2a44] 
-    mb-5 -mx-6 px-6 pb-4">
+            {/* TABS */}
+            {/* TABS */}
+            <div className="-mx-7 px-7 mb-6 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-6 overflow-x-auto">
 
-                {/* LEFT SIDE — TABS */}
-                <div className="flex items-center gap-3 overflow-x-auto">
-                    {tabs.map((t) => {
-                        const isActive = tab === t.label;
+                    {tabs.map((t) => (
+                        <button
+                            key={t.label}
+                            type="button"
+                            onClick={() => {
+                                setTab(t.label);
+                                setCurrentPage(1);
+                            }}
+                            className={`
+          pb-3 text-sm font-medium transition-all duration-200
+          flex items-center gap-2 whitespace-nowrap
+          ${tab === t.label
+                                    ? "border-b-2 border-primary-button-bg text-primary-button-bg"
+                                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white border-b-2 border-transparent"
+                                }
+        `}
+                        >
+                            {t.icon}
+                            {t.label}
+                        </button>
+                    ))}
 
-                        return (
-                            <button
-                                key={t.label}
-                                onClick={() => {
-                                    setTab(t.label);
-                                    setCurrentPage(1);
-                                }}
-                                className={`
-            flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium
-            transition-all duration-200 whitespace-nowrap
-            ${isActive
-                                        ? "bg-primary-button-bg text-white shadow-sm"
-                                        : "text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-[#1c2742] hover:text-gray-800 dark:hover:text-white"
-                                    }
-          `}
-                            >
-                                <span className="text-base">{t.icon}</span>
-                                {t.label}
-                            </button>
-                        );
-                    })}
-                </div>
-
-                {/* RIGHT SIDE — SEARCH + PAGE SIZE */}
-                <div className="flex items-center gap-3">
-
-                    {/* Search */}
-                    {/* <div className="relative">
-                        <input
-                            type="text"
-                            placeholder="Search provider..."
-                            value={searchInput}
-                            onChange={(e) => setSearchInput(e.target.value)}
-                            onKeyDown={(e) => e.key === "Enter" && applySearch()}
+                    {/* PAGE SIZE RIGHT SIDE */}
+                    <div className="ml-auto pb-2">
+                        <select
+                            value={itemsPerPage}
+                            onChange={(e) => {
+                                setItemsPerPage(Number(e.target.value));
+                                setCurrentPage(1);
+                            }}
                             className="
-          h-9 w-[240px] pl-3 pr-3 text-sm
+          h-9 px-3 text-sm
           border border-gray-300 dark:border-gray-600
           rounded-md bg-white dark:bg-[#111c34]
           focus:outline-none focus:ring-1 focus:ring-primary-button-bg
           focus:border-primary-button-bg
           transition-all
         "
-                        />
-                    </div> */}
-
-                    {/* Page Size */}
-                    <select
-                        value={itemsPerPage}
-                        onChange={(e) => {
-                            setItemsPerPage(Number(e.target.value));
-                            setCurrentPage(1);
-                        }}
-                        className="
-        h-9 px-3 text-sm
-        border border-gray-300 dark:border-gray-600
-        rounded-md bg-white dark:bg-[#111c34]
-        focus:outline-none focus:ring-1 focus:ring-primary-button-bg
-        focus:border-primary-button-bg
-        transition-all
-      "
-                    >
-                        <option value={10}>10 / page</option>
-                        <option value={25}>25 / page</option>
-                        <option value={50}>50 / page</option>
-                    </select>
+                        >
+                            <option value={10}>10 / page</option>
+                            <option value={25}>25 / page</option>
+                            <option value={50}>50 / page</option>
+                        </select>
+                    </div>
 
                 </div>
             </div>
+
+
 
 
 
@@ -302,8 +281,9 @@ export default function ApiManager() {
                                 Base URL
                             </th>
                             <th className="px-4 py-3 text-left font-semibold w-[140px]">
-                                Sender ID
+                                Method
                             </th>
+
                             <th className="px-4 py-3 text-center font-semibold w-[120px]">
                                 Default
                             </th>
@@ -349,8 +329,24 @@ export default function ApiManager() {
 
                                     {/* Sender ID */}
                                     <td className="px-4 py-3 text-gray-700 dark:text-gray-300">
-                                        {p.SenderId}
+                                        <span
+                                            className={`px-2 py-1 rounded-md text-xs font-medium
+            ${p.HttpMethod === "GET"
+                                                    ? "bg-green-100 text-green-700"
+                                                    : p.HttpMethod === "POST"
+                                                        ? "bg-blue-100 text-blue-700"
+                                                        : p.HttpMethod === "PUT"
+                                                            ? "bg-yellow-100 text-yellow-700"
+                                                            : p.HttpMethod === "DELETE"
+                                                                ? "bg-red-100 text-red-700"
+                                                                : "bg-gray-100 text-gray-600"
+                                                }
+        `}
+                                        >
+                                            {p.HttpMethod || "-"}
+                                        </span>
                                     </td>
+
 
                                     {/* Default Toggle */}
                                     <td className="px-4 py-3 text-center">
@@ -473,6 +469,8 @@ export default function ApiManager() {
                 pageSize={itemsPerPage}
                 onPageChange={setCurrentPage}
             />
+            <ToastContainer position="top-right" autoClose={2500} />
+
         </div>
     );
 }
