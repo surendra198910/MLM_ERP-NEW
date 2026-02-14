@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import BinaryTreeNode from "./BinaryTreeNode";
 import { FaChevronUp, FaAngleDoubleUp, FaArrowDown } from "react-icons/fa";
 import "./BinaryTree.scss";
+
 const BinaryTree = ({
   allUsers = [],
   imageFake,
@@ -17,15 +18,18 @@ const BinaryTree = ({
   bgButton = '#808285',
   colorButton = '#ffffff',
   rootUser,
+  onClickUser,  // Pass onClickUser here as a prop
 }) => {
   const [selectedUser, setSelectedUser] = useState(rootUser);
   const [selectedUserLevel, setSelectedUserLevel] = useState(0);
 
+  // Go to the top user (root)
   const goToTop = () => {
     setSelectedUser(rootUser);
     setSelectedUserLevel(0);
   };
 
+  // Navigate down to the leftmost child
   const goToBottomLeft = () => {
     let user = selectedUser;
     let level = selectedUserLevel;
@@ -39,6 +43,7 @@ const BinaryTree = ({
     }
   };
 
+  // Navigate down to the rightmost child
   const goToBottomRight = () => {
     let user = selectedUser;
     let level = selectedUserLevel;
@@ -52,6 +57,7 @@ const BinaryTree = ({
     }
   };
 
+  // Go one level up in the tree
   const upOneLevel = () => {
     const user = [...allUsers, rootUser].find(
       item =>
@@ -64,22 +70,9 @@ const BinaryTree = ({
     }
   };
 
-  const onClickUser = (userId) => {
-    const user = allUsers.find(item => item.id === userId);
-    if (user) {
-      let level = 0;
-      let currentUser = user;
-      while (currentUser) {
-        currentUser = allUsers.find(
-          (user) =>
-            user.left_child_id === currentUser.id ||
-            user.right_child_id === currentUser.id
-        );
-        level++;
-      }
-      setSelectedUser(user);
-      setSelectedUserLevel(level);
-    }
+  // Handle node click to dynamically load the next level of children
+  const onClick = (userId) => {
+    onClickUser(userId);  // Call the provided onClickUser function from parent
   };
 
   return (
@@ -118,7 +111,7 @@ const BinaryTree = ({
               maxDeep={maxDeep}
               renderDetail={renderDetail}
               renderNode={renderNode}
-              onClick={onClickUser}
+              onClick={onClick}  // Pass onClick handler here
               colorText={colorText}
               imageFake={imageFake}
               nameFake={nameFake}
