@@ -276,8 +276,21 @@ export default function ApiManager() {
 
 
             {/* TABLE */}
-            <div className="overflow-x-auto -mx-7.5">
-                <table className="w-full text-sm overflow-hidden">
+            <div className="relative overflow-x-auto -mx-7.5 -mt-7">
+                {loading && (
+                    <div className="absolute inset-0 
+                  bg-white/60 dark:bg-black/40 
+                  backdrop-blur-sm
+                  flex items-center justify-center 
+                  z-20">
+                        <div className="animate-spin w-10 h-10 
+                    border-4 border-primary-button-bg 
+                    border-t-transparent 
+                    rounded-full" />
+                    </div>
+                )}
+
+                <table className="w-full text-sm overflow-hidden ">
 
                     {/* ================= HEADER ================= */}
                     <thead>
