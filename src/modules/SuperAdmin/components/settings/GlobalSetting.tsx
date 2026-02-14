@@ -7,7 +7,7 @@ import { ApiService } from "../../../../services/ApiService";
 import { toast, ToastContainer } from "react-toastify";
 import Swal from "sweetalert2";
 import "react-toastify/dist/ReactToastify.css";
-import { FaEdit, FaSave, FaSitemap, FaShieldAlt, FaProjectDiagram, FaBell, FaMoneyBillWave, FaWhatsapp, FaEnvelope, FaSms } from "react-icons/fa";
+import { FaEdit, FaSave, FaSitemap, FaUserEdit, FaShieldAlt, FaProjectDiagram, FaBell, FaMoneyBillWave, FaWhatsapp, FaEnvelope, FaSms } from "react-icons/fa";
 import { PostService } from "../../../../services/PostService";
 import CropperModal from "../Cropper/Croppermodel";
 
@@ -79,6 +79,7 @@ export default function GlobalSetting() {
 
 
   const tabs = [
+    { label: "Registration Settings", icon: <FaUserEdit /> },
     { label: "Genealogy Settings", icon: <FaSitemap /> },
     { label: "Notification Settings", icon: <FaBell /> },
     { label: "Payout Wallet Settings", icon: <FaMoneyBillWave /> },
@@ -93,7 +94,7 @@ export default function GlobalSetting() {
 
   const inputClass =
     "w-full border border-gray-200 rounded-md px-3 py-2 text-sm h-10 " +
-    "focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 " +
+    "focus:outline-none focus:border-primary-button-bg focus:ring-1 focus:ring-primary-button-bg " +
     "bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100";
   const onMaleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -415,7 +416,7 @@ export default function GlobalSetting() {
           )}
 
           {/* HEADER */}
-          <div className="flex justify-between items-center border-b border-gray-200  pb-3 mb-6 -mx-[20px] md:-mx-[20px] px-[20px] md:px-[25px]">
+          <div className="flex justify-between items-center border-b border-gray-200  pb-3 mb-3 -mx-[20px] md:-mx-[20px] px-[20px] md:px-[25px]">
             <div className="trezo-card-title">
               <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
                 Global Setting
@@ -433,147 +434,9 @@ export default function GlobalSetting() {
 
           </div>
 
-          {/* FORM GRID */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
-
-            {/* Username Prefix */}
-            <div>
-              <label className="text-sm mb-1 block">Username Prefix<span className="text-red-500">*</span></label>
-              <input
-                name="UsernamePrefix"
-                value={values.UsernamePrefix}
-                onChange={handleChange}
-
-                className={inputClass}
-              />
-              {errors.UsernamePrefix && touched.UsernamePrefix && (
-                <p className="text-xs text-red-500">{errors.UsernamePrefix}</p>
-              )}
-            </div>
-
-            {/* Start Series */}
-            <div>
-              <label className="text-sm mb-1 block">Start Series<span className="text-red-500">*</span></label>
-              <input
-                type="number"
-                name="StartSeries"
-                value={values.StartSeries}
-                onChange={handleChange}
-
-                className={inputClass}
-              />
-            </div>
-
-            {/* Series Type */}
-            {/* Series Type */}
-            <div>
-              <label className="text-sm mb-1 block">Series Type<span className="text-red-500">*</span></label>
-
-              <select
-                name="SeriesType"
-                value={values.SeriesType}
-                onChange={handleChange}
-                className={inputClass}
-              >
-                <option value="">Select Series Type</option>
-                <option value="Incremental">Incremental</option>
-                <option value="Random">Random</option>
-              </select>
-
-              {errors.SeriesType && touched.SeriesType && (
-                <p className="text-xs text-red-500">{errors.SeriesType}</p>
-              )}
-            </div>
-
-
-            {/* Username Type */}
-            <div>
-              <label className="text-sm mb-1 block">Username Type<span className="text-red-500">*</span></label>
-
-              <select
-                name="UserNameType"
-                value={values.UserNameType}
-                onChange={handleChange}
-                className={inputClass}
-              >
-                <option value="">Select Username Type</option>
-                <option value="Manual">Manual</option>
-                <option value="Auto">Auto</option>
-              </select>
-
-              {errors.UserNameType && touched.UserNameType && (
-                <p className="text-xs text-red-500">{errors.UserNameType}</p>
-              )}
-            </div>
-
-
-            {/* Password Type */}
-            <div>
-              <label className="text-sm mb-1 block">Password Type<span className="text-red-500">*</span></label>
-
-              <select
-                name="PasswordType"
-                value={values.PasswordType}
-                onChange={handleChange}
-                className={inputClass}
-              >
-                <option value="">Select Password Type</option>
-                <option value="Manual">Manual</option>
-                <option value="Auto">Auto</option>
-              </select>
-
-              {errors.PasswordType && touched.PasswordType && (
-                <p className="text-xs text-red-500">{errors.PasswordType}</p>
-              )}
-            </div>
-
-
-            {/* Plan Type */}
-            <div>
-              <label className="text-sm mb-1 block">Plan Type<span className="text-red-500">*</span></label>
-
-              <select
-                name="PlanType"
-                value={values.PlanType}
-                onChange={handleChange}
-                className={inputClass}
-              >
-                <option value="">Select Plan Type</option>
-                <option value="Generation">Generation</option>
-                <option value="Binary">Binary</option>
-              </select>
-
-              {errors.PlanType && touched.PlanType && (
-                <p className="text-xs text-red-500">{errors.PlanType}</p>
-              )}
-            </div>
-
-
-            {/* Placement Type */}
-            <div>
-              <label className="text-sm mb-1 block">Placement Type<span className="text-red-500">*</span></label>
-
-              <select
-                name="PlacementType"
-                value={values.PlacementType}
-                onChange={handleChange}
-                className={inputClass}
-              >
-                <option value="">Select Placement Type</option>
-                <option value="Manual">Manual</option>
-                <option value="Auto">Auto</option>
-              </select>
-
-              {errors.PlacementType && touched.PlacementType && (
-                <p className="text-xs text-red-500">{errors.PlacementType}</p>
-              )}
-            </div>
-
-
-          </div>
           {/* TABS */}
-          <div className="mt-4 mb-6">
-            <div className="flex border-b border-gray-200 gap-6 overflow-x-auto">
+          <div className="mt-0 mb-6">
+            <div className="flex border-b border-gray-200 gap-6 overflow-x-auton px-6 -mx-6">
               {tabs.map((t, i) => (
                 <button
                   key={i}
@@ -594,6 +457,131 @@ export default function GlobalSetting() {
             </div>
           </div>
           {tab === 0 && (
+            <div className="space-y-6 animate-fadeIn">
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-5">
+
+                {/* Username Prefix */}
+                <div>
+                  <label className="text-sm mb-1 block">
+                    Username Prefix<span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    name="UsernamePrefix"
+                    value={values.UsernamePrefix}
+                    onChange={handleChange}
+                    className={inputClass}
+                  />
+                  {errors.UsernamePrefix && touched.UsernamePrefix && (
+                    <p className="text-xs text-red-500">{errors.UsernamePrefix}</p>
+                  )}
+                </div>
+
+                {/* Start Series */}
+                <div>
+                  <label className="text-sm mb-1 block">
+                    Start Series<span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    name="StartSeries"
+                    value={values.StartSeries}
+                    onChange={handleChange}
+                    className={inputClass}
+                  />
+                </div>
+
+                {/* Series Type */}
+                <div>
+                  <label className="text-sm mb-1 block">
+                    Series Type<span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="SeriesType"
+                    value={values.SeriesType}
+                    onChange={handleChange}
+                    className={inputClass}
+                  >
+                    <option value="">Select Series Type</option>
+                    <option value="Incremental">Incremental</option>
+                    <option value="Random">Random</option>
+                  </select>
+                </div>
+
+                {/* Username Type */}
+                <div>
+                  <label className="text-sm mb-1 block">
+                    Username Type<span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="UserNameType"
+                    value={values.UserNameType}
+                    onChange={handleChange}
+                    className={inputClass}
+                  >
+                    <option value="">Select Username Type</option>
+                    <option value="Manual">Manual</option>
+                    <option value="Auto">Auto</option>
+                  </select>
+                </div>
+
+                {/* Password Type */}
+                <div>
+                  <label className="text-sm mb-1 block">
+                    Password Type<span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="PasswordType"
+                    value={values.PasswordType}
+                    onChange={handleChange}
+                    className={inputClass}
+                  >
+                    <option value="">Select Password Type</option>
+                    <option value="Manual">Manual</option>
+                    <option value="Auto">Auto</option>
+                  </select>
+                </div>
+
+                {/* Plan Type */}
+                <div>
+                  <label className="text-sm mb-1 block">
+                    Plan Type<span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="PlanType"
+                    value={values.PlanType}
+                    onChange={handleChange}
+                    className={inputClass}
+                  >
+                    <option value="">Select Plan Type</option>
+                    <option value="Generation">Generation</option>
+                    <option value="Binary">Binary</option>
+                  </select>
+                </div>
+
+                {/* Placement Type */}
+                <div>
+                  <label className="text-sm mb-1 block">
+                    Placement Type<span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    name="PlacementType"
+                    value={values.PlacementType}
+                    onChange={handleChange}
+                    className={inputClass}
+                  >
+                    <option value="">Select Placement Type</option>
+                    <option value="Manual">Manual</option>
+                    <option value="Auto">Auto</option>
+                  </select>
+                </div>
+
+              </div>
+
+            </div>
+          )}
+
+          {tab === 1 && (
             <div className="space-y-6 animate-fadeIn">
 
               {/* IMAGE SELECTORS */}
@@ -637,7 +625,7 @@ export default function GlobalSetting() {
                     </label>
 
                     {/* Delete */}
-                    {maleIcon && (
+                    {/* {maleIcon && (
                       <button
                         type="button"
                         onClick={deleteMale}
@@ -645,7 +633,7 @@ export default function GlobalSetting() {
                       >
                         ✕
                       </button>
-                    )}
+                    )} */}
                   </div>
                 </div>
 
@@ -687,7 +675,7 @@ export default function GlobalSetting() {
                     </label>
 
                     {/* Delete */}
-                    {femaleIcon && (
+                    {/* {femaleIcon && (
                       <button
                         type="button"
                         onClick={deleteFemale}
@@ -695,7 +683,7 @@ export default function GlobalSetting() {
                       >
                         ✕
                       </button>
-                    )}
+                    )} */}
                   </div>
                 </div>
 
@@ -703,9 +691,9 @@ export default function GlobalSetting() {
 
             </div>
           )}
-          {tab === 1 && (
-            <div className="overflow-x-auto animate-fadeIn">
-              <table className="w-full border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden text-sm">
+          {tab === 2 && (
+            <div className="overflow-x-auto animate-fadeIn -mt-5.5 -mx-6">
+              <table className="w-full border border-gray-200 dark:border-gray-700  overflow-hidden text-sm">
 
                 {/* Header */}
                 <thead className="bg-primary-table-bg text-primary-table-text dark:bg-gray-800">
@@ -765,10 +753,26 @@ export default function GlobalSetting() {
                               className="sr-only peer"
                               checked={event[field]}
                               onChange={(e) => {
+                                const isEnabled = e.target.checked;
+
                                 const updated = [...notificationEvents];
-                                updated[index][field] = e.target.checked;
+                                updated[index][field] = isEnabled;
                                 setNotificationEvents(updated);
+
+                                const serviceName =
+                                  field === "IsWhatsApp"
+                                    ? "WhatsApp"
+                                    : field === "IsSMS"
+                                      ? "SMS"
+                                      : "Email";
+
+                                if (isEnabled) {
+                                  toast.success(`${serviceName} enabled for ${event.EventTriggerType}`);
+                                } else {
+                                  toast.info(`${serviceName} disabled for ${event.EventTriggerType}`);
+                                }
                               }}
+
                             />
 
                             <div className="
@@ -796,7 +800,7 @@ export default function GlobalSetting() {
           )}
 
 
-          {tab === 2 && (
+          {tab === 3 && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-5 animate-fadeIn">
               {/* Sponsor Income */}
               <div>

@@ -64,14 +64,14 @@ const Template: React.FC = () => {
   }, []);
   const roiCappingSchema = Yup.object().shape({
     InvestorCap: Yup.number()
-      .typeError("Investor ROI Cap must be a number")
-      .required("Investor ROI Cap is required")
+      .typeError("Investor ROI Multiplier must be a number")
+      .required("Investor ROI Multiplier is required")
       .min(0, "Cannot be negative")
       .max(1000, "Value too large"),
 
     LeaderCap: Yup.number()
-      .typeError("Leader ROI Cap must be a number")
-      .required("Leader ROI Cap is required")
+      .typeError("Leader ROI Multiplier must be a number")
+      .required("Leader ROI Multiplier is required")
       .min(0, "Cannot be negative")
       .max(1000, "Value too large"),
   });
@@ -472,22 +472,24 @@ const Template: React.FC = () => {
                       {/* Investor */}
                       <div>
                         <label className="mb-[10px] text-black dark:text-white font-medium block">
-                          Investor ROI Cap (%)
+                          Investor ROI Multiplier
                           <span className="text-red-500">*</span>
                         </label>
 
                         <Field
                           type="number"
-                          step="0.01"
                           name="InvestorCap"
-                          placeholder="Enter Investor ROI Cap"
+                          placeholder="Enter Investor ROI Multiplier"
                           className="h-[55px] rounded-md text-black dark:text-white 
-          border border-gray-200 dark:border-[#172036] 
-          bg-white dark:bg-[#0c1427] 
-          px-[17px] block w-full outline-0
-          transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
-          focus:border-primary-button-bg"
+  border border-gray-200 dark:border-[#172036] 
+  bg-white dark:bg-[#0c1427] 
+  px-[17px] block w-full outline-0
+  appearance-none
+  [&::-webkit-inner-spin-button]:appearance-none
+  [&::-webkit-outer-spin-button]:appearance-none
+  focus:border-primary-button-bg"
                         />
+
 
                         <ErrorMessage
                           name="InvestorCap"
@@ -499,22 +501,23 @@ const Template: React.FC = () => {
                       {/* Leader */}
                       <div>
                         <label className="mb-[10px] text-black dark:text-white font-medium block">
-                          Leader ROI Cap (%)
+                          Leader ROI Multiplier
                           <span className="text-red-500">*</span>
                         </label>
-
                         <Field
                           type="number"
-                          step="0.01"
                           name="LeaderCap"
-                          placeholder="Enter Leader ROI Cap"
+                          placeholder="Enter Leader ROI Multiplier"
                           className="h-[55px] rounded-md text-black dark:text-white 
-          border border-gray-200 dark:border-[#172036] 
-          bg-white dark:bg-[#0c1427] 
-          px-[17px] block w-full outline-0
-          transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
-          focus:border-primary-button-bg"
+  border border-gray-200 dark:border-[#172036] 
+  bg-white dark:bg-[#0c1427] 
+  px-[17px] block w-full outline-0
+  appearance-none
+  [&::-webkit-inner-spin-button]:appearance-none
+  [&::-webkit-outer-spin-button]:appearance-none
+  focus:border-primary-button-bg"
                         />
+
 
                         <ErrorMessage
                           name="LeaderCap"
