@@ -2,6 +2,10 @@ import React, { useState, useEffect } from "react";
 import { ApiService } from "../../../../services/ApiService";
 import Swal from "sweetalert2";
 import { useCurrency } from "../../context/CurrencyContext";
+import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
+import { SmartActions } from "../Security/SmartActionWithFormName";
+import AccessRestricted from "../../common/AccessRestricted";
+
 // Define the data structure for creators
 export interface PackageSponsor {
     PackageId: number;
@@ -19,10 +23,68 @@ const Template: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const { universalService } = ApiService();
     const [packages, setPackages] = useState<PackageSponsor[]>([]);
+    const [permissionLoading, setPermissionLoading] = useState(true);
+    const [hasPageAccess, setHasPageAccess] = useState(true);
+
+    const path = location.pathname;
+    const formName = path.split("/").pop();   // must match DB
+    const isEditable = SmartActions.canAdd(formName);
+
     const [sponsorMap, setSponsorMap] = useState<{
-        [key: number]: { percentage: number; valueType: string };
+        [key: number]: number;
     }>({});
+
     const { currency } = useCurrency();
+    const fetchFormPermissions = async () => {
+        try {
+            setPermissionLoading(true);
+
+            const saved = localStorage.getItem("EmployeeDetails");
+            const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
+
+            const payload = {
+                procName: "AssignForm",
+                Para: JSON.stringify({
+                    ActionMode: "GetForms",
+                    FormName: formName,
+                    EmployeeId: employeeId,
+                }),
+            };
+
+            const response = await universalService(payload);
+            const data = response?.data ?? response;
+
+            if (!Array.isArray(data)) {
+                setHasPageAccess(false);
+                return;
+            }
+
+            const pagePermission = data.find(
+                (p) =>
+                    String(p.FormNameWithExt).trim().toLowerCase() ===
+                    formName?.trim().toLowerCase()
+            );
+
+            if (
+                !pagePermission ||
+                !pagePermission.Action ||
+                pagePermission.Action.trim() === ""
+            ) {
+                setHasPageAccess(false);
+                return;
+            }
+
+            SmartActions.load(data);
+            setHasPageAccess(true);
+
+        } catch (err) {
+            console.error("Permission fetch failed", err);
+            setHasPageAccess(false);
+        } finally {
+            setPermissionLoading(false);
+        }
+    };
+
     const getIPLocation = async () => {
         try {
             const res = await fetch("https://ipapi.co/json/");
@@ -91,11 +153,9 @@ const Template: React.FC = () => {
             // Bind into sponsorMap
             const sponsorObj: any = {};
             pkgList.forEach((p) => {
-                sponsorObj[p.PackageId] = {
-                    percentage: p.SponsorPercentage ?? 0,
-                    valueType: p.ValueType || "Percentage",
-                };
+                sponsorObj[p.PackageId] = p.SponsorPercentage ?? 0;
             });
+
 
             setSponsorMap(sponsorObj);
         } catch (err) {
@@ -107,10 +167,11 @@ const Template: React.FC = () => {
     };
 
 
-    // Load on page load
     useEffect(() => {
+        fetchFormPermissions();
         fetchPackages();
     }, []);
+
     const saveSponsor = async () => {
         const confirm = await Swal.fire({
             title: "Confirm Save",
@@ -126,13 +187,13 @@ const Template: React.FC = () => {
         if (!confirm.isConfirmed) return;
 
         try {
+            setLoading(true); // ✅ show loader while saving
+
             const payload = Object.keys(sponsorMap).map((id) => ({
                 PackageId: Number(id),
-                SponsorPercentage: sponsorMap[id].percentage,
-                ValueType: sponsorMap[id].valueType,
+                SponsorPercentage: sponsorMap[Number(id)],
             }));
 
-            // ✅ Get client info
             const clientInfo = await getClientInfo();
 
             const response = await universalService({
@@ -149,20 +210,51 @@ const Template: React.FC = () => {
                 : response?.data?.[0];
 
             if (res?.StatusCode == "1") {
-                Swal.fire("Success", res?.Msg || "Saved successfully", "success");
+                await fetchPackages();   // ✅ 🔥 REFRESH COMPONENT DATA
+
+                Swal.fire({
+                    icon: "success",
+                    title: "Success",
+                    text: res?.Msg || "Saved successfully",
+                    timer: 1500,
+                    showConfirmButton: false,
+                });
             } else {
                 Swal.fire("Error", res?.Msg || "Operation failed", "error");
             }
+
         } catch (err) {
             console.error(err);
             Swal.fire("Error", "Server error occurred", "error");
+        } finally {
+            setLoading(false); // ✅ stop loader
         }
     };
 
 
 
 
+
     const imageBaseUrl = import.meta.env.VITE_IMAGE_PREVIEW_URL;
+    if (permissionLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px] bg-white dark:bg-[#0c1427] rounded-md">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="theme-loader"></div>
+                    {/* <p className="text-sm text-gray-500">
+          Loading permissions...
+        </p> */}
+
+                </div>
+            </div>
+        );
+    }
+    if (!hasPageAccess) {
+        return (
+            <AccessRestricted />
+        );
+    }
+
     return (
         <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-md">
             {/* --- HEADER & SEARCH SECTION --- */}
@@ -178,13 +270,26 @@ const Template: React.FC = () => {
                         {/* 3. BUTTONS GROUP (Exactly from your design) */}
                         <div className="flex items-center gap-2">
                             {/* ADD BUTTON */}
-                            <button
-                                type="button"
-                                onClick={saveSponsor}
-                                className="px-6 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover text-white rounded text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                            <PermissionAwareTooltip
+                                allowed={isEditable}
+                                allowedText="Save Setting"
+                                deniedText="Permission required"
                             >
-                                Save Setting
-                            </button>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        if (!isEditable) return;
+                                        saveSponsor();
+                                    }}
+                                    disabled={!isEditable}
+                                    className="px-6 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover 
+        text-white rounded text-sm font-medium transition-colors 
+        disabled:opacity-50"
+                                >
+                                    Save Setting
+                                </button>
+                            </PermissionAwareTooltip>
+
                         </div>
                     </div>
                 </div>
@@ -268,7 +373,7 @@ const Template: React.FC = () => {
 
                                     </div>
 
-                                   
+
                                     {/* Sponsor Settings */}
                                     <div className="space-y-4">
                                         {/* Value Type */}
@@ -276,22 +381,9 @@ const Template: React.FC = () => {
                                             <span className="text-gray-500 dark:text-gray-400">
                                                 Value Type
                                             </span>
-                                            <select
-                                                value={sponsorMap[pkg.PackageId]?.valueType || "Percentage"}
-                                                onChange={(e) =>
-                                                    setSponsorMap({
-                                                        ...sponsorMap,
-                                                        [pkg.PackageId]: {
-                                                            ...sponsorMap[pkg.PackageId],
-                                                            valueType: e.target.value,
-                                                        },
-                                                    })
-                                                }
-                                                className="w-30 bg-white dark:bg-[#020617] border border-primary-button-bg dark:primary-button-bg rounded-xl px-2 py-1 text-sm"
-                                            >
-                                                <option value="Percentage">Percentage</option>
-                                                <option value="Value">Value</option>
-                                            </select>
+                                            <span className="font-semibold text-gray-900 dark:text-gray-200">
+                                                {pkg.ValueType}
+                                            </span>
                                         </div>
 
                                         {/* Sponsor Percentage */}
@@ -302,16 +394,15 @@ const Template: React.FC = () => {
                                             <input
                                                 type="number"
                                                 step="0.01"
-                                                value={sponsorMap[pkg.PackageId]?.percentage ?? 0}
+                                                value={sponsorMap[pkg.PackageId] ?? 0}
+
                                                 onChange={(e) =>
                                                     setSponsorMap({
                                                         ...sponsorMap,
-                                                        [pkg.PackageId]: {
-                                                            ...sponsorMap[pkg.PackageId],
-                                                            percentage: Number(e.target.value),
-                                                        },
+                                                        [pkg.PackageId]: Number(e.target.value),
                                                     })
                                                 }
+
                                                 className="w-24 text-right bg-white dark:bg-[#020617] border border-primary-button-bg0 dark:primary-button-bg rounded-xl px-3 py-1.5 text-sm font-semibold text-primary-button-bg focus:ring-2 focus:ring-blue-500 outline-none"
                                             />
                                         </div>

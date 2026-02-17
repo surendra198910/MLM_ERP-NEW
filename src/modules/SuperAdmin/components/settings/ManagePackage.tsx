@@ -6,6 +6,9 @@ import { FaEdit } from "react-icons/fa";
 import { ApiService } from "../../../../services/ApiService";
 import Swal from "sweetalert2";
 import { useCurrency } from "../../context/CurrencyContext";
+import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
+import { SmartActions } from "../Security/SmartActionWithFormName";
+import AccessRestricted from "../../common/AccessRestricted";
 
 /* ================= TYPES ================= */
 
@@ -34,6 +37,60 @@ const Template: React.FC = () => {
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 8;
     const { currency } = useCurrency();
+    const [permissionLoading, setPermissionLoading] = useState(true);
+    const [hasPageAccess, setHasPageAccess] = useState(true);
+
+    const path = location.pathname;
+    const formName = path.split("/").pop();
+    const canAdd = SmartActions.canAdd(formName);
+    const canEdit = SmartActions.canEdit(formName);
+    // must match DB
+    const fetchFormPermissions = async () => {
+        try {
+            setPermissionLoading(true);
+
+            const saved = localStorage.getItem("EmployeeDetails");
+            const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
+
+            const payload = {
+                procName: "AssignForm",
+                Para: JSON.stringify({
+                    ActionMode: "GetForms",
+                    FormName: formName,
+                    EmployeeId: employeeId,
+                }),
+            };
+
+            const response = await universalService(payload);
+            const data = response?.data ?? response;
+
+            if (!Array.isArray(data)) {
+                setHasPageAccess(false);
+                return;
+            }
+
+            const pagePermission = data.find(
+                (p) =>
+                    String(p.FormNameWithExt).trim().toLowerCase() ===
+                    formName?.trim().toLowerCase()
+            );
+
+            if (!pagePermission || !pagePermission.Action?.trim()) {
+                setHasPageAccess(false);
+                return;
+            }
+
+            SmartActions.load(data);
+            setHasPageAccess(true);
+
+        } catch (err) {
+            console.error("Permission fetch failed", err);
+            setHasPageAccess(false);
+        } finally {
+            setPermissionLoading(false);
+        }
+    };
+
     /* ================= FETCH PACKAGES ================= */
 
     const fetchPackages = async () => {
@@ -63,8 +120,10 @@ const Template: React.FC = () => {
     };
 
     useEffect(() => {
+        fetchFormPermissions();
         fetchPackages();
     }, []);
+
 
     const getImageUrl = (img?: string) => {
         if (!img || img === "null" || img === "undefined") {
@@ -115,6 +174,24 @@ const Template: React.FC = () => {
     );
 
     /* ================= UI ================= */
+   if (permissionLoading) {
+  return (
+    <div className="flex items-center justify-center min-h-[400px] bg-white dark:bg-[#0c1427] rounded-md">
+      <div className="flex flex-col items-center gap-3">
+        <div className="theme-loader"></div>
+        {/* <p className="text-sm text-gray-500">
+          Loading permissions...
+        </p> */}
+        
+      </div>
+    </div>
+  );
+}
+if (!hasPageAccess) {
+  return (
+   <AccessRestricted />
+  );
+}
 
     return (
         <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-md">
@@ -128,12 +205,24 @@ const Template: React.FC = () => {
                     Manage Packages
                 </h5>
 
-                <button
-                    onClick={() => navigate("/superadmin/mlm-setting/add-package")}
-                    className="px-6 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover text-white rounded text-sm font-medium"
+                <PermissionAwareTooltip
+                    allowed={canAdd}
+                    allowedText="Add Package"
+                    deniedText="Permission required"
                 >
-                    Add Package
-                </button>
+                    <button
+                        disabled={!canAdd}
+                        onClick={() => {
+                            if (!canAdd) return;
+                            navigate("/superadmin/mlm-setting/add-package");
+                        }}
+                        className="px-6 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover 
+        text-white rounded text-sm font-medium disabled:opacity-50"
+                    >
+                        Add Package
+                    </button>
+                </PermissionAwareTooltip>
+
 
             </div>
 
@@ -272,17 +361,26 @@ from-primary-button-bg to-primary-button-bg bg-clip-text text-transparent">
                             <div className="mt-5 flex justify-between items-center gap-2">
 
                                 {/* Edit */}
-                                <button
-                                    onClick={() =>
-                                        navigate(`/superadmin/mlm-setting/add-package/${pkg.ProductId}`)
-                                    }
-                                    className="flex items-center gap-1 px-3 py-1.5
-                  bg-primary-button-bg hover:bg-button-bg-hover
-                  text-white text-xs rounded"
+                                <PermissionAwareTooltip
+                                    allowed={canEdit}
+                                    allowedText="Edit Package"
+                                    deniedText="Permission required"
                                 >
-                                    <FaEdit size={12} />
-                                    Edit
-                                </button>
+                                    <button
+                                        disabled={!canEdit}
+                                        onClick={() => {
+                                            if (!canEdit) return;
+                                            navigate(`/superadmin/mlm-setting/add-package/${pkg.ProductId}`);
+                                        }}
+                                        className="flex items-center gap-1 px-3 py-1.5
+        bg-primary-button-bg hover:bg-button-bg-hover
+        text-white text-xs rounded disabled:opacity-50"
+                                    >
+                                        <FaEdit size={12} />
+                                        Edit
+                                    </button>
+                                </PermissionAwareTooltip>
+
 
                                 {/* Toggle Switch */}
                                 <div className="flex items-center gap-2">
@@ -292,14 +390,19 @@ from-primary-button-bg to-primary-button-bg bg-clip-text text-transparent">
                                     </span>
 
                                     <button
-                                        onClick={() => toggleStatus(pkg)}
+                                        disabled={!canEdit}
+                                        onClick={() => {
+                                            if (!canEdit) return;
+                                            toggleStatus(pkg);
+                                        }}
                                         className={`relative inline-flex h-6 w-11 items-center rounded-full
     transition-colors duration-300 focus:outline-none
     ${pkg.IsActive === 1
                                                 ? "bg-primary-button-bg"
                                                 : "bg-gray-400"
-                                            }`}
+                                            } ${!canEdit ? "opacity-50 cursor-not-allowed" : ""}`}
                                     >
+
 
                                         <span
                                             className={`inline-block h-5 w-5 transform rounded-full bg-white shadow

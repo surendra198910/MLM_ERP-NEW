@@ -68,7 +68,7 @@ const ToDoList: React.FC = () => {
   const [columnsReady, setColumnsReady] = useState(false);
   const [searchTrigger, setSearchTrigger] = useState(0);
   const [permissionsLoading, setPermissionsLoading] = useState(true);
-const [hasPageAccess, setHasPageAccess] = useState(true);
+  const [hasPageAccess, setHasPageAccess] = useState(true);
 
 
   // 👉 Columns that should be treated as dates
@@ -100,59 +100,59 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
     return value ?? "-";
   };
 
- const fetchFormPermissions = async () => {
-  try {
-    setPermissionsLoading(true);
+  const fetchFormPermissions = async () => {
+    try {
+      setPermissionsLoading(true);
 
-    const saved = localStorage.getItem("EmployeeDetails");
-    const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
+      const saved = localStorage.getItem("EmployeeDetails");
+      const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
 
-    const payload = {
-      procName: "AssignForm",
-      Para: JSON.stringify({
-        ActionMode: "Forms",
-        FormCategoryId: 5, // 👈 category for this page
-        EmployeeId: employeeId,
-      }),
-    };
+      const payload = {
+        procName: "AssignForm",
+        Para: JSON.stringify({
+          ActionMode: "Forms",
+          FormCategoryId: 5, // 👈 category for this page
+          EmployeeId: employeeId,
+        }),
+      };
 
-    const response = await universalService(payload);
-    const data = response?.data ?? response;
+      const response = await universalService(payload);
+      const data = response?.data ?? response;
 
-    // ❌ Invalid or empty response → deny access
-    if (!Array.isArray(data)) {
+      // ❌ Invalid or empty response → deny access
+      if (!Array.isArray(data)) {
+        setHasPageAccess(false);
+        return;
+      }
+
+      // 🔍 Find permission for THIS form/page
+      const pagePermission = data.find(
+        (p) =>
+          Number(p.FormId) === CURRENT_FORM_ID &&
+          Number(p.FormCategoryId) === 5
+      );
+
+      // ❌ No permission OR empty Action
+      if (
+        !pagePermission ||
+        !pagePermission.Action ||
+        pagePermission.Action.trim() === ""
+      ) {
+        setHasPageAccess(false);
+        return;
+      }
+
+      // ✅ Permission allowed → load SmartActions
+      SmartActions.load(data);
+      setHasPageAccess(true);
+    } catch (error) {
+      console.error("Form permission fetch failed:", error);
       setHasPageAccess(false);
-      return;
+    } finally {
+      setPermissionsLoading(false);
     }
+  };
 
-    // 🔍 Find permission for THIS form/page
-    const pagePermission = data.find(
-      (p) =>
-        Number(p.FormId) === CURRENT_FORM_ID &&
-        Number(p.FormCategoryId) === 5
-    );
-
-    // ❌ No permission OR empty Action
-    if (
-      !pagePermission ||
-      !pagePermission.Action ||
-      pagePermission.Action.trim() === ""
-    ) {
-      setHasPageAccess(false);
-      return;
-    }
-
-    // ✅ Permission allowed → load SmartActions
-    SmartActions.load(data);
-    setHasPageAccess(true);
-  } catch (error) {
-    console.error("Form permission fetch failed:", error);
-    setHasPageAccess(false);
-  } finally {
-    setPermissionsLoading(false);
-  }
-};
- 
 
   const fetchExportData = async () => {
     const filters = getFilterPayload(filterColumn, searchQuery);
@@ -636,13 +636,13 @@ const [hasPageAccess, setHasPageAccess] = useState(true);
     // fallback when columns not yet loaded
     return 6;
   }, [displayedColumns]);
-if (permissionsLoading) {
-  return <Loader />; // or your spinner
-}
+  if (permissionsLoading) {
+    return <Loader />; // or your spinner
+  }
 
-if (!hasPageAccess) {
-  return <AccessRestricted />;
-}
+  if (!hasPageAccess) {
+    return <AccessRestricted />;
+  }
 
   return (
     <>
@@ -756,8 +756,8 @@ if (!hasPageAccess) {
                 >
                   <div
                     className={`h-[34px] flex items-center ${SmartActions.canManageColumns(CURRENT_FORM_ID)
-                        ? ""
-                        : "pointer-events-none opacity-50"
+                      ? ""
+                      : "pointer-events-none opacity-50"
                       }`}
                   >
                     <ColumnSelector
@@ -1153,8 +1153,8 @@ if (!hasPageAccess) {
                             key={col.ColumnName}
                             onClick={() => handleSort(col.ColumnName)}
                             className={`font-medium ltr:text-left rtl:text-right px-[20px] py-[11px] whitespace-nowrap cursor-pointer transition-colors ${sortColumn === col.ColumnName
-                                ? "bg-primary-table-bg-hover dark:bg-[#1e2a4a]"
-                                : "bg-primary-table-bg dark:bg-[#15203c]"
+                              ? "bg-primary-table-bg-hover dark:bg-[#1e2a4a]"
+                              : "bg-primary-table-bg dark:bg-[#15203c]"
                               }`}
                           >
                             <div className="flex items-center gap-1 group font-semibold">
@@ -1163,8 +1163,8 @@ if (!hasPageAccess) {
                               </span>
                               <i
                                 className={`material-symbols-outlined text-sm transition-all ${sortColumn === col.ColumnName
-                                    ? "text-gray-400 dark:text-primary-button-bg-hover opacity-100"
-                                    : "text-gray-400 dark:text-gray-500 opacity-40"
+                                  ? "text-gray-400 dark:text-primary-button-bg-hover opacity-100"
+                                  : "text-gray-400 dark:text-gray-500 opacity-40"
                                   }`}
                               >
                                 {sortDirection === "ASC"
@@ -1550,17 +1550,28 @@ if (!hasPageAccess) {
                             value={tagInput}
                             onChange={(e) => setTagInput(e.target.value)}
                             onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === ",") {
+                              if (e.key === "Enter" || e.key === "," || e.key === " ") {
                                 e.preventDefault();
+
                                 const t = tagInput.trim().replace(",", "");
+
                                 if (t && !tags.includes(t)) {
                                   const updated = [...tags, t];
                                   setTags(updated);
                                   setFieldValue("actionList", updated);
                                 }
+
                                 setTagInput("");
                               }
+
+                              // Optional: Backspace removes last tag if input empty
+                              if (e.key === "Backspace" && !tagInput && tags.length > 0) {
+                                const updated = tags.slice(0, -1);
+                                setTags(updated);
+                                setFieldValue("actionList", updated);
+                              }
                             }}
+
                             placeholder={
                               tags.length === 0 ? "add, edit, delete" : ""
                             }
