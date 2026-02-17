@@ -7,9 +7,13 @@ import { ApiService } from "../../../../services/ApiService";
 import { toast, ToastContainer } from "react-toastify";
 import Swal from "sweetalert2";
 import "react-toastify/dist/ReactToastify.css";
-import { FaEdit, FaSave, FaSitemap, FaUserEdit, FaShieldAlt, FaProjectDiagram, FaBell, FaMoneyBillWave, FaWhatsapp, FaEnvelope, FaSms } from "react-icons/fa";
+import { FaEdit, FaSave, FaSitemap, FaUserEdit, FaShieldAlt, FaProjectDiagram, FaBell, FaMoneyBillWave, FaWhatsapp, FaEnvelope, FaSms, FaChartLine, FaWallet, FaUserPlus } from "react-icons/fa";
 import { PostService } from "../../../../services/PostService";
 import CropperModal from "../Cropper/Croppermodel";
+import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
+import { SmartActions } from "../Security/SmartActionWithFormName";
+import AccessRestricted from "../../common/AccessRestricted";
+import { motion } from "framer-motion";
 
 // -------------------------------------
 // TYPES
@@ -32,6 +36,11 @@ const initialValues = {
   ROIWallet: "",
   LevelIncomeWallet: "",
   BinaryIncomeWallet: "",
+  // 🔥 NEW VALUE TYPE FIELDS
+  ROIIncomeValueType: "Percentage",
+  ROILevelIncomeValueType: "Percentage",
+  SponsorIncomeValueType: "Percentage",
+  BinaryIncomeValueType: "Percentage",
 };
 
 
@@ -51,6 +60,11 @@ const validationSchema = Yup.object().shape({
   ROIWallet: Yup.string().required("Required"),
   LevelIncomeWallet: Yup.string().required("Required"),
   BinaryIncomeWallet: Yup.string().required("Required"),
+  ROIIncomeValueType: Yup.string().required("Required"),
+  ROILevelIncomeValueType: Yup.string().required("Required"),
+  SponsorIncomeValueType: Yup.string().required("Required"),
+  BinaryIncomeValueType: Yup.string().required("Required"),
+
 });
 
 
@@ -74,17 +88,71 @@ export default function GlobalSetting() {
   const [cropTarget, setCropTarget] = useState<"male" | "female" | null>(null);
   const [walletOptions, setWalletOptions] = useState([]);
   const [notificationEvents, setNotificationEvents] = useState([]);
+  const [permissionsLoading, setPermissionsLoading] = useState(true);
+  const [hasPageAccess, setHasPageAccess] = useState(true);
+
+  const path = location.pathname;
+  const formName = path.split("/").pop();   // must match DB
 
   const [tab, setTab] = useState(0);
 
 
   const tabs = [
-    { label: "Registration Settings", icon: <FaUserEdit /> },
-    { label: "Genealogy Settings", icon: <FaSitemap /> },
+    { label: "Registration Settings", icon: <FaUserPlus /> },
+    { label: "Genealogy Settings", icon: <FaProjectDiagram /> },
     { label: "Notification Settings", icon: <FaBell /> },
-    { label: "Payout Wallet Settings", icon: <FaMoneyBillWave /> },
+    { label: "Payout Wallet Settings", icon: <FaWallet /> },
+    { label: "Income Settings", icon: <FaChartLine /> },
   ];
 
+  const fetchFormPermissions = async () => {
+    try {
+      setPermissionsLoading(true);
+
+      const saved = localStorage.getItem("EmployeeDetails");
+      const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
+
+      const payload = {
+        procName: "AssignForm",
+        Para: JSON.stringify({
+          ActionMode: "GetForms",
+          FormName: formName,
+          EmployeeId: employeeId,
+        }),
+      };
+
+      const response = await universalService(payload);
+      const data = response?.data ?? response;
+
+      if (!Array.isArray(data)) {
+        setHasPageAccess(false);
+        return;
+      }
+
+      const pagePermission = data.find(
+        (p) =>
+          String(p.FormNameWithExt).trim().toLowerCase() ===
+          formName?.trim().toLowerCase()
+      );
+
+      if (
+        !pagePermission ||
+        !pagePermission.Action ||
+        pagePermission.Action.trim() === ""
+      ) {
+        setHasPageAccess(false);
+        return;
+      }
+
+      SmartActions.load(data);
+      setHasPageAccess(true);
+    } catch (error) {
+      console.error("Permission fetch failed:", error);
+      setHasPageAccess(false);
+    } finally {
+      setPermissionsLoading(false);
+    }
+  };
 
 
 
@@ -198,10 +266,12 @@ export default function GlobalSetting() {
     }
   };
   useEffect(() => {
+    fetchFormPermissions();
     loadSettings();
     loadWallets();
     loadNotificationEvents();
   }, []);
+
   const handleCroppedImage = async (croppedBase64: string) => {
     try {
       const res = await fetch(croppedBase64);
@@ -273,6 +343,11 @@ export default function GlobalSetting() {
         ROIWallet: data.ROIIncomeWallet || "",
         LevelIncomeWallet: data.LevelIncomeWallet || "",
         BinaryIncomeWallet: data.BinaryIncomeWallet || "",
+        ROIIncomeValueType: data.ROIIncomeValueType || "Percentage",
+        ROILevelIncomeValueType: data.ROILevelIncomeValueType || "Percentage",
+        SponsorIncomeValueType: data.SponsorIncomeValueType || "Percentage",
+        BinaryIncomeValueType: data.BinaryIncomeValueType || "Percentage",
+
       });
 
 
@@ -334,6 +409,11 @@ export default function GlobalSetting() {
           ROIIncomeWallet: values.ROIWallet,
           LevelIncomeWallet: values.LevelIncomeWallet,
           BinaryIncomeWallet: values.BinaryIncomeWallet,
+          ROIIncomeValueType: values.ROIIncomeValueType,
+          ROILevelIncomeValueType: values.ROILevelIncomeValueType,
+          SponsorIncomeValueType: values.SponsorIncomeValueType,
+          BinaryIncomeValueType: values.BinaryIncomeValueType,
+
 
           JsonData: JSON.stringify(notificationEvents),
           EntryBy: 1,
@@ -377,6 +457,24 @@ export default function GlobalSetting() {
   // -------------------------------------
   // LOADING SCREEN
   // -------------------------------------
+  if (permissionsLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px] bg-white dark:bg-[#0c1427] rounded-md">
+        <div className="flex flex-col items-center gap-3">
+          <div className="theme-loader"></div>
+          {/* <p className="text-sm text-gray-500">
+          Loading permissions...
+        </p> */}
+
+        </div>
+      </div>
+    );
+  }
+  if (!hasPageAccess) {
+    return (
+      <AccessRestricted />
+    );
+  }
 
   if (initialLoading) {
     return (
@@ -424,37 +522,64 @@ export default function GlobalSetting() {
             </div>
 
             <div className="flex gap-2">
-              <button
-                type="submit"
-                className="flex items-center gap-2 px-4 py-1.5 bg-primary-button-bg hover:bg-primary-button-bg-hover text-white rounded text-sm"
+              <PermissionAwareTooltip
+                allowed={SmartActions.canEdit(formName)}
+                allowedText="Update Settings"
+                deniedText="Permission required"
               >
-                <FaSave /> Update
-              </button>
+                <button
+                  type="submit"
+                  disabled={!SmartActions.canEdit(formName)}
+                  className="flex items-center gap-2 px-4 py-1.5 
+    bg-primary-button-bg hover:bg-primary-button-bg-hover 
+    text-white rounded text-sm disabled:opacity-50"
+                >
+                  <FaSave /> Update
+                </button>
+              </PermissionAwareTooltip>
+
             </div>
 
           </div>
 
           {/* TABS */}
-          <div className="mt-0 mb-6">
-            <div className="flex border-b border-gray-200 gap-6 overflow-x-auton px-6 -mx-6">
-              {tabs.map((t, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setTab(i)}
-                  className={`pb-2 text-sm font-medium transition-colors flex items-center gap-2
-    ${tab === i
-                      ? "border-b-2 border-primary-button-bg text-primary-button-bg"
-                      : "text-gray-500 hover:text-gray-700 border-b-2 border-transparent"
-                    }`}
-                >
-                  {t.icon}
-                  {t.label}
-                </button>
-              ))}
+          <div className="mt-7 mb-6">
+            <div className="flex border-b border-gray-200 gap-6 overflow-x-auto px-6 relative">
 
+              {tabs.map((t, i) => {
+                const isActive = tab === i;
+
+                return (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => setTab(i)}
+                    className={`
+          relative pb-3 text-sm font-medium
+          transition-colors duration-200
+          flex items-center gap-2 whitespace-nowrap
+          ${isActive
+                        ? "text-primary-button-bg"
+                        : "text-gray-500 hover:text-gray-700"}
+        `}
+                  >
+                    {t.icon}
+                    {t.label}
+
+                    {/* 🔥 Animated Underline */}
+                    {isActive && (
+                      <motion.div
+                        layoutId="tabUnderline"
+                        className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary-button-bg rounded-full"
+                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                      />
+                    )}
+                  </button>
+                );
+              })}
 
             </div>
+
           </div>
           {tab === 0 && (
             <div className="space-y-6 animate-fadeIn">
@@ -909,6 +1034,102 @@ export default function GlobalSetting() {
             </div>
           )}
 
+          {tab === 4 && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-5 animate-fadeIn">
+
+              {/* ROI Income */}
+              <div>
+                <label className="text-sm mb-1 block">
+                  ROI Income Value Type<span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="ROIIncomeValueType"
+                  value={values.ROIIncomeValueType}
+                  onChange={handleChange}
+                  className={inputClass}
+                >
+
+                  <option value="Percentage">Percentage</option>
+                  <option value="Value">Value</option>
+                </select>
+                {errors.ROIIncomeValueType && touched.ROIIncomeValueType && (
+                  <p className="text-xs text-red-500">
+                    {errors.ROIIncomeValueType}
+                  </p>
+                )}
+              </div>
+
+
+              {/* ROI Level Income */}
+              <div>
+                <label className="text-sm mb-1 block">
+                  ROI Level Income Value Type<span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="ROILevelIncomeValueType"
+                  value={values.ROILevelIncomeValueType}
+                  onChange={handleChange}
+                  className={inputClass}
+                >
+
+                  <option value="Percentage">Percentage</option>
+                  <option value="Value">Value</option>
+                </select>
+                {errors.ROILevelIncomeValueType && touched.ROILevelIncomeValueType && (
+                  <p className="text-xs text-red-500">
+                    {errors.ROILevelIncomeValueType}
+                  </p>
+                )}
+              </div>
+
+
+              {/* Sponsor Income */}
+              <div>
+                <label className="text-sm mb-1 block">
+                  Sponsor Income Value Type<span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="SponsorIncomeValueType"
+                  value={values.SponsorIncomeValueType}
+                  onChange={handleChange}
+                  className={inputClass}
+                >
+
+                  <option value="Percentage">Percentage</option>
+                  <option value="Value">Value</option>
+                </select>
+                {errors.SponsorIncomeValueType && touched.SponsorIncomeValueType && (
+                  <p className="text-xs text-red-500">
+                    {errors.SponsorIncomeValueType}
+                  </p>
+                )}
+              </div>
+
+
+              {/* Binary Income */}
+              <div>
+                <label className="text-sm mb-1 block">
+                  Binary Income Value Type<span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="BinaryIncomeValueType"
+                  value={values.BinaryIncomeValueType}
+                  onChange={handleChange}
+                  className={inputClass}
+                >
+
+                  <option value="Percentage">Percentage</option>
+                  <option value="Value">Value</option>
+                </select>
+                {errors.BinaryIncomeValueType && touched.BinaryIncomeValueType && (
+                  <p className="text-xs text-red-500">
+                    {errors.BinaryIncomeValueType}
+                  </p>
+                )}
+              </div>
+
+            </div>
+          )}
 
           <ToastContainer position="top-right" autoClose={3000} />
           <CropperModal

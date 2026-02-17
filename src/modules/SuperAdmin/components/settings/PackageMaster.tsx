@@ -27,6 +27,8 @@ import {
     HtmlButton,
     Separator,
 } from "react-simple-wysiwyg";
+import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
+import { SmartActions } from "../Security/SmartActionWithFormName";
 
 import type { ContentEditableEvent } from "react-simple-wysiwyg";
 import { useNavigate, useParams } from "react-router-dom";
@@ -39,7 +41,8 @@ import Swal from "sweetalert2";
 import { ApiService } from "../../../../services/ApiService";
 import CropperModal from "../Cropper/Croppermodel";
 import { PostService } from "../../../../services/PostService";
-import { SmartActions } from "../Security/SmartAction";
+import AccessRestricted from "../../common/AccessRestricted";
+
 
 
 // ----------------------------------------------------------------------
@@ -127,6 +130,63 @@ export default function AddCompany() {
     const [companyLogo, setCompanyLogo] = useState<string>("");
     const [docValues, setDocValues] = useState<Record<number, DocumentValue>>({});
     const [images, setImages] = useState([]);
+
+
+    const path = location.pathname;
+    // const formName = path.split("/").pop();
+    const formName = "add-package";
+    const isEditable = isEditMode
+        ? SmartActions.canEdit(formName)
+        : SmartActions.canAdd(formName);  // must match DB
+    const fetchFormPermissions = async () => {
+        try {
+            setPermissionLoading(true);
+
+            const saved = localStorage.getItem("EmployeeDetails");
+            const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
+
+            const payload = {
+                procName: "AssignForm",
+                Para: JSON.stringify({
+                    ActionMode: "GetForms",
+                    FormName: formName,
+                    EmployeeId: employeeId,
+                }),
+            };
+
+            const response = await universalService(payload);
+            const data = response?.data ?? response;
+
+            if (!Array.isArray(data)) {
+                setHasPageAccess(false);
+                return;
+            }
+
+            const pagePermission = data.find(
+                (p) =>
+                    String(p.FormNameWithExt).trim().toLowerCase() ===
+                    formName?.trim().toLowerCase()
+            );
+
+            if (
+                !pagePermission ||
+                !pagePermission.Action ||
+                pagePermission.Action.trim() === ""
+            ) {
+                setHasPageAccess(false);
+                return;
+            }
+
+            SmartActions.load(data);
+            setHasPageAccess(true);
+
+        } catch (err) {
+            console.error("Permission fetch failed", err);
+            setHasPageAccess(false);
+        } finally {
+            setPermissionLoading(false);
+        }
+    };
 
     // Handle multiple images
     const handleImagesUpload = async (e) => {
@@ -308,63 +368,13 @@ export default function AddCompany() {
     };
     const [form, setForm] = useState<FormValues>(initialValues);
     const IMAGE_PREVIEW_URL = import.meta.env.VITE_IMAGE_PREVIEW_URL;
-    const CURRENT_FORM_ID = 20;
+
     // --- STYLES ---
     // UPDATED: Added dark mode classes for bg, border, text, placeholder
     const bigInputClasses =
         "w-full border border-gray-300 dark:border-gray-700 rounded-md px-3 py-2 text-sm h-10 " +
         "placeholder-gray-400 focus:outline-none focus:border-primary-button-bg focus:ring-1 focus:ring-primary-button-bg transition-all " +
         "bg-white dark:bg-gray-800 dark:text-gray-100 dark:placeholder-gray-500";
-
-
-    const fetchCompanyPermissions = async () => {
-        try {
-            setPermissionLoading(true);
-
-            const saved = localStorage.getItem("EmployeeDetails");
-            const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
-
-            const payload = {
-                procName: "AssignForm",
-                Para: JSON.stringify({
-                    ActionMode: "Forms",
-                    FormCategoryId: 11, // Package category
-                    EmployeeId: employeeId,
-                }),
-            };
-
-            const response = await universalService(payload);
-            const data = response?.data ?? response;
-
-            // ❌ Invalid response
-            if (!Array.isArray(data)) {
-                setHasPageAccess(false);
-                return;
-            }
-
-            // 🔍 Find THIS PAGE permission
-            const pagePermission = data.find(
-                (p) =>
-                    Number(p.FormId) === CURRENT_FORM_ID &&
-                    Number(p.FormCategoryId) === 11,
-            );
-
-            // ❌ No Action = No Access
-            if (!pagePermission || !pagePermission.Action?.trim()) {
-                setHasPageAccess(false);
-                return;
-            }
-
-            // ✅ Permission OK
-            SmartActions.load(data);
-            setHasPageAccess(true);
-        } catch (err) {
-            console.error("Package permission fetch failed", err);
-            setHasPageAccess(false);
-        } finally {
-            setPermissionLoading(false);
-        }
-    };
 
 
     useEffect(() => {
@@ -476,8 +486,9 @@ export default function AddCompany() {
     }, [id]);
 
     useEffect(() => {
-        fetchCompanyPermissions();
+        fetchFormPermissions();
     }, []);
+
 
 
     const handleSubmit = async (
@@ -707,80 +718,12 @@ export default function AddCompany() {
                     {/* <p className="text-sm text-gray-500">
           Loading permissions...
         </p> */}
+
                 </div>
             </div>
         );
     }
-    if (!hasPageAccess) {
-        return (
-            <div
-                className="w-full bg-white dark:bg-[#0c1427] rounded-md border border-gray-200 
-                 dark:border-[#172036] p-25 flex flex-col md:flex-row 
-                 items-center md:items-start justify-center md:gap-x-40 min-h-[450px]"
-            >
-                {/* LEFT SECTION */}
-                <div className="md:max-w-md md:px-3 px-0 py-14">
-                    <h1 className="text-3xl font-semibold text-black dark:text-white mb-4">
-                        Access Restricted
-                    </h1>
-
-                    <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-6 text-[15px]">
-                        You do not have the necessary permissions to view this module.
-                        <br />
-                        Please contact your administrator to request access or switch to an
-                        authorized account.
-                    </p>
-                </div>
-
-                {/* RIGHT ILLUSTRATION (Primary Themed Shield) */}
-                <div className="hidden md:flex">
-                    <svg
-                        viewBox="0 0 512 512"
-                        className="w-[320px] h-auto opacity-100 select-none"
-                        xmlns="http://www.w3.org/2000/svg"
-                    >
-                        {/* Main Shield - Primary 500 */}
-                        <path
-                            d="M256 40C150 40 60 80 60 180C60 300 256 472 256 472C256 472 452 300 452 180C452 80 362 40 256 40Z"
-                            className="fill-primary-500"
-                        />
-
-                        {/* Inner Highlight - Primary 400 */}
-                        <path
-                            d="M256 75C185 75 105 105 105 180C105 265 256 405 256 405C256 405 407 265 407 180C407 105 327 75 256 75Z"
-                            className="fill-primary-400"
-                        />
-
-                        {/* White Padlock Body */}
-                        <rect
-                            x="186"
-                            y="215"
-                            width="140"
-                            height="105"
-                            rx="12"
-                            className="fill-white"
-                        />
-
-                        {/* Padlock Shackle */}
-                        <path
-                            d="M210 215V175C210 149.5 230.5 129 256 129C281.5 129 302 149.5 302 175V215"
-                            fill="none"
-                            stroke="white"
-                            strokeWidth="22"
-                            strokeLinecap="round"
-                        />
-
-                        {/* Keyhole detail - Primary 500 */}
-                        <circle cx="256" cy="265" r="10" className="fill-primary-500" />
-                        <path
-                            d="M251 270L261 270L264 290L248 290Z"
-                            className="fill-primary-500"
-                        />
-                    </svg>
-                </div>
-            </div>
-        );
-    }
+   
 
     return (
         <Formik
@@ -824,21 +767,24 @@ export default function AddCompany() {
                             >
                                 Back
                             </button>
-                            <button
-                                type="submit"
-                                disabled={loading || isSubmitting}
-                                className={`px-4 py-1.5 rounded text-sm font-medium flex items-center gap-2
-    ${loading || isSubmitting
-                                        ? "bg-gray-300 text-white cursor-not-allowed"
-                                        : "bg-primary-button-bg hover:bg-primary-button-bg-hover text-white"
-                                    }`}
+                            <PermissionAwareTooltip
+                                allowed={isEditable}
+                                allowedText={isEditMode ? "Update Package" : "Add Package"}
+                                deniedText="Permission required"
                             >
-                                {loading || isSubmitting
-                                    ? "Submitting..."
-                                    : isEditMode
-                                        ? "Update Package"
-                                        : "Add Package"}
-                            </button>
+                                <button
+                                    type="submit"
+                                    disabled={!isEditable || loading || isSubmitting}
+                                    className={`px-4 py-1.5 rounded text-sm font-medium flex items-center gap-2
+        ${!isEditable
+                                            ? "bg-gray-300 text-white cursor-not-allowed"
+                                            : "bg-primary-button-bg hover:bg-primary-button-bg-hover text-white"
+                                        }`}
+                                >
+                                    {isEditMode ? "Update Package" : "Add Package"}
+                                </button>
+                            </PermissionAwareTooltip>
+
 
 
                         </div>

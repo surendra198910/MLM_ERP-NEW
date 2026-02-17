@@ -711,6 +711,7 @@ if (permissionsLoading) {
         {/* <p className="text-sm text-gray-500">
           Loading permissions...
         </p> */}
+        
       </div>
     </div>
   );

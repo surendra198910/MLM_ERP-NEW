@@ -5,6 +5,9 @@ import { useCurrency } from "../../context/CurrencyContext";
 import { Dialog, DialogBackdrop, DialogPanel } from "@headlessui/react";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import * as Yup from "yup";
+import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
+import { SmartActions } from "../Security/SmartActionWithFormName";
+import AccessRestricted from "../../common/AccessRestricted";
 
 // Define the data structure for creators
 export interface PackageROI {
@@ -27,6 +30,12 @@ const Template: React.FC = () => {
   const [leaderCap, setLeaderCap] = useState<number | "">("");
   const [roiCapSaving, setRoiCapSaving] = useState(false);
   const [roiCapSettingId, setRoiCapSettingId] = useState<number | null>(null);
+  const [permissionLoading, setPermissionLoading] = useState(true);
+  const [hasPageAccess, setHasPageAccess] = useState(true);
+
+  const path = location.pathname;
+  const formName = path.split("/").pop(); // must match DB
+  const isSave = SmartActions.canSave(formName);
 
   const { currency } = useCurrency();
   const fetchPackages = async () => {
@@ -59,9 +68,8 @@ const Template: React.FC = () => {
   };
 
   // Load on page load
-  useEffect(() => {
-    fetchPackages();
-  }, []);
+
+
   const roiCappingSchema = Yup.object().shape({
     InvestorCap: Yup.number()
       .typeError("Investor ROI Multiplier must be a number")
@@ -75,7 +83,55 @@ const Template: React.FC = () => {
       .min(0, "Cannot be negative")
       .max(1000, "Value too large"),
   });
+  const fetchFormPermissions = async () => {
+    try {
+      setPermissionLoading(true);
 
+      const saved = localStorage.getItem("EmployeeDetails");
+      const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
+
+      const payload = {
+        procName: "AssignForm",
+        Para: JSON.stringify({
+          ActionMode: "GetForms",
+          FormName: formName,
+          EmployeeId: employeeId,
+        }),
+      };
+
+      const response = await universalService(payload);
+      const data = response?.data ?? response;
+
+      if (!Array.isArray(data)) {
+        setHasPageAccess(false);
+        return;
+      }
+
+      const pagePermission = data.find(
+        (p) =>
+          String(p.FormNameWithExt).trim().toLowerCase() ===
+          formName?.trim().toLowerCase()
+      );
+
+      if (!pagePermission || !pagePermission.Action?.trim()) {
+        setHasPageAccess(false);
+        return;
+      }
+
+      SmartActions.load(data);
+      setHasPageAccess(true);
+
+    } catch (err) {
+      console.error("Permission fetch failed", err);
+      setHasPageAccess(false);
+    } finally {
+      setPermissionLoading(false);
+    }
+  };
+  useEffect(() => {
+    fetchFormPermissions();
+    fetchPackages();
+  }, []);
   const handleROICapping = async () => {
     try {
       const getResponse = await universalService({
@@ -196,6 +252,26 @@ const Template: React.FC = () => {
 
 
   const imageBaseUrl = import.meta.env.VITE_IMAGE_PREVIEW_URL;
+  
+  if (permissionLoading) {
+  return (
+    <div className="flex items-center justify-center min-h-[400px] bg-white dark:bg-[#0c1427] rounded-md">
+      <div className="flex flex-col items-center gap-3">
+        <div className="theme-loader"></div>
+        {/* <p className="text-sm text-gray-500">
+          Loading permissions...
+        </p> */}
+        
+      </div>
+    </div>
+  );
+}
+if (!hasPageAccess) {
+  return (
+   <AccessRestricted />
+  );
+}
+
   return (
     <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-md">
       {/* --- HEADER & SEARCH SECTION --- */}
@@ -211,20 +287,44 @@ const Template: React.FC = () => {
             {/* 3. BUTTONS GROUP (Exactly from your design) */}
             <div className="flex items-center gap-2">
               {/* ADD BUTTON */}
-              <button
-                type="button"
-                onClick={handleROICapping}
-                className="px-6 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover text-white rounded text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              <PermissionAwareTooltip
+                allowed={isSave}
+                allowedText="ROI Capping"
+                deniedText="Permission required"
               >
-                ROI Capping
-              </button>
-              <button
-                type="button"
-                onClick={saveROI}
-                className="px-6 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover text-white rounded text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                <button
+                  type="button"
+                  disabled={!isSave}
+                  onClick={() => {
+                    if (!isSave) return;
+                    handleROICapping();
+                  }}
+                  className="px-6 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover 
+    text-white rounded text-sm font-medium transition-colors disabled:opacity-50"
+                >
+                  ROI Capping
+                </button>
+              </PermissionAwareTooltip>
+
+              <PermissionAwareTooltip
+                allowed={isSave}
+                allowedText="Save Setting"
+                deniedText="Permission required"
               >
-                Save Setting
-              </button>
+                <button
+                  type="button"
+                  disabled={!isSave}
+                  onClick={() => {
+                    if (!isSave) return;
+                    saveROI();
+                  }}
+                  className="px-6 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover 
+    text-white rounded text-sm font-medium transition-colors disabled:opacity-50"
+                >
+                  Save Setting
+                </button>
+              </PermissionAwareTooltip>
+
             </div>
           </div>
         </div>

@@ -6,6 +6,10 @@ import Pagination from "../../common/Pagination";
 import AddProviderModal from "./AddProviderModal";
 import { FaSms, FaWhatsapp, FaEnvelope, FaEdit, FaTrash } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
+import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
+import { SmartActions } from "../Security/SmartActionWithFormName";
+import AccessRestricted from "../../common/AccessRestricted";
+import { motion, AnimatePresence } from "framer-motion";
 
 
 
@@ -26,11 +30,14 @@ export default function ApiManager() {
     const [providers, setProviders] = useState<Provider[]>([]);
     const [loading, setLoading] = useState(false);
     const [tab, setTab] = useState("SMS");
+    const [permissionsLoading, setPermissionsLoading] = useState(true);
+    const [hasPageAccess, setHasPageAccess] = useState(true);
 
-   
+
     const [searchQuery, setSearchQuery] = useState("");
     const [editData, setEditData] = useState<any>(null);
-
+    const path = location.pathname;
+    const formName = path.split("/").pop();
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState(10);
     const [totalCount, setTotalCount] = useState(0);
@@ -41,6 +48,59 @@ export default function ApiManager() {
         { label: "Email", icon: <FaEnvelope /> },
     ];
 
+    const fetchFormPermissions = async () => {
+        try {
+            setPermissionsLoading(true);
+
+            const saved = localStorage.getItem("EmployeeDetails");
+            const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
+
+            const payload = {
+                procName: "AssignForm",
+                Para: JSON.stringify({
+                    ActionMode: "GetForms",
+                    FormName: formName,
+                    EmployeeId: employeeId,
+                }),
+            };
+
+            const response = await universalService(payload);
+            const data = response?.data ?? response;
+
+            // ❌ Invalid response → deny access
+            if (!Array.isArray(data)) {
+                setHasPageAccess(false);
+                return;
+            }
+
+            // 🔎 Find permission for THIS page
+            const pagePermission = data.find(
+                (p) =>
+                    String(p.FormNameWithExt).trim().toLowerCase() ===
+                    formName?.trim().toLowerCase()
+            );
+
+            // ❌ No permission or empty Action
+            if (
+                !pagePermission ||
+                !pagePermission.Action ||
+                pagePermission.Action.trim() === ""
+            ) {
+                setHasPageAccess(false);
+                return;
+            }
+
+            // ✅ Load permissions into SmartActions
+            SmartActions.load(data);
+            setHasPageAccess(true);
+
+        } catch (error) {
+            console.error("Form permission fetch failed:", error);
+            setHasPageAccess(false);
+        } finally {
+            setPermissionsLoading(false);
+        }
+    };
 
     const fetchProviders = async () => {
         try {
@@ -81,37 +141,37 @@ export default function ApiManager() {
         fetchProviders();
     }, [tab, currentPage, itemsPerPage, searchQuery]);
 
-const handleDefaultToggle = async (provider: Provider) => {
-    try {
-        const newValue = !provider.IsDefault;
+    const handleDefaultToggle = async (provider: Provider) => {
+        try {
+            const newValue = !provider.IsDefault;
 
-        // Prevent disabling the only default
-        if (!newValue) {
-            toast.info("At least one provider must remain default.");
-            return;
+            // Prevent disabling the only default
+            if (!newValue) {
+                toast.info("At least one provider must remain default.");
+                return;
+            }
+
+            await universalService({
+                procName: "ApiManager",
+                Para: JSON.stringify({
+                    ActionMode: "Update",
+                    ProviderId: provider.ProviderId,
+                    ProviderType: tab,
+                    ProviderName: provider.Name,
+                    BaseUrl: provider.BaseURL,
+                    SenderId: provider.SenderId,
+                    IsDefault: newValue,
+                }),
+            });
+
+            toast.success(`${provider.Name} is now Default ${tab} Provider`);
+
+            fetchProviders();
+        } catch (err) {
+            console.error(err);
+            toast.error("Failed to update default provider");
         }
-
-        await universalService({
-            procName: "ApiManager",
-            Para: JSON.stringify({
-                ActionMode: "Update",
-                ProviderId: provider.ProviderId,
-                ProviderType: tab,
-                ProviderName: provider.Name,
-                BaseUrl: provider.BaseURL,
-                SenderId: provider.SenderId,
-                IsDefault: newValue,
-            }),
-        });
-
-        toast.success(`${provider.Name} is now Default ${tab} Provider`);
-
-        fetchProviders();
-    } catch (err) {
-        console.error(err);
-        toast.error("Failed to update default provider");
-    }
-};
+    };
 
 
 
@@ -172,7 +232,27 @@ const handleDefaultToggle = async (provider: Provider) => {
     };
 
     const totalPages = Math.ceil(totalCount / itemsPerPage);
+    useEffect(() => {
+        fetchFormPermissions();
+    }, []);
+    if (permissionsLoading) {
+        return (
+            <div className="flex items-center justify-center min-h-[400px] bg-white dark:bg-[#0c1427] rounded-md">
+                <div className="flex flex-col items-center gap-3">
+                    <div className="theme-loader"></div>
+                    {/* <p className="text-sm text-gray-500">
+          Loading permissions...
+        </p> */}
 
+                </div>
+            </div>
+        );
+    }
+    if (!hasPageAccess) {
+        return (
+            <AccessRestricted />
+        );
+    }
     return (
         <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-md">
             {/* HEADER */}
@@ -180,47 +260,65 @@ const handleDefaultToggle = async (provider: Provider) => {
                 <h5 className="font-bold text-xl text-black dark:text-white">
                     API Manager
                 </h5>
-
-                <button
-                    onClick={() => {
-                        setEditData(null);   // 🔥 clear edit
-                        setShowModal(true);
-                    }}
-                    className="px-4 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover text-white rounded text-sm"
+                <PermissionAwareTooltip
+                    allowed={SmartActions.canAdd(formName)}
+                    allowedText="Add Provider"
+                    deniedText="Permission required"
                 >
-                    Add Provider
-                </button>
+                    <button
+                        onClick={() => {
+                            if (!SmartActions.canAdd(formName)) return;
+                            setEditData(null);
+                            setShowModal(true);
+                        }}
+                        disabled={!SmartActions.canAdd(formName)}
+                        className="px-4 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover 
+        text-white rounded text-sm disabled:opacity-50"
+                    >
+                        Add Provider
+                    </button>
+                </PermissionAwareTooltip>
 
 
             </div>
 
             {/* TABS */}
-            {/* TABS */}
-            {/* TABS */}
-            <div className="-mx-7 px-7 mb-6 border-b border-gray-200 dark:border-gray-700">
-                <div className="flex items-center gap-6 overflow-x-auto">
+            <div className="-mx-7 px-7 mb-6 mt-3 border-b border-gray-200 dark:border-gray-700">
+                <div className="flex items-center gap-6 overflow-x-auto relative">
 
-                    {tabs.map((t) => (
-                        <button
-                            key={t.label}
-                            type="button"
-                            onClick={() => {
-                                setTab(t.label);
-                                setCurrentPage(1);
-                            }}
-                            className={`
-          pb-3 text-sm font-medium transition-all duration-200
+                    {tabs.map((t) => {
+                        const isActive = tab === t.label;
+
+                        return (
+                            <button
+                                key={t.label}
+                                type="button"
+                                onClick={() => {
+                                    setTab(t.label);
+                                    setCurrentPage(1);
+                                }}
+                                className={`
+          relative pb-3 text-sm font-medium transition-colors duration-200
           flex items-center gap-2 whitespace-nowrap
-          ${tab === t.label
-                                    ? "border-b-2 border-primary-button-bg text-primary-button-bg"
-                                    : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white border-b-2 border-transparent"
-                                }
+          ${isActive
+                                        ? "text-primary-button-bg"
+                                        : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-white"}
         `}
-                        >
-                            {t.icon}
-                            {t.label}
-                        </button>
-                    ))}
+                            >
+                                {t.icon}
+                                {t.label}
+
+                                {/* 🔥 Animated Underline */}
+                                {isActive && (
+                                    <motion.div
+                                        layoutId="activeTab"
+                                        className="absolute bottom-0 left-0 right-0 h-[2px] bg-primary-button-bg rounded-full"
+                                        transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                                    />
+                                )}
+                            </button>
+                        );
+                    })}
 
                     {/* PAGE SIZE RIGHT SIDE */}
                     <div className="ml-auto pb-2">
@@ -230,14 +328,10 @@ const handleDefaultToggle = async (provider: Provider) => {
                                 setItemsPerPage(Number(e.target.value));
                                 setCurrentPage(1);
                             }}
-                            className="
-          h-9 px-3 text-sm
-          border border-gray-300 dark:border-gray-600
-          rounded-md bg-white dark:bg-[#111c34]
-          focus:outline-none focus:ring-1 focus:ring-primary-button-bg
-          focus:border-primary-button-bg
-          transition-all
-        "
+                            className="h-9 px-3 text-sm border border-gray-300 dark:border-gray-600
+        rounded-md bg-white dark:bg-[#111c34]
+        focus:outline-none focus:ring-1 focus:ring-primary-button-bg
+        focus:border-primary-button-bg transition-all"
                         >
                             <option value={10}>10 / page</option>
                             <option value={25}>25 / page</option>
@@ -246,16 +340,13 @@ const handleDefaultToggle = async (provider: Provider) => {
                     </div>
 
                 </div>
+
             </div>
 
 
 
-
-
-
-
             {/* TABLE */}
-            <div className="relative overflow-x-auto -mx-7.5 -mt-7">
+            <div className="relative overflow-x-auto -mx-7.5 -mt-6">
                 {loading && (
                     <div className="absolute inset-0 
                   bg-white/60 dark:bg-black/40 
@@ -390,52 +481,71 @@ const handleDefaultToggle = async (provider: Provider) => {
                                     <td className="px-4 py-3 text-center">
                                         <div className="flex justify-center items-center gap-2">
 
-                                            <button
-                                                onClick={async () => {
-                                                    try {
-                                                        const res = await universalService({
-                                                            procName: "ApiManager",
-                                                            Para: JSON.stringify({
-                                                                ActionMode: "Select",
-                                                                ProviderId: p.ProviderId,
-                                                            }),
-                                                        });
-
-                                                        const data = res?.data?.[0] || res?.[0];
-                                                        if (!data) return;
-
-                                                        const parsedParams = data.Parameters
-                                                            ? JSON.parse(data.Parameters)
-                                                            : [];
-
-                                                        setEditData({
-                                                            ...data,
-                                                            Parameters: parsedParams,
-                                                        });
-
-                                                        setShowModal(true);
-                                                    } catch (err) {
-                                                        console.error(err);
-                                                        Swal.fire("Error", "Failed to load provider details", "error");
-                                                    }
-                                                }}
-                                                className="w-9 h-9 flex items-center justify-center rounded-md 
-                     text-primary-button-bg 
-                    hover:bg-primary-button-bg hover:text-white 
-                    transition-all duration-200"
+                                            <PermissionAwareTooltip
+                                                allowed={SmartActions.canEdit(formName)}
+                                                allowedText="Edit Provider"
+                                                deniedText="Permission required"
                                             >
-                                                <FaEdit size={14} />
-                                            </button>
+                                                <button
+                                                    onClick={async () => {
+                                                        if (!SmartActions.canEdit(formName)) return;
 
-                                            <button
-                                                onClick={() => handleDelete(p)}
-                                                className="w-9 h-9 flex items-center justify-center rounded-md 
-                     text-red-500 
-                    hover:bg-red-500 hover:text-white 
-                    transition-all duration-200"
+                                                        try {
+                                                            const res = await universalService({
+                                                                procName: "ApiManager",
+                                                                Para: JSON.stringify({
+                                                                    ActionMode: "Select",
+                                                                    ProviderId: p.ProviderId,
+                                                                }),
+                                                            });
+
+                                                            const data = res?.data?.[0] || res?.[0];
+                                                            if (!data) return;
+
+                                                            const parsedParams = data.Parameters
+                                                                ? JSON.parse(data.Parameters)
+                                                                : [];
+
+                                                            setEditData({
+                                                                ...data,
+                                                                Parameters: parsedParams,
+                                                            });
+
+                                                            setShowModal(true);
+                                                        } catch (err) {
+                                                            console.error(err);
+                                                            Swal.fire("Error", "Failed to load provider details", "error");
+                                                        }
+                                                    }}
+                                                    disabled={!SmartActions.canEdit(formName)}
+                                                    className="w-9 h-9 flex items-center justify-center rounded-md 
+        text-primary-button-bg hover:bg-primary-button-bg hover:text-white 
+        transition-all duration-200 disabled:opacity-50"
+                                                >
+                                                    <FaEdit size={14} />
+                                                </button>
+                                            </PermissionAwareTooltip>
+
+
+                                            <PermissionAwareTooltip
+                                                allowed={SmartActions.canDelete(formName)}
+                                                allowedText="Delete Provider"
+                                                deniedText="Permission required"
                                             >
-                                                <FaTrash size={14} />
-                                            </button>
+                                                <button
+                                                    onClick={() => {
+                                                        if (!SmartActions.canDelete(formName)) return;
+                                                        handleDelete(p);
+                                                    }}
+                                                    disabled={!SmartActions.canDelete(formName)}
+                                                    className="w-9 h-9 flex items-center justify-center rounded-md 
+        text-red-500 hover:bg-red-500 hover:text-white 
+        transition-all duration-200 disabled:opacity-50"
+                                                >
+                                                    <FaTrash size={14} />
+                                                </button>
+                                            </PermissionAwareTooltip>
+
 
                                         </div>
                                     </td>

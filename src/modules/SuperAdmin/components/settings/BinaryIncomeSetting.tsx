@@ -8,50 +8,63 @@ import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
 import { SmartActions } from "../Security/SmartActionWithFormName";
 import AccessRestricted from "../../common/AccessRestricted";
 
-type LevelSetting = {
-    RequiredSponsorCount: number | "";
-    RequiredBusinessAmount: number | "";
-    LevelPercentage: number | "";
+type PairIncomeSettingRow = {
+    FromPair: number | "";
+    ToPair: number | "";
+    Ratio: string;
+    IncomePercentage: number | "";
+    Capping: number | "";
 };
 
 
 
 interface Props { }
 
-export default function LevelSettingsManager({ }: Props) {
+export default function PairIncomeSetting({ }: Props) {
 
     const { universalService } = ApiService();
     const [errors, setErrors] = useState<any[]>([]);
 
-    const emptyRow: LevelSetting = {
-        RequiredSponsorCount: "",
-        RequiredBusinessAmount: "",
-        LevelPercentage: "",
+    const emptyRow: PairIncomeSettingRow = {
+        FromPair: "",
+        ToPair: "",
+        Ratio: "",
+        IncomePercentage: "",
+        Capping: "",
     };
 
-    const levelSchema = Yup.array().of(
+    const pairSchema = Yup.array().of(
         Yup.object().shape({
-            RequiredSponsorCount: Yup.number()
-                .typeError("Sponsor Count is required")
-                .required("Sponsor Count is required")
-                .min(0, "Cannot be negative"),
+            FromPair: Yup.number()
+                .typeError("From Pair is required")
+                .required("From Pair is required")
+                .min(0),
 
-            RequiredBusinessAmount: Yup.number()
-                .typeError("Business Amount is required")
-                .required("Business Amount is required")
-                .min(0, "Cannot be negative"),
+            ToPair: Yup.number()
+                .typeError("To Pair is required")
+                .required("To Pair is required")
+                .min(0),
+
+            Ratio: Yup.string()
+                .required("Ratio is required")
+                .matches(/^\d+:\d+$/, "Ratio must be like 1:1 or 2:1"),
 
 
+            IncomePercentage: Yup.number()
+                .typeError("Income % is required")
+                .required("Income % is required")
+                .min(0)
+                .max(100),
 
-            LevelPercentage: Yup.number()
-                .typeError("Level Percentage is required")
-                .required("Level Percentage is required")
-                .min(0, "Cannot be negative")
-                .max(100, "Cannot exceed 100%"),
+            Capping: Yup.number()
+                .typeError("Capping is required")
+                .required("Capping is required")
+                .min(0),
         })
     );
 
-    const [rows, setRows] = useState<LevelSetting[]>([emptyRow]);
+
+    const [rows, setRows] = useState<PairIncomeSettingRow[]>([emptyRow]);
     const [loading, setLoading] = useState(false);
     const [tableLoading, setTableLoading] = useState(true);
     const [permissionLoading, setPermissionLoading] = useState(true);
@@ -114,18 +127,15 @@ export default function LevelSettingsManager({ }: Props) {
     /* ======================================================
        LOAD DATA
     ====================================================== */
-    useEffect(() => {
-        fetchFormPermissions();
-        fetchLevels();
-    }, []);
 
 
-    const fetchLevels = async () => {
+
+    const fetchPairIncome = async () => {
         try {
             setTableLoading(true);
 
             const res = await universalService({
-                procName: "ManageLevelIncome",
+                procName: "ManagePairIncome",
                 Para: JSON.stringify({
                     ActionMode: "GetAll",
                 }),
@@ -134,27 +144,32 @@ export default function LevelSettingsManager({ }: Props) {
             const data = res?.data || res;
 
             if (Array.isArray(data) && data.length > 0) {
-
                 const formatted = data.map((item: any) => ({
-                    RequiredSponsorCount: item?.RequiredSponsorCount ?? "",
-                    RequiredBusinessAmount: item?.RequiredBusinessAmount ?? "",
-                    LevelPercentage: item?.LevelPercentage ?? "",
+                    FromPair: item?.FromPair ?? "",
+                    ToPair: item?.ToPair ?? "",
+                    Ratio: item?.Ratio ?? "",
+                    IncomePercentage: item?.IncomePercentage ?? "",
+                    Capping: item?.Capping ?? "",
                 }));
 
                 setRows(formatted);
-
             } else {
-                setRows([emptyRow]);
+                setRows([{ ...emptyRow }]);
             }
 
         } catch (err) {
             console.error(err);
-            Swal.fire("Error", "Failed to load level settings", "error");
+            Swal.fire("Error", "Failed to load Pair Income settings", "error");
         } finally {
             setTableLoading(false);
         }
     };
 
+
+    useEffect(() => {
+        fetchFormPermissions();
+        fetchPairIncome();
+    }, []);
 
 
     /* ======================================================
@@ -165,8 +180,8 @@ export default function LevelSettingsManager({ }: Props) {
 
     const removeRow = async (index: number) => {
         const result = await Swal.fire({
-            title: "Remove this level?",
-            text: `Level ${index + 1} will be removed.`,
+            title: "Remove this pair?",
+            text: `Pair ${index + 1} will be removed.`,
             icon: "warning",
             showCancelButton: true,
             confirmButtonText: "Yes, Remove",
@@ -191,7 +206,7 @@ export default function LevelSettingsManager({ }: Props) {
 
     const handleChange = async (
         index: number,
-        field: keyof LevelSetting,
+        field: keyof PairIncomeSettingRow,
         value: any
     ) => {
         const updated = [...rows];
@@ -199,7 +214,7 @@ export default function LevelSettingsManager({ }: Props) {
         setRows(updated);
 
         try {
-            await levelSchema.validateAt(`[${index}].${field}`, updated);
+            await pairSchema.validateAt(`[${index}].${field}`, updated);
 
             const newErrors = [...errors];
             if (newErrors[index]) {
@@ -219,55 +234,48 @@ export default function LevelSettingsManager({ }: Props) {
 
 
 
+
     /* ======================================================
        SAVE
     ====================================================== */
-
     const handleSave = async () => {
+
+        if (!SmartActions.canEdit(formName)) {
+            Swal.fire("Permission Denied", "You cannot update Pair Income settings.", "error");
+            return;
+        }
+
         try {
-            // ✅ Full Yup validation
-            await levelSchema.validate(rows, { abortEarly: false });
-
-            // Clear previous errors if validation passes
+            await pairSchema.validate(rows, { abortEarly: false });
             setErrors([]);
-
         } catch (validationError: any) {
 
             const formattedErrors: any[] = [];
 
-            if (validationError.inner && validationError.inner.length > 0) {
+            validationError.inner?.forEach((err: any) => {
+                const match = err.path?.match(/\[(\d+)\]\.(.+)/);
+                if (match) {
+                    const rowIndex = Number(match[1]);
+                    const fieldName = match[2];
 
-                validationError.inner.forEach((err: any) => {
-                    const match = err.path?.match(/\[(\d+)\]\.(.+)/);
-
-                    if (match) {
-                        const rowIndex = Number(match[1]);
-                        const fieldName = match[2];
-
-                        if (!formattedErrors[rowIndex]) {
-                            formattedErrors[rowIndex] = {};
-                        }
-
-                        formattedErrors[rowIndex][fieldName] = err.message;
+                    if (!formattedErrors[rowIndex]) {
+                        formattedErrors[rowIndex] = {};
                     }
-                });
-            }
+                    formattedErrors[rowIndex][fieldName] = err.message;
+                }
+            });
 
-            // ✅ Set inline errors (no Swal popup)
             setErrors(formattedErrors);
             return;
         }
 
-        // ✅ Confirmation only (correct usage of Swal)
         const confirmResult = await Swal.fire({
             title: "Are you sure?",
-            text: "Do you want to update level settings?",
+            text: "Do you want to update Pair Income settings?",
             icon: "question",
             showCancelButton: true,
             confirmButtonText: "Yes, Update",
             cancelButtonText: "Cancel",
-            confirmButtonColor: "#3085d6",
-            cancelButtonColor: "#d33",
         });
 
         if (!confirmResult.isConfirmed) return;
@@ -275,19 +283,20 @@ export default function LevelSettingsManager({ }: Props) {
         try {
             setLoading(true);
 
-            const finalData = rows.map((row, index) => ({
-                LevelNo: index + 1,
-                RequiredSponsorCount: Number(row.RequiredSponsorCount),
-                RequiredBusinessAmount: Number(row.RequiredBusinessAmount),
-                LevelPercentage: Number(row.LevelPercentage),
+            const finalData = rows.map(row => ({
+                FromPair: Number(row.FromPair),
+                ToPair: Number(row.ToPair),
+                Ratio: row.Ratio,
+                IncomePercentage: Number(row.IncomePercentage),
+                Capping: Number(row.Capping),
             }));
 
             const response = await universalService({
-                procName: "ManageLevelIncome",
+                procName: "ManagePairIncome",
                 Para: JSON.stringify({
                     ActionMode: "Update",
                     JsonData: JSON.stringify(finalData),
-                    EntryBy: localStorage.getItem("CompanyId"),
+                    EntryBy: Number(localStorage.getItem("CompanyId") || 0),
                 }),
             });
 
@@ -295,7 +304,7 @@ export default function LevelSettingsManager({ }: Props) {
 
             if (res?.Status === "SUCCESS") {
                 Swal.fire("Success", res.Message, "success");
-                fetchLevels();
+                fetchPairIncome();
             } else {
                 Swal.fire("Error", res?.Message || "Operation failed", "error");
             }
@@ -317,24 +326,24 @@ export default function LevelSettingsManager({ }: Props) {
         "w-full h-10 px-3 rounded-md text-sm " +
         "border bg-white dark:bg-gray-800 dark:text-gray-100 " +
         "focus:outline-none focus:ring-1 transition-all duration-200";
-    if (permissionLoading) {
-        return (
-            <div className="flex items-center justify-center min-h-[400px] bg-white dark:bg-[#0c1427] rounded-md">
-                <div className="flex flex-col items-center gap-3">
-                    <div className="theme-loader"></div>
-                    {/* <p className="text-sm text-gray-500">
+  if (permissionLoading) {
+  return (
+    <div className="flex items-center justify-center min-h-[400px] bg-white dark:bg-[#0c1427] rounded-md">
+      <div className="flex flex-col items-center gap-3">
+        <div className="theme-loader"></div>
+        {/* <p className="text-sm text-gray-500">
           Loading permissions...
         </p> */}
-
-                </div>
-            </div>
-        );
-    }
-    if (!hasPageAccess) {
-        return (
-            <AccessRestricted />
-        );
-    }
+        
+      </div>
+    </div>
+  );
+}
+if (!hasPageAccess) {
+  return (
+   <AccessRestricted />
+  );
+}
 
 
     return (
@@ -346,12 +355,12 @@ export default function LevelSettingsManager({ }: Props) {
     pb-4 mb-0 -mx-7 px-6">
 
                 <h5 className="font-bold text-xl text-black dark:text-white">
-                    Level Settings
+                    Binary Income Setting
                 </h5>
 
                 <PermissionAwareTooltip
                     allowed={isEditable}
-                    allowedText="Add Level"
+                    allowedText="Add Pair"
                     deniedText="Permission required"
                 >
                     <button
@@ -364,7 +373,7 @@ export default function LevelSettingsManager({ }: Props) {
         text-white rounded text-sm flex items-center gap-2 transition-all disabled:opacity-50"
                     >
                         <FaPlus size={12} />
-                        Add Level
+                        Add Pair
                     </button>
                 </PermissionAwareTooltip>
 
@@ -388,10 +397,12 @@ export default function LevelSettingsManager({ }: Props) {
                 <table className="w-full text-sm">
                     <thead>
                         <tr className="bg-primary-table-bg text-primary-table-text dark:bg-[#15203c]">
-                            <th className="px-4 py-3 text-left font-semibold w-[80px]">Level</th>
-                            <th className="px-4 py-3 text-left font-semibold">Sponsor Count</th>
-                            <th className="px-4 py-3 text-left font-semibold">Business Amount</th>
-                            <th className="px-4 py-3 text-left font-semibold w-[120px]">Level %</th>
+                            <th className="px-4 py-3 text-left font-semibold w-[80px]">S. No.</th>
+                            <th className="px-4 py-3 text-left font-semibold">From Pair</th>
+                            <th className="px-4 py-3 text-left font-semibold">To Pair</th>
+                            <th className="px-4 py-3 text-left font-semibold w-[160px]">Ratio</th>
+                            <th className="px-4 py-3 text-left font-semibold w-[190px]">Income Percentage</th>
+                            <th className="px-4 py-3 text-left font-semibold w-[120px]">Capping</th>
                             <th className="px-0 py-3 text-center font-semibold w-[100px]">Action</th>
                         </tr>
                     </thead>
@@ -401,92 +412,126 @@ export default function LevelSettingsManager({ }: Props) {
                             <tr
                                 key={index}
                                 className="border-b border-gray-100 dark:border-gray-700 
-             hover:bg-gray-50 dark:hover:bg-[#172036] 
-             transition-colors duration-200"
+            hover:bg-gray-50 dark:hover:bg-[#172036] 
+            transition-colors duration-200"
                             >
-
                                 <td className="px-4 py-3 font-semibold">
                                     {index + 1}
                                 </td>
 
+                                {/* From Pair */}
                                 <td className="px-4 py-3">
                                     <input
                                         type="number"
-                                        value={row.RequiredSponsorCount}
-                                        onChange={(e) =>
-                                            handleChange(index, "RequiredSponsorCount", e.target.value)
-                                        }
-                                        className={`${baseInputClass} ${errors[index]?.RequiredSponsorCount
-                                            ? "border-red-500 focus:ring-red-500"
-                                            : "border-gray-200 dark:border-gray-700 focus:ring-primary-button-bg"
+                                        disabled={!isEditable}
+                                        value={row.FromPair}
+                                        className={`${baseInputClass} ${errors[index]?.FromPair
+                                                ? "border-red-500 focus:ring-red-500"
+                                                : "border-gray-200 dark:border-gray-700 focus:ring-primary-button-bg"
                                             }`}
+                                        onChange={(e) =>
+                                            handleChange(index, "FromPair", e.target.value)
+                                        }
                                     />
-
-                                    {errors[index]?.RequiredSponsorCount && (
+                                    {errors[index]?.FromPair && (
                                         <p className="text-red-500 text-xs mt-1">
-                                            {errors[index].RequiredSponsorCount}
+                                            {errors[index].FromPair}
                                         </p>
                                     )}
-
                                 </td>
 
+                                {/* To Pair */}
                                 <td className="px-4 py-3">
                                     <input
                                         type="number"
-                                        value={row.RequiredBusinessAmount}
-                                        onChange={(e) =>
-                                            handleChange(index, "RequiredBusinessAmount", e.target.value)
-                                        }
-                                        className={`${baseInputClass} ${errors[index]?.RequiredBusinessAmount
-                                            ? "border-red-500 focus:ring-red-500"
-                                            : "border-gray-200 dark:border-gray-700 focus:ring-primary-button-bg"
+                                        disabled={!isEditable}
+                                        value={row.ToPair}
+                                        className={`${baseInputClass} ${errors[index]?.ToPair
+                                                ? "border-red-500 focus:ring-red-500"
+                                                : "border-gray-200 dark:border-gray-700 focus:ring-primary-button-bg"
                                             }`}
+                                        onChange={(e) =>
+                                            handleChange(index, "ToPair", e.target.value)
+                                        }
                                     />
-
-                                    {errors[index]?.RequiredBusinessAmount && (
+                                    {errors[index]?.ToPair && (
                                         <p className="text-red-500 text-xs mt-1">
-                                            {errors[index].RequiredBusinessAmount}
+                                            {errors[index].ToPair}
                                         </p>
                                     )}
-
                                 </td>
 
-                              
+                                {/* Ratio */}
+                                <td className="px-4 py-3">
+                                    <input
+                                        type="text"
+                                        disabled={!isEditable}
+                                        value={row.Ratio}
+                                        placeholder="e.g. 1:1"
+                                        className={`${baseInputClass} ${errors[index]?.Ratio
+                                                ? "border-red-500 focus:ring-red-500"
+                                                : "border-gray-200 dark:border-gray-700 focus:ring-primary-button-bg"
+                                            }`}
+                                        onChange={(e) =>
+                                            handleChange(index, "Ratio", e.target.value)
+                                        }
+                                    />
+                                    {errors[index]?.Ratio && (
+                                        <p className="text-red-500 text-xs mt-1">
+                                            {errors[index].Ratio}
+                                        </p>
+                                    )}
+                                </td>
+
+                                {/* Income Percentage */}
                                 <td className="px-4 py-3">
                                     <input
                                         type="number"
-                                        step="0.01"
-                                        min="0"
-                                        value={row.LevelPercentage}
-                                        onChange={(e) =>
-                                            handleChange(
-                                                index,
-                                                "LevelPercentage",
-                                                e.target.value === "" ? "" : Number(e.target.value)
-                                            )
-                                        }
-                                        onWheel={(e) => e.currentTarget.blur()} // prevent scroll change
-                                        className={`${baseInputClass} ${errors[index]?.LevelPercentage
-                                            ? "border-red-500 focus:ring-red-500"
-                                            : "border-gray-200 dark:border-gray-700 focus:ring-primary-button-bg"
+                                        disabled={!isEditable}
+                                        value={row.IncomePercentage}
+                                        className={`${baseInputClass} ${errors[index]?.IncomePercentage
+                                                ? "border-red-500 focus:ring-red-500"
+                                                : "border-gray-200 dark:border-gray-700 focus:ring-primary-button-bg"
                                             }`}
+                                        onChange={(e) =>
+                                            handleChange(index, "IncomePercentage", e.target.value)
+                                        }
                                     />
-
-                                    {errors[index]?.LevelPercentage && (
+                                    {errors[index]?.IncomePercentage && (
                                         <p className="text-red-500 text-xs mt-1">
-                                            {errors[index].LevelPercentage}
+                                            {errors[index].IncomePercentage}
                                         </p>
                                     )}
-
                                 </td>
 
+                                {/* Capping */}
+                                <td className="px-4 py-3">
+                                    <input
+                                        type="number"
+                                        disabled={!isEditable}
+                                        value={row.Capping}
+                                        className={`${baseInputClass} ${errors[index]?.Capping
+                                                ? "border-red-500 focus:ring-red-500"
+                                                : "border-gray-200 dark:border-gray-700 focus:ring-primary-button-bg"
+                                            }`}
+                                        onChange={(e) =>
+                                            handleChange(index, "Capping", e.target.value)
+                                        }
+                                    />
+                                    {errors[index]?.Capping && (
+                                        <p className="text-red-500 text-xs mt-1">
+                                            {errors[index].Capping}
+                                        </p>
+                                    )}
+                                </td>
 
+                                {/* Action */}
                                 <td className="px-8 py-3 text-center">
                                     {rows.length > 1 && (
                                         <button
                                             onClick={() => removeRow(index)}
                                             className="w-9 h-9 flex items-center justify-center
-                               rounded-md text-red-500 hover:bg-red-500 hover:text-white"
+                        rounded-md text-red-500 hover:bg-red-500 hover:text-white"
                                         >
                                             <FaTimes size={14} />
                                         </button>
@@ -495,6 +540,7 @@ export default function LevelSettingsManager({ }: Props) {
                             </tr>
                         ))}
                     </tbody>
+
                 </table>
             </div>
 
