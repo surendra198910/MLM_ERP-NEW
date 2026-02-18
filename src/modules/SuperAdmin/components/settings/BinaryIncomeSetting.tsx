@@ -393,7 +393,7 @@ if (!hasPageAccess) {
             )}
 
             {/* TABLE */}
-            <div className="overflow-x-auto -mx-13 px-6">
+            <div className="overflow-x-auto -mx-13 px-6 mt-2">
                 <table className="w-full text-sm">
                     <thead>
                         <tr className="bg-primary-table-bg text-primary-table-text dark:bg-[#15203c]">

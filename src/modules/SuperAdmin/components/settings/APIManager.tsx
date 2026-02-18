@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { ApiService } from "../../../../services/ApiService";
 import Swal from "sweetalert2";
 import Pagination from "../../common/Pagination";
@@ -9,7 +9,7 @@ import { toast, ToastContainer } from "react-toastify";
 import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
 import { SmartActions } from "../Security/SmartActionWithFormName";
 import AccessRestricted from "../../common/AccessRestricted";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 
 
@@ -26,14 +26,11 @@ type Provider = {
 export default function ApiManager() {
     const { universalService } = ApiService();
     const [showModal, setShowModal] = useState(false);
-
     const [providers, setProviders] = useState<Provider[]>([]);
     const [loading, setLoading] = useState(false);
     const [tab, setTab] = useState("SMS");
     const [permissionsLoading, setPermissionsLoading] = useState(true);
     const [hasPageAccess, setHasPageAccess] = useState(true);
-
-
     const [searchQuery, setSearchQuery] = useState("");
     const [editData, setEditData] = useState<any>(null);
     const path = location.pathname;
@@ -67,7 +64,6 @@ export default function ApiManager() {
             const response = await universalService(payload);
             const data = response?.data ?? response;
 
-            // ❌ Invalid response → deny access
             if (!Array.isArray(data)) {
                 setHasPageAccess(false);
                 return;
@@ -172,10 +168,6 @@ export default function ApiManager() {
             toast.error("Failed to update default provider");
         }
     };
-
-
-
-
     const handleDelete = async (provider: Provider) => {
         const result = await Swal.fire({
             title: "Delete Provider?",
@@ -230,7 +222,6 @@ export default function ApiManager() {
             Swal.fire("Error", "Something went wrong while deleting.", "error");
         }
     };
-
     const totalPages = Math.ceil(totalCount / itemsPerPage);
     useEffect(() => {
         fetchFormPermissions();

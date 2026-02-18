@@ -13,9 +13,6 @@ type LevelSetting = {
     RequiredBusinessAmount: number | "";
     LevelPercentage: number | "";
 };
-
-
-
 interface Props { }
 
 export default function LevelSettingsManager({ }: Props) {
@@ -40,8 +37,6 @@ export default function LevelSettingsManager({ }: Props) {
                 .typeError("Business Amount is required")
                 .required("Business Amount is required")
                 .min(0, "Cannot be negative"),
-
-
 
             LevelPercentage: Yup.number()
                 .typeError("Level Percentage is required")
@@ -384,7 +379,7 @@ export default function LevelSettingsManager({ }: Props) {
             )}
 
             {/* TABLE */}
-            <div className="overflow-x-auto -mx-13 px-6">
+            <div className="overflow-x-auto -mx-13 px-6 mt-2">
                 <table className="w-full text-sm">
                     <thead>
                         <tr className="bg-primary-table-bg text-primary-table-text dark:bg-[#15203c]">
