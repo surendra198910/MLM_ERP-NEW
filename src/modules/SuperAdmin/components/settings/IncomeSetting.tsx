@@ -1220,7 +1220,7 @@ const ToDoList: React.FC = () => {
                                             {/* Max Level */}
                                             <div>
                                                 <label className="mb-[10px] text-black dark:text-white font-medium block">
-                                                    Max Level
+                                                    Max Level<span className="text-red-500">*</span>
                                                 </label>
                                                 <Field
                                                     type="number"

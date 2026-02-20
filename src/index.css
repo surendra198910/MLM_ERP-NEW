@@ -1,9 +1,10 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 @import "tailwindcss";
 
 @custom-variant dark (&:where([class=dark], [class=dark] *));
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+
 @theme {
-  --font-body: "Inter", serif;
+  --font-body: "Poppoins", serif;
   --text-xs: 12px;
   --text-sm: 13px;
   --text-base: 14px;
@@ -126,7 +127,7 @@
 /** Body */
 html,
 body {
-font-family: var(--font-body, "Inter"), sans-serif !important;
+font-family: 'Poppins', sans-serif;
 
   @apply font-body text-sm md:text-base !p-0 !overflow-y-auto text-gray-500 bg-gray-50 leading-normal dark:bg-[#0a0e19] dark:text-gray-400;
 }
