@@ -11,8 +11,6 @@ import { SmartActions } from "../Security/SmartActionWithFormName";
 import AccessRestricted from "../../common/AccessRestricted";
 import { motion } from "framer-motion";
 
-
-
 type Provider = {
     ProviderId: number;
     Name: string;
@@ -251,6 +249,7 @@ export default function ApiManager() {
                 <h5 className="font-bold text-xl text-black dark:text-white">
                     API Manager
                 </h5>
+                
                 <PermissionAwareTooltip
                     allowed={SmartActions.canAdd(formName)}
                     allowedText="Add Provider"
@@ -269,12 +268,12 @@ export default function ApiManager() {
                         Add Provider
                     </button>
                 </PermissionAwareTooltip>
-
+                        
 
             </div>
 
             {/* TABS */}
-            <div className="-mx-7 px-7 mb-6 mt-3 border-b border-gray-200 dark:border-gray-700">
+            <div className="-mx-7 px-7 py-2 mb-6 border-b border-gray-200 dark:border-gray-700">
                 <div className="flex items-center gap-6 overflow-x-auto relative">
 
                     {tabs.map((t) => {
@@ -334,10 +333,8 @@ export default function ApiManager() {
 
             </div>
 
-
-
             {/* TABLE */}
-            <div className="relative overflow-x-auto -mx-7.5 -mt-6">
+            <div className="relative overflow-x-auto -mx-7.5 -mt-4">
                 {loading && (
                     <div className="absolute inset-0 
                   bg-white/60 dark:bg-black/40 
@@ -548,8 +545,6 @@ export default function ApiManager() {
                 </table>
             </div>
 
-
-
             <AddProviderModal
                 open={showModal}
                 editData={editData}
@@ -559,8 +554,6 @@ export default function ApiManager() {
                 }}
                 onSuccess={fetchProviders}
             />
-
-
 
             {/* PAGINATION */}
             <Pagination
