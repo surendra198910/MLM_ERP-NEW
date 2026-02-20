@@ -18,7 +18,7 @@ interface User {
   id: string | number;
   username: string;
   image: string;
-  paidstatus:string,
+  paidstatus: string;
   left_child_id?: string | number | null;
   right_child_id?: string | number | null;
   description?: UserDescription;
@@ -55,7 +55,7 @@ export default class BinaryTreeNode extends React.Component<BinaryTreeNodeProps>
     const fakeUser: User = {
       id: null,
       username: nameFake,
-      paidstatus:null,
+      paidstatus: null,
       left_child_id: null,
       right_child_id: null,
       image: imageFake,
@@ -80,7 +80,9 @@ export default class BinaryTreeNode extends React.Component<BinaryTreeNodeProps>
               renderNode(user)
             ) : (
               <div className="distributor-wrap">
-                <div className={`avatar ${user.id ? (user.paidstatus === 'Paid' ? 'paid' : 'unpaid') : ''}`}>
+                <div
+                  className={`avatar ${user.id ? (user.paidstatus === "Paid" ? "paid" : "unpaid") : ""}`}
+                >
                   <img
                     src={`${imageBaseUrl}${user.image}`}
                     alt="User"
@@ -100,160 +102,93 @@ export default class BinaryTreeNode extends React.Component<BinaryTreeNodeProps>
                 renderDetail(user)
               ) : (
                 <div className="details-wrap">
-                  <div className="details-title">Member Details</div>
+                  {/* Header */}
+                  <div className="details-title header">
+                    Member Details
+                    <span className="close-btn">×</span>
+                  </div>
 
+                  {/* Basic Info */}
                   <div className="details-row">
-                    <div className="d-flex align-items-center justify-content-between w-100">
-                      <div className="label">Member Name</div>
-                      <div className="value">{user.username}</div>
-                    </div>
+                    <span className="label">Member Name</span>
+                    <span className="value">{user.username}</span>
                   </div>
 
                   <div className="details-row">
-                    <div className="d-flex align-items-center justify-content-between w-100">
-                      <div className="label">Sponsor Name</div>
-                      <div className="value">
-                        {user.description?.Sponsor || "-"}
-                      </div>
-                    </div>
+                    <span className="label">Sponsor Name</span>
+                    <span className="value">
+                      {user.description?.Sponsor || "-"}
+                    </span>
                   </div>
 
                   <div className="details-row">
-                    <div className="d-flex align-items-center justify-content-between w-100">
-                      <div className="label">Joining Date</div>
-                      <div className="value">
-                        {user.description?.Reg_Date || "-"}
-                      </div>
-                    </div>
+                    <span className="label">Joining Date</span>
+                    <span className="value">
+                      {user.description?.Reg_Date || "-"}
+                    </span>
                   </div>
 
                   <div className="details-row">
-                    <div className="d-flex align-items-center justify-content-between w-100">
-                      <div className="label">Status</div>
-                      <div className="value">
-                        {user.description?.Bot_Status || "-"}
-                      </div>
-                    </div>
+                    <span className="label">Status</span>
+                    <span
+                      className={`status-badge ${
+                        user.description?.Bot_Status === "Active"
+                          ? "active"
+                          : "inactive"
+                      }`}
+                    >
+                      {user.description?.Bot_Status || "-"}
+                    </span>
                   </div>
+
                   <div className="details-row">
-                    <div className="d-flex align-items-center justify-content-between w-100">
-                      <div className="label">Investment</div>
-                      <div className="value">
-                        $
-                        {user.description?.totalInvestmentAmount?.toFixed(2) ||
-                          "0"}
-                      </div>
-                    </div>
+                    <span className="label">Investment</span>
+                    <span className="value highlight">
+                      $
+                      {user.description?.totalInvestmentAmount?.toFixed(2) ||
+                        "0"}
+                    </span>
                   </div>
+
                   <div className="details-row">
-                    <div className="d-flex align-items-center justify-content-between w-100">
-                      <div className="label">Activation Date</div>
-                      <div className="value">
-                        {user.description?.Bot_Activation_Date || "-"}
-                      </div>
-                    </div>
+                    <span className="label">Activation Date</span>
+                    <span className="value">
+                      {user.description?.Bot_Activation_Date || "-"}
+                    </span>
                   </div>
 
-                  <div className="details-title"></div>
+                  {/* Business Section */}
+                  <div className="details-subtitle">Business Summary</div>
 
-                  <div
-                    className="details-row border-top-2"
-                    style={{
-                      background: "none",
-                      gap: "10",
-                      justifyContent: "space-between",
-                      padding: "0",
-                      flexWrap: "wrap",
-                    }}
-                  >
-                    <div
-                      className="d-flex align-items-center justify-content-between"
-                      style={{
-                        background: "rgba(59, 59, 59, 0.68)",
-                        width: "49%",
-                        padding: "1px 4px",
-                        marginBottom: "3px",
-                      }}
-                    >
-                      <div className="label">Total Left Business</div>
-                      <div className="value">
-                        {user.description?.totalleftTeamCount ?? 0}
-                      </div>
+                  <div className="business-grid">
+                    <div className="business-box">
+                      <span>Total Left</span>
+                      <b>{user.description?.totalleftTeamCount ?? 0}</b>
                     </div>
 
-                    <div
-                      className="d-flex align-items-center justify-content-between"
-                      style={{
-                        background: "rgba(59, 59, 59, 0.68)",
-                        width: "49%",
-                        padding: "1px 4px",
-                        marginBottom: "3px",
-                      }}
-                    >
-                      <div className="label">Total Right Business</div>
-                      <div className="value">
-                        {user.description?.totalRightTeamCount ?? 0}
-                      </div>
+                    <div className="business-box">
+                      <span>Total Right</span>
+                      <b>{user.description?.totalRightTeamCount ?? 0}</b>
                     </div>
 
-                    <div
-                      className="d-flex align-items-center justify-content-between"
-                      style={{
-                        background: "rgba(59, 59, 59, 0.68)",
-                        width: "49%",
-                        padding: "1px 4px",
-                        marginBottom: "3px",
-                      }}
-                    >
-                      <div className="label">Current Left Business</div>
-                      <div className="value">
-                        {user.description?.leftTeamCount ?? 0}
-                      </div>
+                    <div className="business-box">
+                      <span>Current Left</span>
+                      <b>{user.description?.leftTeamCount ?? 0}</b>
                     </div>
 
-                    <div
-                      className="d-flex align-items-center justify-content-between"
-                      style={{
-                        background: "rgba(59, 59, 59, 0.68)",
-                        width: "49%",
-                        padding: "1px 4px",
-                        marginBottom: "3px",
-                      }}
-                    >
-                      <div className="label">Current Right Business</div>
-                      <div className="value">
-                        {user.description?.rightTeamCount ?? 0}
-                      </div>
+                    <div className="business-box">
+                      <span>Current Right</span>
+                      <b>{user.description?.rightTeamCount ?? 0}</b>
                     </div>
 
-                    <div
-                      className="d-flex align-items-center justify-content-between"
-                      style={{
-                        background: "rgba(59, 59, 59, 0.68)",
-                        width: "49%",
-                        padding: "1px 4px",
-                        marginBottom: "3px",
-                      }}
-                    >
-                      <div className="label">Remaining Left Business</div>
-                      <div className="value">
-                        {user.description?.leftRemainingTeamCount ?? 0}
-                      </div>
+                    <div className="business-box">
+                      <span>Remaining Left</span>
+                      <b>{user.description?.leftRemainingTeamCount ?? 0}</b>
                     </div>
 
-                    <div
-                      className="d-flex align-items-center justify-content-between"
-                      style={{
-                        background: "rgba(59, 59, 59, 0.68)",
-                        width: "49%",
-                        padding: "1px 4px",
-                        marginBottom: "3px",
-                      }}
-                    >
-                      <div className="label">Remaining Right Business</div>
-                      <div className="value">
-                        {user.description?.rightRemaining ?? 0}
-                      </div>
+                    <div className="business-box">
+                      <span>Remaining Right</span>
+                      <b>{user.description?.rightRemaining ?? 0}</b>
                     </div>
                   </div>
                 </div>

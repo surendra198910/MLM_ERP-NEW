@@ -1,13 +1,168 @@
-import React, { useState } from "react";
-
+import React, { useState, useEffect } from "react";
+import { ApiService } from "../../../../services/ApiService";
+import DataTable from "react-data-table-component";
+import ColumnSelector from "../ColumnSelector/ColumnSelector";
+import CustomPagination from "../../../../components/CommonFormElements/Pagination/CustomPagination";
 const Template: React.FC = () => {
   const [searchInput, setSearchInput] = useState("");
-  const [filterColumn, setFilterColumn] = useState("__NONE__");
+  const [filterColumn, setFilterColumn] = useState("");
   const [showTable, setShowTable] = useState(false); // Toggle to show 'Oops' or 'Welcome'
+  const { universalService } = ApiService();
+  const [columns, setColumns] = useState<any[]>([]);
+  const [data, setData] = useState([]);
+  const [totalRows, setTotalRows] = useState(0);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [sortIndex, setSortIndex] = useState(1);
+  const [sortDirection, setSortDirection] = useState("ASC");
+  const [visibleColumns, setVisibleColumns] = useState<any[]>([]);
+  const [columnsReady, setColumnsReady] = useState(false);
+  const [refreshGrid, setRefreshGrid] = useState(0);
+  const handleSort = (column: any, direction: string) => {
+    console.log("Sorted Column:", column);
 
+    setSortIndex(column.columnIndex); // 1,2,3,4...
+    setSortDirection(direction.toUpperCase());
+  };
+  const handlePageChange = (page) => {
+    setPage(page);
+  };
+  const handlePerRowsChange = (newPerPage, page) => {
+    setPerPage(newPerPage);
+    setPage(page);
+  };
+  const fetchGridColumns = async () => {
+    const saved = localStorage.getItem("EmployeeDetails");
+    const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
+    try {
+      const payload = {
+        procName: "GetUserGridColumns",
+        Para: JSON.stringify({
+          UserId: employeeId,
+          GridName: "USP_FetchROIIncome",
+        }),
+      };
+
+      const res = await universalService(payload);
+      const data = res?.data || res;
+
+      if (Array.isArray(data)) {
+        const reactCols = data
+          .filter((c: any) => c.IsVisible === true)
+          .sort((a: any, b: any) => a.ColumnOrder - b.ColumnOrder)
+          .map((c: any, index: number) => ({
+            id: index + 1, // ✅ IMPORTANT FOR DATATABLE
+            name: c.DisplayName,
+            selector: (row: any) => row[c.ColumnKey],
+            sortable: true,
+            columnKey: c.ColumnKey,
+            columnIndex: index + 1, // ✅ THIS WILL MATCH SELECT ORDER
+          }));
+        const actionColumn = {
+          name: "Action",
+          cell: (row) => (
+            <div className="flex gap-2">
+              <button onClick={() => handleEdit(row)}>✏️</button>
+              <button onClick={() => handleDelete(row)}>🗑️</button>
+            </div>
+          ),
+          ignoreRowClick: true,
+          button: true,
+        };
+
+        setColumns([...reactCols, actionColumn]);
+      } else {
+        setColumns([]);
+      }
+    } catch (err) {
+      console.error("Grid columns fetch failed", err);
+      setColumns([]);
+    }
+  };
+  const handleEdit = (row) => {
+    console.log("Edit Row:", row.TotalRecords);
+    // open modal or navigate
+  };
+
+  const handleDelete = (row) => {
+    if (confirm(`Delete ${row.UserName}?`)) {
+      console.log("Delete Row:", row);
+      // call API delete
+    }
+  };
+  const fetchGridData = async () => {
+    try {
+      const payload = {
+        procName: "FetchROIIncome", // your SP name OR MLMSP
+        Para: JSON.stringify({
+          SearchBy: filterColumn,
+          Criteria: searchInput,
+          Page: page,
+          PageSize: perPage,
+          SortIndex: sortIndex,
+          SortDir: sortDirection,
+        }),
+      };
+
+      const res = await universalService(payload);
+      const result = res?.data || res;
+      if (result?.rows && Array.isArray(result.rows)) {
+        setData(result.rows);
+        setTotalRows(result[0]?.TotalRecords || 0);
+      } else if (Array.isArray(result)) {
+        // fallback if backend returns only data rows
+        setData(result);
+        setTotalRows(result[0]?.TotalRecords || 0);
+      } else {
+        setData([]);
+        setTotalRows(0);
+      }
+    } catch (err) {
+      console.error("Grid data fetch failed", err);
+      setData([]);
+      setTotalRows(0);
+    }
+  };
+  const fetchVisibleColumns = async () => {
+    const saved = localStorage.getItem("EmployeeDetails");
+    const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
+    const payload = {
+      procName: "UniversalColumnSelector",
+      Para: JSON.stringify({
+        EmployeeId: employeeId,
+        USPName: "USP_FetchROIIncome",
+        ActionMode: "List",
+        Mode: "Get",
+      }),
+    };
+    const response = await universalService(payload);
+    const cols = response?.data ?? response;
+    if (Array.isArray(cols)) {
+      setVisibleColumns(
+        cols
+          .map((c) => ({
+            ...c,
+            IsVisible:
+              c.IsVisible === true || c.IsVisible === 1 || c.IsVisible === "1",
+            IsHidden:
+              c.IsHidden === false || c.IsHidden === 0 || c.IsHidden === "0",
+          }))
+          .sort((a, b) => a.DisplayOrder - b.DisplayOrder),
+      );
+      setColumnsReady(true);
+      setRefreshGrid((prev) => prev + 1);
+    }
+  };
+  useEffect(() => {
+    fetchGridColumns();
+  }, [refreshGrid]);
+  useEffect(() => {
+    if (columns.length > 0) {
+      fetchGridData();
+    }
+  }, [columns, page, perPage, sortIndex, sortDirection, refreshGrid]);
   const applySearch = () => {
-    // Dummy trigger to show the "No Records" state
-    setShowTable(true);
+    fetchGridData();
   };
 
   const resetSearch = () => {
@@ -15,22 +170,53 @@ const Template: React.FC = () => {
     setSearchInput("");
     setFilterColumn("__NONE__");
   };
-
+  const customStyles = {
+    headRow: {
+      style: {
+        backgroundColor: "primar-table-bg",
+        minHeight: "45px",
+      },
+    },
+    headCells: {
+      style: {
+        padding: "11px 20px",
+        fontWeight: 600,
+        color: "var(--primary-table-text)",
+        cursor: "pointer",
+        whiteSpace: "nowrap",
+        backgroundColor: "var(--primary-table-bg)",
+        borderBottom: "1px solid var(--primary-table-bg-hover)",
+      },
+    },
+    rows: {
+      style: {
+        minHeight: "42px",
+      },
+    },
+    cells: {
+      style: {
+        padding: "10px 20px",
+      },
+    },
+  };
   return (
     <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-md">
       {/* --- HEADER & SEARCH SECTION --- */}
       <div className="trezo-card-header mb-[10px] md:mb-[10px] sm:flex items-center justify-between pb-5 border-b border-gray-200 -mx-[20px] md:-mx-[25px] px-[20px] md:px-[25px]">
         <div className="trezo-card-title">
-          <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">Manage Template</h5>
+          <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
+            Manage Template
+          </h5>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:w-auto w-full">
           <div className="flex flex-col sm:flex-row items-center gap-3 flex-wrap justify-end">
-            
             {/* 1. Filter Dropdown (Exactly from your design) */}
             <div className="relative w-full sm:w-[180px]">
               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-500">
-                <i className="material-symbols-outlined !text-[18px]">filter_list</i>
+                <i className="material-symbols-outlined !text-[18px]">
+                  filter_list
+                </i>
               </span>
               <select
                 value={filterColumn}
@@ -38,10 +224,12 @@ const Template: React.FC = () => {
                 className="w-full h-[34px] pl-8 pr-8 text-xs rounded-md appearance-none outline-none border border-gray-300 dark:border-[#172036] bg-white dark:bg-[#0c1427] text-black dark:text-white transition-all focus:border-primary-button-bg"
               >
                 <option value="__NONE__">Select Filter Option</option>
-                <option value="TemplateName">Template Name</option>
+                <option value="Username">Username</option>
               </select>
               <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
-                <i className="material-symbols-outlined !text-[18px]">expand_more</i>
+                <i className="material-symbols-outlined !text-[18px]">
+                  expand_more
+                </i>
               </span>
             </div>
 
@@ -72,12 +260,15 @@ const Template: React.FC = () => {
               </button>
 
               {/* COLUMN SELECTOR BUTTON */}
-              <button
-                type="button"
-                className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-gray-300 dark:border-gray-600 text-gray-500 hover:bg-gray-100 transition-all"
+
+              <div
+                className={`h-[34px] flex items-center "pointer-events-none opacity-50"}`}
               >
-                <i className="material-symbols-outlined text-[20px]">view_column</i>
-              </button>
+                <ColumnSelector
+                  procName="USP_FetchROIIncome"
+                  onApply={fetchVisibleColumns}
+                />
+              </div>
 
               {/* ADD BUTTON */}
               <button
@@ -94,7 +285,9 @@ const Template: React.FC = () => {
                   onClick={resetSearch}
                   className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-gray-400 text-gray-500 hover:bg-gray-100 transition-all"
                 >
-                  <i className="material-symbols-outlined text-[20px]">refresh</i>
+                  <i className="material-symbols-outlined text-[20px]">
+                    refresh
+                  </i>
                 </button>
               )}
             </div>
@@ -103,55 +296,24 @@ const Template: React.FC = () => {
       </div>
 
       {/* --- CONTENT CONTAINER --- */}
-      <div className="min-h-[500px] flex items-center justify-center">
-        {!showTable ? (
-          /* STATE 1: INITIAL WELCOME */
-          <div className="text-center animate-in fade-in duration-700">
-            <div className="mb-6 flex justify-center">
-              <svg viewBox="0 0 512 512" className="w-[280px] h-auto select-none" xmlns="http://www.w3.org/2000/svg">
-                <rect x="40" y="80" width="432" height="340" rx="30" className="fill-primary-button-bg" />
-                <path d="M70 80H442C458 80 472 93 472 110V130H40V110C40 93 53 80 70 80Z" className="fill-primary-200" />
-                <g className="fill-primary-200">
-                  <rect x="90" y="210" width="25" height="25" rx="6" />
-                  <rect x="140" y="210" width="240" height="15" rx="7.5" />
-                  <rect x="90" y="265" width="25" height="25" rx="6" />
-                  <rect x="140" y="265" width="240" height="15" rx="7.5" />
-                </g>
-                <circle cx="380" cy="380" r="90" className="fill-primary-50 stroke-primary-200" strokeWidth="8" />
-              </svg>
-            </div>
-            <h2 className="text-2xl font-semibold text-gray-700 dark:text-white">Ready to explore?</h2>
-            <p className="text-gray-500 mt-2">Use the filters above to find Template records.</p>
-          </div>
-        ) : (
-          /* STATE 2: OOPS / NO DATA */
-          <div className="flex flex-col md:flex-row items-center justify-center p-10 gap-10 min-h-[300px] animate-in fade-in zoom-in duration-300">
-            <div className="text-center md:text-left max-w-md">
-              <h3 className="text-xl font-bold text-purple-600 mb-1">Oops!</h3>
-              <h2 className="text-3xl font-extrabold text-gray-800 dark:text-white mb-4">No Records Found!</h2>
-              <p className="text-gray-500 dark:text-gray-400 text-sm leading-relaxed mb-6">
-                We couldn't find any templates matching "{searchInput}". Please adjust your criteria and search again.
-              </p>
-              <button onClick={resetSearch} className="text-primary-button-bg font-semibold hover:underline flex items-center gap-1">
-                <i className="material-symbols-outlined text-[18px]">refresh</i>
-                Clear Search
-              </button>
-            </div>
-
-            <div className="flex-shrink-0">
-              <svg viewBox="0 0 512 512" className="w-[320px] h-auto select-none" xmlns="http://www.w3.org/2000/svg" fill="none">
-                <path d="M96 220L256 300L416 220" className="stroke-primary-button-bg" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M96 220L150 160L256 200" className="stroke-primary-button-bg" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M416 220L362 160L256 200" className="stroke-primary-button-bg" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M96 220V340C96 360 112 376 132 376H380C400 376 416 360 416 340V220" className="stroke-primary-button-bg" strokeWidth="10" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M150 220L256 260L362 220L256 190L150 220Z" className="fill-primary-button-bg" />
-                <path d="M256 110C300 90 340 110 340 140C340 165 300 175 256 200" className="stroke-primary-button-bg" strokeWidth="8" strokeLinecap="round" strokeDasharray="12 14" />
-                <circle cx="256" cy="90" r="26" className="stroke-primary-button-bg fill-primary-50" strokeWidth="6" />
-                <path d="M245 92H268C268 78 245 78 245 92C245 106 268 106 268 92" className="stroke-primary-button-bg-hover" strokeWidth="5" strokeLinecap="round" />
-              </svg>
-            </div>
-          </div>
-        )}
+      <div className="trezo-card-content -mx-[20px] md:-mx-[25px]">
+        <DataTable
+          title=""
+          columns={columns}
+          data={data}
+          customStyles={customStyles}
+          pagination
+          paginationServer
+          paginationTotalRows={totalRows}
+          paginationComponent={(props) => (
+            <CustomPagination {...props} currentPage={page} />
+          )}
+          onChangePage={handlePageChange}
+          onChangeRowsPerPage={handlePerRowsChange}
+          onSort={handleSort}
+          sortServer
+          defaultSortFieldId={1}
+        />
       </div>
     </div>
   );
