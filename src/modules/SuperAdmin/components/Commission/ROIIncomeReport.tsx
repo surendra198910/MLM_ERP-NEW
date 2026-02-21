@@ -216,7 +216,8 @@ const Template: React.FC = () => {
     },
     rows: {
       style: {
-        minHeight: "42px",
+        minHeight: "49px",
+        
       },
     },
     cells: {
@@ -231,7 +232,7 @@ const Template: React.FC = () => {
       <div className="trezo-card-header mb-[10px] md:mb-[10px] sm:flex items-center justify-between pb-5 border-b border-gray-200 -mx-[20px] md:-mx-[25px] px-[20px] md:px-[25px]">
         <div className="trezo-card-title">
           <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
-            Manage Template
+            ROI Income Report
           </h5>
         </div>
 
@@ -331,7 +332,7 @@ const Template: React.FC = () => {
           </div>
         </div>
       ) : (
-        <div className="flex justify-between items-center py-0 mb-[10px]">
+        <div className="flex justify-between items-center py-2 mb-[10px]">
           {/* PAGE SIZE */}
           <div className="relative">
             <select
@@ -367,7 +368,7 @@ const Template: React.FC = () => {
         </div>
       )}
       {/* --- CONTENT CONTAINER --- */}
-      <div className="trezo-card-content -mx-[20px] md:-mx-[25px]">
+      <div className="trezo-card-content">
         <DataTable
           title=""
           columns={columns}
