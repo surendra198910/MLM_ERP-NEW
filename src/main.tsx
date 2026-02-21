@@ -8,7 +8,8 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { SweetAlertProvider } from "./modules/SuperAdmin/context/SweetAlertContext.tsx";
 import { ToastContainer } from "react-toastify";
-
+import "react-date-range/dist/styles.css";
+import "react-date-range/dist/theme/default.css";
 import App from "./App.tsx";
 import "./index.css";
 
