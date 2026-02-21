@@ -3,6 +3,7 @@ import { ApiService } from "../../../../services/ApiService";
 import DataTable from "react-data-table-component";
 import ColumnSelector from "../ColumnSelector/ColumnSelector";
 import CustomPagination from "../../../../components/CommonFormElements/Pagination/CustomPagination";
+import ExportButtons from "../../../../components/CommonFormElements/ExportButtons/ExportButtons";
 const Template: React.FC = () => {
   const [searchInput, setSearchInput] = useState("");
   const [filterColumn, setFilterColumn] = useState("");
@@ -17,6 +18,7 @@ const Template: React.FC = () => {
   const [sortDirection, setSortDirection] = useState("ASC");
   const [visibleColumns, setVisibleColumns] = useState<any[]>([]);
   const [columnsReady, setColumnsReady] = useState(false);
+  const [tableLoading, setTableLoading] = useState(true);
   const [refreshGrid, setRefreshGrid] = useState(0);
   const handleSort = (column: any, direction: string) => {
     console.log("Sorted Column:", column);
@@ -62,8 +64,12 @@ const Template: React.FC = () => {
           name: "Action",
           cell: (row) => (
             <div className="flex gap-2">
-              <button onClick={() => handleEdit(row)}>✏️</button>
-              <button onClick={() => handleDelete(row)}>🗑️</button>
+              <button onClick={() => handleEdit(row)}> <i className="material-symbols-outlined !text-md">
+                edit
+              </i></button>
+              <button onClick={() => handleDelete(row)}><i className="material-symbols-outlined !text-md">
+                delete
+              </i></button>
             </div>
           ),
           ignoreRowClick: true,
@@ -83,7 +89,23 @@ const Template: React.FC = () => {
     console.log("Edit Row:", row.TotalRecords);
     // open modal or navigate
   };
+  const exportColumns = columns
+    .filter(c => c.columnKey)
+    .map(c => ({
+      key: c.columnKey,
+      label: c.name
+    }));
+  const fetchExportData = async () => {
+    const payload = {
+      procName: "FetchROIIncome",
+      Para: JSON.stringify({
+        PageSize: 0,
+             }),
+    };
 
+    const res = await universalService(payload);
+    return res?.data ?? res ?? [];
+  };
   const handleDelete = (row) => {
     if (confirm(`Delete ${row.UserName}?`)) {
       console.log("Delete Row:", row);
@@ -92,8 +114,10 @@ const Template: React.FC = () => {
   };
   const fetchGridData = async () => {
     try {
+      setTableLoading(true);
+
       const payload = {
-        procName: "FetchROIIncome", // your SP name OR MLMSP
+        procName: "FetchROIIncome",
         Para: JSON.stringify({
           SearchBy: filterColumn,
           Criteria: searchInput,
@@ -106,11 +130,11 @@ const Template: React.FC = () => {
 
       const res = await universalService(payload);
       const result = res?.data || res;
+
       if (result?.rows && Array.isArray(result.rows)) {
         setData(result.rows);
         setTotalRows(result[0]?.TotalRecords || 0);
       } else if (Array.isArray(result)) {
-        // fallback if backend returns only data rows
         setData(result);
         setTotalRows(result[0]?.TotalRecords || 0);
       } else {
@@ -121,6 +145,8 @@ const Template: React.FC = () => {
       console.error("Grid data fetch failed", err);
       setData([]);
       setTotalRows(0);
+    } finally {
+      setTableLoading(false);
     }
   };
   const fetchVisibleColumns = async () => {
@@ -173,7 +199,7 @@ const Template: React.FC = () => {
   const customStyles = {
     headRow: {
       style: {
-        backgroundColor: "primar-table-bg",
+        backgroundColor: "var(--color-primary-table-bg)",
         minHeight: "45px",
       },
     },
@@ -181,11 +207,11 @@ const Template: React.FC = () => {
       style: {
         padding: "11px 20px",
         fontWeight: 600,
-        color: "var(--primary-table-text)",
+        color: "var(--color-primary-table-text)",
         cursor: "pointer",
         whiteSpace: "nowrap",
-        backgroundColor: "var(--primary-table-bg)",
-        borderBottom: "1px solid var(--primary-table-bg-hover)",
+        backgroundColor: "var(--color-primary-table-bg)",
+        borderBottom: "1px solid var(--color-primary-table-bg-hover)",
       },
     },
     rows: {
@@ -294,7 +320,52 @@ const Template: React.FC = () => {
           </div>
         </div>
       </div>
+      {tableLoading ? (
+        <div className="flex justify-between items-center py-2 animate-pulse">
+          <div className="h-8 w-[120px] bg-gray-200 dark:bg-gray-700 rounded-md" />
+          <div className="flex gap-2">
+            <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded-md" />
+            <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded-md" />
+            <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded-md" />
+            <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded-md" />
+          </div>
+        </div>
+      ) : (
+        <div className="flex justify-between items-center py-0 mb-[10px]">
+          {/* PAGE SIZE */}
+          <div className="relative">
+            <select
+              value={perPage}
+              onChange={(e) => {
+                setPerPage(Number(e.target.value));
+                setPage(1);
+              }}
+              className="h-8 w-[120px] px-3 pr-7 text-xs font-semibold
+        text-gray-600 dark:text-gray-300
+        bg-transparent border border-gray-300 dark:border-gray-600
+        rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800
+        transition-all appearance-none"
+            >
+              <option value="10">10 / page</option>
+              <option value="25">25 / page</option>
+              <option value="50">50 / page</option>
+              <option value="100">100 / page</option>
+            </select>
 
+            <span className="absolute inset-y-0 right-2 flex items-center pointer-events-none">
+              <i className="material-symbols-outlined text-[18px] text-gray-500">
+                expand_more
+              </i>
+            </span>
+          </div>
+
+          <ExportButtons
+            title="ROI Income Report"
+            columns={exportColumns}
+            fetchData={fetchExportData}
+          />
+        </div>
+      )}
       {/* --- CONTENT CONTAINER --- */}
       <div className="trezo-card-content -mx-[20px] md:-mx-[25px]">
         <DataTable
@@ -312,6 +383,10 @@ const Template: React.FC = () => {
           onChangeRowsPerPage={handlePerRowsChange}
           onSort={handleSort}
           sortServer
+          progressPending={tableLoading}
+          progressComponent={
+            <div className="p-6 text-sm text-gray-500">Loading data...</div>
+          }
           defaultSortFieldId={1}
         />
       </div>
