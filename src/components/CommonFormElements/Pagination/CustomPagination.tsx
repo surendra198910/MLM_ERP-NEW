@@ -6,7 +6,7 @@ type CustomPaginationProps = {
   currentPage: number;
   rowsPerPage: number;
   rowCount: number;
-  onChangePage: (page: number) => void;
+  onChangePage: (page: number, totalRows?: number) => void;
   onChangeRowsPerPage: (size: number, page: number) => void;
 };
 
@@ -61,8 +61,8 @@ const CustomPagination: React.FC<CustomPaginationProps> = ({
   if (rowCount === 0) return null;
 
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 border-t bg-white dark:bg-[#0c1427]">
-      
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-2 border-t border-gray-200 bg-white dark:bg-[#0c1427]">
+
       {/* LEFT INFO */}
       <div className="text-xs text-gray-600 dark:text-gray-300">
         Showing <b>{startRow}</b> – <b>{endRow}</b> of <b>{rowCount}</b> results
@@ -71,7 +71,7 @@ const CustomPagination: React.FC<CustomPaginationProps> = ({
       {/* RIGHT CONTROLS */}
       <div className="flex flex-wrap items-center gap-2">
 
-       
+
 
         {/* Pagination */}
         <ol className="flex flex-wrap gap-1">
@@ -108,11 +108,10 @@ const CustomPagination: React.FC<CustomPaginationProps> = ({
               <li key={page}>
                 <button
                   onClick={() => onChangePage(page)}
-                  className={`w-[31px] h-[31px] border rounded transition-all ${
-                    page === currentPage
+                  className={`w-[31px] h-[31px] border rounded transition-all ${page === currentPage
                       ? "bg-primary-button-bg text-white border-primary-button-bg"
                       : "dark:border-[#172036]"
-                  }`}
+                    }`}
                 >
                   {page}
                 </button>

@@ -4,6 +4,9 @@ import DataTable from "react-data-table-component";
 import ColumnSelector from "../ColumnSelector/ColumnSelector";
 import CustomPagination from "../../../../components/CommonFormElements/Pagination/CustomPagination";
 import ExportButtons from "../../../../components/CommonFormElements/ExportButtons/ExportButtons";
+import StatsCards from "../../../../components/CommonFormElements/StatsCard/StatsCards";
+import DateRangeFilter from "../../../../components/CommonFormElements/DateRangeFilter/DateRangeFilter";
+import OopsNoData from "../../../../components/CommonFormElements/DataNotFound/OopsNoData";
 const Template: React.FC = () => {
   const [searchInput, setSearchInput] = useState("");
   const [filterColumn, setFilterColumn] = useState("");
@@ -17,17 +20,35 @@ const Template: React.FC = () => {
   const [sortIndex, setSortIndex] = useState(1);
   const [sortDirection, setSortDirection] = useState("ASC");
   const [visibleColumns, setVisibleColumns] = useState<any[]>([]);
+  const [stats, setStats] = useState({});
   const [columnsReady, setColumnsReady] = useState(false);
   const [tableLoading, setTableLoading] = useState(true);
   const [refreshGrid, setRefreshGrid] = useState(0);
+  const [dateRange, setDateRange] = useState({
+    from: "",
+    to: "",
+    preset: "today",
+  });
+
+  const statsConfig = [
+    { key: "LifetimeIncome", title: "Lifetime Income", icon: "payments", variant: "income" },
+    { key: "ThisMonthIncome", title: "This Month Income", icon: "calendar_month", variant: "income" },
+    { key: "LastMonthIncome", title: "Last Month Income", icon: "history", variant: "income" },
+    { key: "TodayIncome", title: "Today Income", icon: "today", variant: "highlight" },
+  ];
   const handleSort = (column: any, direction: string) => {
     console.log("Sorted Column:", column);
 
     setSortIndex(column.columnIndex); // 1,2,3,4...
     setSortDirection(direction.toUpperCase());
   };
-  const handlePageChange = (page) => {
-    setPage(page);
+  const handlePageChange = (p) => {
+    setPage(p);
+
+    fetchGridData({
+      ...dateRange,
+      pageOverride: p,
+    });
   };
   const handlePerRowsChange = (newPerPage, page) => {
     setPerPage(newPerPage);
@@ -67,7 +88,7 @@ const Template: React.FC = () => {
               <button onClick={() => handleEdit(row)}> <i className="material-symbols-outlined !text-md">
                 edit
               </i></button>
-              <button onClick={() => handleDelete(row)}><i className="material-symbols-outlined !text-md">
+              <button className="text-danger-500 hover:text-danger-700" onClick={() => handleDelete(row)}><i className="material-symbols-outlined !text-md">
                 delete
               </i></button>
             </div>
@@ -99,20 +120,53 @@ const Template: React.FC = () => {
     const payload = {
       procName: "FetchROIIncome",
       Para: JSON.stringify({
+        SearchBy: filterColumn,
+        Criteria: searchInput,
+        Page: page,
         PageSize: 0,
-             }),
+        SortIndex: sortIndex,
+        SortDir: sortDirection,
+
+        /* ⭐ DATE FILTER */
+        FromDate: dateRange.from || null,
+        ToDate: dateRange.to || null,
+      }),
     };
 
     const res = await universalService(payload);
     return res?.data ?? res ?? [];
   };
+  const GetStats = async () => {
+    const payload = {
+      procName: "FetchROIIncome",
+      Para: JSON.stringify({
+        ActionMode: "GetStats",
+      }),
+    };
+
+    const res = await universalService(payload);
+
+    const result = res?.data ?? res ?? [];
+
+    setStats(result[0] || {});
+
+
+    return result;
+  };
+
   const handleDelete = (row) => {
     if (confirm(`Delete ${row.UserName}?`)) {
       console.log("Delete Row:", row);
-      // call API delete
+
     }
   };
-  const fetchGridData = async () => {
+
+  const fetchGridData = async (options?: any) => {
+    const range = options || dateRange;
+
+    const pageToUse = options?.pageOverride ?? page;
+    const perPageToUse = options?.perPageOverride ?? perPage;
+
     try {
       setTableLoading(true);
 
@@ -121,10 +175,13 @@ const Template: React.FC = () => {
         Para: JSON.stringify({
           SearchBy: filterColumn,
           Criteria: searchInput,
-          Page: page,
-          PageSize: perPage,
+          Page: pageToUse,
+          PageSize: perPageToUse,
           SortIndex: sortIndex,
           SortDir: sortDirection,
+
+          FromDate: range.from || null,
+          ToDate: range.to || null,
         }),
       };
 
@@ -142,9 +199,7 @@ const Template: React.FC = () => {
         setTotalRows(0);
       }
     } catch (err) {
-      console.error("Grid data fetch failed", err);
-      setData([]);
-      setTotalRows(0);
+      console.error(err);
     } finally {
       setTableLoading(false);
     }
@@ -181,6 +236,7 @@ const Template: React.FC = () => {
   };
   useEffect(() => {
     fetchGridColumns();
+    GetStats();
   }, [refreshGrid]);
   useEffect(() => {
     if (columns.length > 0) {
@@ -211,13 +267,13 @@ const Template: React.FC = () => {
         cursor: "pointer",
         whiteSpace: "nowrap",
         backgroundColor: "var(--color-primary-table-bg)",
-        borderBottom: "1px solid var(--color-primary-table-bg-hover)",
+
       },
     },
     rows: {
       style: {
         minHeight: "49px",
-        
+
       },
     },
     cells: {
@@ -238,6 +294,13 @@ const Template: React.FC = () => {
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:w-auto w-full">
           <div className="flex flex-col sm:flex-row items-center gap-3 flex-wrap justify-end">
+            <DateRangeFilter
+              onChange={(r) => {
+                setPage(1); // reset pagination
+                setDateRange(r);
+                fetchGridData(r);
+              }}
+            />
             {/* 1. Filter Dropdown (Exactly from your design) */}
             <div className="relative w-full sm:w-[180px]">
               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-500">
@@ -300,7 +363,7 @@ const Template: React.FC = () => {
               {/* ADD BUTTON */}
               <button
                 type="button"
-                className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-white text-white bg-primary-button-bg hover:bg-white hover:border-primary-button-bg hover:text-primary-button-bg transition-all shadow-sm"
+                className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-primary-button-bg text-white bg-primary-button-bg hover:bg-white hover:border-primary-button-bg hover:text-primary-button-bg transition-all shadow-sm"
               >
                 <i className="material-symbols-outlined text-[20px]">add</i>
               </button>
@@ -321,6 +384,13 @@ const Template: React.FC = () => {
           </div>
         </div>
       </div>
+
+      <StatsCards
+        stats={stats}
+        config={statsConfig}
+        loading={tableLoading}
+      />
+
       {tableLoading ? (
         <div className="flex justify-between items-center py-2 animate-pulse">
           <div className="h-8 w-[120px] bg-gray-200 dark:bg-gray-700 rounded-md" />
@@ -338,8 +408,16 @@ const Template: React.FC = () => {
             <select
               value={perPage}
               onChange={(e) => {
-                setPerPage(Number(e.target.value));
+                const size = Number(e.target.value);
+
+                setPerPage(size);
                 setPage(1);
+
+                fetchGridData({
+                  ...dateRange,
+                  pageOverride: 1,
+                  perPageOverride: size,
+                });
               }}
               className="h-8 w-[120px] px-3 pr-7 text-xs font-semibold
         text-gray-600 dark:text-gray-300
@@ -377,17 +455,25 @@ const Template: React.FC = () => {
           pagination
           paginationServer
           paginationTotalRows={totalRows}
+
           paginationComponent={(props) => (
-            <CustomPagination {...props} currentPage={page} />
+            <CustomPagination
+              {...props}
+              currentPage={page}
+              rowsPerPage={perPage}
+            />
           )}
+
           onChangePage={handlePageChange}
           onChangeRowsPerPage={handlePerRowsChange}
           onSort={handleSort}
           sortServer
+
           progressPending={tableLoading}
           progressComponent={
             <div className="p-6 text-sm text-gray-500">Loading data...</div>
           }
+          noDataComponent={!tableLoading && <OopsNoData />}
           defaultSortFieldId={1}
         />
       </div>
