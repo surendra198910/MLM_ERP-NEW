@@ -12,16 +12,19 @@ type Props = {
   title?: string;
   columns: ColumnDef[];
   fetchData: () => Promise<any[]>;
+  disabled?: boolean;   // ⭐ add
 };
 
 const ExportButtons: React.FC<Props> = ({
   title = "Report",
   columns,
   fetchData,
+  disabled = false,
 }) => {
   const [loading, setLoading] = useState(false);
 
   const safeFetch = async () => {
+    if (disabled) return [];
     try {
       setLoading(true);
       const data = await fetchData();
@@ -116,13 +119,13 @@ const ExportButtons: React.FC<Props> = ({
             </thead>
             <tbody>
               ${data
-                .map(
-                  r =>
-                    `<tr>${columns
-                      .map(c => `<td>${r[c.key] ?? "-"}</td>`)
-                      .join("")}</tr>`
-                )
-                .join("")}
+        .map(
+          r =>
+            `<tr>${columns
+              .map(c => `<td>${r[c.key] ?? "-"}</td>`)
+              .join("")}</tr>`
+        )
+        .join("")}
             </tbody>
           </table>
           <script>window.onload=function(){window.print()}</script>
@@ -148,7 +151,14 @@ const ExportButtons: React.FC<Props> = ({
     tooltip: string;
   }) => (
     <div className="relative group">
-      <button disabled={loading} onClick={onClick} className={btn}>
+      <button
+        disabled={loading || disabled}
+        onClick={() => {
+          if (disabled) return;
+          onClick();
+        }}
+        className={btn}
+      >
         {loading ? "..." : label}
       </button>
 

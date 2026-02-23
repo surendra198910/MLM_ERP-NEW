@@ -46,6 +46,8 @@ class SmartAction {
   canSearch = (form: string) => this.can(form, "search");
   canManageColumns = (form: string) => this.can(form, "manage-columns");
   canAdvancedSearch = (form: string) => this.can(form, "advance-search");
+  canDateFilter = (form: string) => this.can(form, "date-filter");
+  canExport = (form: string) => this.can(form, "export");
 }
 
 export const SmartActions = new SmartAction();

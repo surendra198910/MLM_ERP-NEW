@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { format } from "date-fns";
 import { ApiService } from "../../../../services/ApiService";
 import DataTable from "react-data-table-component";
 import ColumnSelector from "../ColumnSelector/ColumnSelector";
@@ -7,6 +8,14 @@ import ExportButtons from "../../../../components/CommonFormElements/ExportButto
 import StatsCards from "../../../../components/CommonFormElements/StatsCard/StatsCards";
 import DateRangeFilter from "../../../../components/CommonFormElements/DateRangeFilter/DateRangeFilter";
 import OopsNoData from "../../../../components/CommonFormElements/DataNotFound/OopsNoData";
+import TableSkeleton from "../Forms/TableSkeleton";
+import customStyles from "../../../../components/CommonFormElements/DataTableComponents/CustomStyles";
+import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
+import { SmartActions } from "../Security/SmartActionWithFormName";
+import { useLocation } from "react-router-dom";
+import Loader from "../../common/Loader";
+import AccessRestricted from "../../common/AccessRestricted";
+import ActionCell from "../../../../components/CommonFormElements/DataTableComponents/ActionCell";
 const Template: React.FC = () => {
   const [searchInput, setSearchInput] = useState("");
   const [filterColumn, setFilterColumn] = useState("");
@@ -24,9 +33,16 @@ const Template: React.FC = () => {
   const [columnsReady, setColumnsReady] = useState(false);
   const [tableLoading, setTableLoading] = useState(true);
   const [refreshGrid, setRefreshGrid] = useState(0);
+  const [permissionsLoading, setPermissionsLoading] = useState(true);
+  const [hasPageAccess, setHasPageAccess] = useState(true);
+  const todayStr = format(new Date(), "yyyy-MM-dd");
+  const location = useLocation();
+  const path = location.pathname;
+  const formName = path.split("/").pop();
+  const canExport = SmartActions.canExport(formName);
   const [dateRange, setDateRange] = useState({
-    from: "",
-    to: "",
+    from: todayStr,
+    to: todayStr,
     preset: "today",
   });
 
@@ -36,6 +52,58 @@ const Template: React.FC = () => {
     { key: "LastMonthIncome", title: "Last Month Income", icon: "history", variant: "income" },
     { key: "TodayIncome", title: "Today Income", icon: "today", variant: "highlight" },
   ];
+  const fetchFormPermissions = async () => {
+    try {
+      setPermissionsLoading(true);
+
+      const saved = localStorage.getItem("EmployeeDetails");
+      const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
+
+      const payload = {
+        procName: "AssignForm",
+        Para: JSON.stringify({
+          ActionMode: "GetForms",
+          FormName: formName, // 👈 category for this page
+          EmployeeId: employeeId,
+        }),
+      };
+
+      const response = await universalService(payload);
+      const data = response?.data ?? response;
+
+      // ❌ Invalid or empty response → deny access
+      if (!Array.isArray(data)) {
+        setHasPageAccess(false);
+        return;
+      }
+
+      // 🔍 Find permission for THIS form/page
+      const pagePermission = data.find(
+        (p) =>
+          String(p.FormNameWithExt).trim().toLowerCase() ===
+          formName?.trim().toLowerCase(),
+      );
+
+      // ❌ No permission OR empty Action
+      if (
+        !pagePermission ||
+        !pagePermission.Action ||
+        pagePermission.Action.trim() === ""
+      ) {
+        setHasPageAccess(false);
+        return;
+      }
+
+      // ✅ Permission allowed → load SmartActions
+      SmartActions.load(data);
+      setHasPageAccess(true);
+    } catch (error) {
+      console.error("Form permission fetch failed:", error);
+      setHasPageAccess(false);
+    } finally {
+      setPermissionsLoading(false);
+    }
+  };
   const handleSort = (column: any, direction: string) => {
     console.log("Sorted Column:", column);
 
@@ -84,14 +152,11 @@ const Template: React.FC = () => {
         const actionColumn = {
           name: "Action",
           cell: (row) => (
-            <div className="flex gap-2">
-              <button onClick={() => handleEdit(row)}> <i className="material-symbols-outlined !text-md">
-                edit
-              </i></button>
-              <button className="text-danger-500 hover:text-danger-700" onClick={() => handleDelete(row)}><i className="material-symbols-outlined !text-md">
-                delete
-              </i></button>
-            </div>
+            <ActionCell
+              row={row}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
           ),
           ignoreRowClick: true,
           button: true,
@@ -204,6 +269,7 @@ const Template: React.FC = () => {
       setTableLoading(false);
     }
   };
+
   const fetchVisibleColumns = async () => {
     const saved = localStorage.getItem("EmployeeDetails");
     const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
@@ -252,36 +318,17 @@ const Template: React.FC = () => {
     setSearchInput("");
     setFilterColumn("__NONE__");
   };
-  const customStyles = {
-    headRow: {
-      style: {
-        backgroundColor: "var(--color-primary-table-bg)",
-        minHeight: "45px",
-      },
-    },
-    headCells: {
-      style: {
-        padding: "11px 20px",
-        fontWeight: 600,
-        color: "var(--color-primary-table-text)",
-        cursor: "pointer",
-        whiteSpace: "nowrap",
-        backgroundColor: "var(--color-primary-table-bg)",
+  const hasData = data.length > 0;
+  useEffect(() => {
+    fetchFormPermissions();
+  }, []);
+  if (permissionsLoading) {
+    return <Loader />;
+  }
 
-      },
-    },
-    rows: {
-      style: {
-        minHeight: "49px",
-
-      },
-    },
-    cells: {
-      style: {
-        padding: "10px 20px",
-      },
-    },
-  };
+  if (!hasPageAccess) {
+    return <AccessRestricted />;
+  }
   return (
     <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-md">
       {/* --- HEADER & SEARCH SECTION --- */}
@@ -294,80 +341,125 @@ const Template: React.FC = () => {
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:w-auto w-full">
           <div className="flex flex-col sm:flex-row items-center gap-3 flex-wrap justify-end">
-            <DateRangeFilter
-              onChange={(r) => {
-                setPage(1); // reset pagination
-                setDateRange(r);
-                fetchGridData(r);
-              }}
-            />
+            <div className="px-4">
+              <PermissionAwareTooltip
+                allowed={SmartActions.canDateFilter(formName)}
+                allowedText="Filter by Date"
+              >
+                <DateRangeFilter
+                  disabled={!SmartActions.canDateFilter(formName)}
+                  onChange={(r) => {
+                    if (!SmartActions.canDateFilter(formName)) return; // safety
+
+                    setPage(1); // reset pagination
+                    setDateRange(r);
+                    fetchGridData(r);
+                  }}
+                />
+              </PermissionAwareTooltip>
+            </div>
             {/* 1. Filter Dropdown (Exactly from your design) */}
             <div className="relative w-full sm:w-[180px]">
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-500">
-                <i className="material-symbols-outlined !text-[18px]">
-                  filter_list
-                </i>
-              </span>
-              <select
-                value={filterColumn}
-                onChange={(e) => setFilterColumn(e.target.value)}
-                className="w-full h-[34px] pl-8 pr-8 text-xs rounded-md appearance-none outline-none border border-gray-300 dark:border-[#172036] bg-white dark:bg-[#0c1427] text-black dark:text-white transition-all focus:border-primary-button-bg"
+              <PermissionAwareTooltip
+                allowed={SmartActions.canAdvancedSearch(formName)}
+                allowedText="Search By"
               >
-                <option value="__NONE__">Select Filter Option</option>
-                <option value="Username">Username</option>
-              </select>
-              <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
-                <i className="material-symbols-outlined !text-[18px]">
-                  expand_more
-                </i>
-              </span>
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-500">
+                  <i className="material-symbols-outlined !text-[18px]">
+                    filter_list
+                  </i>
+                </span>
+                <select
+                  value={filterColumn}
+                  onChange={(e) => setFilterColumn(e.target.value)}
+                  className={`w-full h-[34px] pl-8 pr-8 text-xs rounded-md appearance-none outline-none border transition-all
+                           ${SmartActions.canAdvancedSearch(formName)
+                      ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
+                      : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                    }`}
+                >
+                  <option value="__NONE__">Select Filter Option</option>
+                  <option value="Username">Username</option>
+                </select>
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
+                  <i className="material-symbols-outlined !text-[18px]">
+                    expand_more
+                  </i>
+                </span>
+              </PermissionAwareTooltip>
             </div>
 
             {/* 2. Search Input (Exactly from your design) */}
             <div className="relative">
-              <span className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-500">
-                <i className="material-symbols-outlined !text-[18px]">search</i>
-              </span>
-              <input
-                type="text"
-                value={searchInput}
-                placeholder="Enter Criteria..."
-                onChange={(e) => setSearchInput(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && applySearch()}
-                className="h-[34px] w-full pl-8 pr-3 text-xs rounded-md outline-none border border-gray-300 dark:border-[#172036] bg-white dark:bg-[#0c1427] text-black dark:text-white focus:border-primary-button-bg transition-all"
-              />
+              <PermissionAwareTooltip
+                allowed={SmartActions.canSearch(formName)}
+                allowedText="Enter Criteria"
+              >
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-500">
+                  <i className="material-symbols-outlined !text-[18px]">search</i>
+                </span>
+                <input
+                  type="text"
+                  value={searchInput}
+                  placeholder="Enter Criteria..."
+                  disabled={!SmartActions.canAdd(formName)}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && applySearch()}
+                  className={`h-[34px] w-full pl-8 pr-3 text-xs rounded-md outline-none border transition-all
+                           ${SmartActions.canSearch(formName)
+                      ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
+                      : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                    }`}
+                />
+              </PermissionAwareTooltip>
             </div>
 
             {/* 3. BUTTONS GROUP (Exactly from your design) */}
             <div className="flex items-center gap-2">
               {/* SEARCH BUTTON */}
-              <button
-                type="button"
-                onClick={applySearch}
-                className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-primary-button-bg text-primary-button-bg hover:bg-primary-button-bg hover:text-white transition-all shadow-sm"
+              <PermissionAwareTooltip
+                allowed={SmartActions.canSearch(formName)}
+                allowedText="Search"
               >
-                <i className="material-symbols-outlined text-[20px]">search</i>
-              </button>
-
+                <button
+                  type="button"
+                  onClick={applySearch}
+                  disabled={!SmartActions.canSearch(formName)}
+                  className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-primary-button-bg text-primary-button-bg hover:bg-primary-button-bg hover:text-white transition-all shadow-sm disabled:opacity-50"
+                >
+                  <i className="material-symbols-outlined text-[20px]">search</i>
+                </button>
+              </PermissionAwareTooltip>
               {/* COLUMN SELECTOR BUTTON */}
-
-              <div
-                className={`h-[34px] flex items-center "pointer-events-none opacity-50"}`}
+              <PermissionAwareTooltip
+                allowed={SmartActions.canManageColumns(formName)}
+                allowedText="Manage Columns"
               >
-                <ColumnSelector
-                  procName="USP_FetchROIIncome"
-                  onApply={fetchVisibleColumns}
-                />
-              </div>
-
+                <div
+                  className={`h-[34px] flex items-center ${!SmartActions.canManageColumns(formName)
+                    ? "pointer-events-none opacity-50"
+                    : ""
+                    }`}
+                >
+                  <ColumnSelector
+                    procName="USP_FetchROIIncome"
+                    onApply={fetchVisibleColumns}
+                  />
+                </div>
+              </PermissionAwareTooltip>
               {/* ADD BUTTON */}
-              <button
-                type="button"
-                className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-primary-button-bg text-white bg-primary-button-bg hover:bg-white hover:border-primary-button-bg hover:text-primary-button-bg transition-all shadow-sm"
+              <PermissionAwareTooltip
+                allowed={SmartActions.canAdd(formName)}
+                allowedText="Add New"
               >
-                <i className="material-symbols-outlined text-[20px]">add</i>
-              </button>
-
+                <button
+                  type="button"
+                  disabled={!SmartActions.canAdd(formName)}
+                  className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-primary-button-bg text-white bg-primary-button-bg hover:bg-white hover:border-primary-button-bg hover:text-primary-button-bg transition-all shadow-sm disabled:opacity-50"
+                >
+                  <i className="material-symbols-outlined text-[20px]">add</i>
+                </button>
+              </PermissionAwareTooltip>
               {/* REFRESH BUTTON (Visible when showTable is true) */}
               {showTable && (
                 <button
@@ -401,8 +493,9 @@ const Template: React.FC = () => {
             <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded-md" />
           </div>
         </div>
-      ) : (
+      ) : hasData ? (
         <div className="flex justify-between items-center py-2 mb-[10px]">
+
           {/* PAGE SIZE */}
           <div className="relative">
             <select
@@ -438,13 +531,19 @@ const Template: React.FC = () => {
             </span>
           </div>
 
-          <ExportButtons
-            title="ROI Income Report"
-            columns={exportColumns}
-            fetchData={fetchExportData}
-          />
+          {/* EXPORT */}
+                    <PermissionAwareTooltip allowed={canExport}>
+            <div className={!canExport ? "pointer-events-none opacity-50" : ""}>
+              <ExportButtons
+                title="ROI Income Report"
+                columns={exportColumns}
+                fetchData={fetchExportData}
+                disabled={!canExport}
+              />
+            </div>
+          </PermissionAwareTooltip>
         </div>
-      )}
+      ) : null}
       {/* --- CONTENT CONTAINER --- */}
       <div className="trezo-card-content">
         <DataTable
@@ -471,7 +570,11 @@ const Template: React.FC = () => {
 
           progressPending={tableLoading}
           progressComponent={
-            <div className="p-6 text-sm text-gray-500">Loading data...</div>
+            <TableSkeleton
+              rows={perPage}
+              columns={columns.length || 8}
+
+            />
           }
           noDataComponent={!tableLoading && <OopsNoData />}
           defaultSortFieldId={1}

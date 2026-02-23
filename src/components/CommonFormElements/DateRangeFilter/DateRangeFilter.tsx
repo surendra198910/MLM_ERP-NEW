@@ -1,5 +1,5 @@
 "use client";
-
+import { format, startOfWeek, endOfWeek, subWeeks, subDays } from "date-fns";
 import React, { useState, useEffect } from "react";
 import { DateRange } from "react-date-range";
 import {
@@ -12,11 +12,12 @@ import {
 
 type Props = {
     onChange: (r: { from: string; to: string; preset: string }) => void;
+    disabled?: boolean;
 };
 
-const DateRangeFilterPro: React.FC<Props> = ({ onChange }) => {
+const DateRangeFilterPro: React.FC<Props> = ({ onChange, disabled }) => {
     const today = new Date();
-
+    today.setHours(0, 0, 0, 0);
     const [showCalendar, setShowCalendar] = useState(false);
     const [preset, setPreset] = useState("today");
     const [label, setLabel] = useState("");
@@ -40,8 +41,8 @@ const DateRangeFilterPro: React.FC<Props> = ({ onChange }) => {
 
     const emit = (from: Date, to: Date, p: string) => {
         onChange({
-            from: from.toISOString().slice(0, 10),
-            to: to.toISOString().slice(0, 10),
+            from: format(from, "yyyy-MM-dd"),
+            to: format(to, "yyyy-MM-dd"),
             preset: p,
         });
     };
@@ -58,7 +59,26 @@ const DateRangeFilterPro: React.FC<Props> = ({ onChange }) => {
         if (p === "custom") return;
 
         if (p === "today") applyRange(today, today, p);
+        if (p === "yesterday") {
+            const y = subDays(today, 1);
+            applyRange(y, y, p);
+        }
+        if (p === "thisWeek") {
+            applyRange(
+                startOfWeek(today, { weekStartsOn: 1 }),
+                today,
+                p
+            );
+        }
+        if (p === "lastWeek") {
+            const d = subWeeks(today, 1);
 
+            applyRange(
+                startOfWeek(d, { weekStartsOn: 1 }),
+                endOfWeek(d, { weekStartsOn: 1 }),
+                p
+            );
+        }
         if (p === "thisMonth")
             applyRange(startOfMonth(today), today, p);
 
@@ -76,6 +96,7 @@ const DateRangeFilterPro: React.FC<Props> = ({ onChange }) => {
     };
 
     const applyCustom = () => {
+        if (disabled) return;
         const r = state[0];
         applyRange(r.startDate, r.endDate, "custom");
         setShowCalendar(false);
@@ -94,8 +115,13 @@ const DateRangeFilterPro: React.FC<Props> = ({ onChange }) => {
 
             {/* SINGLE INPUT */}
             <div
-                onClick={() => setShowCalendar(true)}
-                className="h-[34px] px-3 text-xs rounded-md border border-gray-300 dark:border-[#172036] bg-white dark:bg-[#0c1427] flex items-center justify-between cursor-pointer min-w-[260px]"
+                onClick={() => {
+                    if (disabled) return;
+                    setShowCalendar(true);
+                }}
+                className={`h-[34px] px-3 text-xs rounded-md border border-gray-300 dark:border-[#172036] bg-white dark:bg-[#0c1427] flex items-center justify-between min-w-[260px]
+${disabled ? "bg-gray-100 opacity-50 pointer-events-none cursor-not-allowed" : "cursor-pointer"}
+`}
             >
                 <span>{label}</span>
                 <i className="material-symbols-outlined text-[18px] text-gray-500">
@@ -112,6 +138,9 @@ const DateRangeFilterPro: React.FC<Props> = ({ onChange }) => {
 
                         {[
                             { key: "today", label: "Today", icon: "today" },
+                            { key: "yesterday", label: "Yesterday", icon: "history" },
+                            { key: "thisWeek", label: "This Week", icon: "date_range" },
+                            { key: "lastWeek", label: "Last Week", icon: "history" },
                             { key: "thisMonth", label: "This Month", icon: "calendar_month" },
                             { key: "lastMonth", label: "Last Month", icon: "history" },
                             { key: "lastYear", label: "Last Year", icon: "event" },
@@ -157,7 +186,7 @@ const DateRangeFilterPro: React.FC<Props> = ({ onChange }) => {
 
                             <button
                                 onClick={applyCustom}
-                                 className="px-[26.5px] py-[12px] rounded-md bg-primary-button-bg text-white hover:bg-primary-button-bg-hover"
+                                className="px-[26.5px] py-[12px] rounded-md bg-primary-button-bg text-white hover:bg-primary-button-bg-hover"
                             >
                                 Apply
                             </button>
