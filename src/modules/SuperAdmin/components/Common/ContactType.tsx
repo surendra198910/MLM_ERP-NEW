@@ -1407,9 +1407,7 @@ if (!hasPageAccess) {
                               >
                                 <button
                                   type="button"
-                                  disabled={
-                                    !SmartActions.canEdit(CURRENT_FORM_ID)
-                                  }
+                                  disabled={!SmartActions.canEdit(CURRENT_FORM_ID)}
                                   onClick={() => {
                                     if (!SmartActions.canEdit(CURRENT_FORM_ID))
                                       return;
