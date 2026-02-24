@@ -69,7 +69,8 @@ import BinaryIncomeSetting from "../components/settings/BinaryIncomeSetting.js"
 import ProcessROIIncome from "../components/Commission/ProcessROIIncome.js";
 import IncomeSetting from "../components/settings/IncomeSetting.js";
 import ROIIncomeReport from "../components/Commission/ROIIncomeReport.js";
-
+import AddReport from "../components/AdministrativeTools/AddReport/AddReport.js"
+import ManageReports from "../components/AdministrativeTools/AddReport/ManageReport.js";
 const AppRoutes = () => {
   const [active, setActive] = useState(false);
 
@@ -273,6 +274,9 @@ const AppRoutes = () => {
             <Route path="/superadmin/commission/process-roi-income" element={<ProcessROIIncome />} />
             <Route path="/superadmin/mlm-setting/income-setting" element={<IncomeSetting />} />
             <Route path="/superadmin/commission/roi-income-report" element={<ROIIncomeReport />} />
+            <Route path="/superadmin/mlm-setting/add-report/:id?" element={<AddReport />} />
+            <Route path="/superadmin/mlm-setting/manage-report" element={<ManageReports />} />
+
           </Routes>
 
           {/* Footer */}

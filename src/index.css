@@ -1914,3 +1914,24 @@ html[dir="rtl"] {
 .dark .swal2-html-container {
   color: #fff !important;
 }
+/* ---------- LIGHT ---------- */
+:root {
+  --table-header-bg: #f9fafb;
+  --table-header-text: #111827;
+  --table-row-bg: #ffffff;
+  --table-row-text: #1f2937;
+  --table-border: #e5e7eb;
+  --table-row-hover: #f3f4f6;
+  --table-pagination-bg: #ffffff;
+}
+
+/* ---------- DARK ---------- */
+.dark {
+  --table-header-bg: #1e293b;
+  --table-header-text: #e2e8f0;
+  --table-row-bg: #0f172a;
+  --table-row-text: #cbd5e1;
+  --table-border: #334155;
+  --table-row-hover: #1e293b;
+  --table-pagination-bg: #0f172a;
+}
