@@ -545,7 +545,11 @@ const Template: React.FC = () => {
         </div>
       ) : null}
       {/* --- CONTENT CONTAINER --- */}
-      <div className="trezo-card-content">
+      <div className="trezo-card-content 
+  bg-white dark:bg-[#0f172a]
+  text-gray-800 dark:text-gray-200
+  border border-gray-200 dark:border-gray-700
+  rounded-lg overflow-hidden">
         <DataTable
           title=""
           columns={columns}
