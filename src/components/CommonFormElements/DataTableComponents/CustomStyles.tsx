@@ -7,7 +7,7 @@ const customStyles = {
 
   headRow: {
     style: {
-      backgroundColor: "var(--table-header-bg)",
+      backgroundColor: "var(--color-primary-table-bg)",
       borderBottom: "1px solid var(--table-border)",
       minHeight: "45px",
     },
@@ -15,7 +15,7 @@ const customStyles = {
 
   headCells: {
     style: {
-      color: "var(--table-header-text)",
+      color: "var(--color-primary-table-text)",
       fontWeight: 600,
       fontSize: "13px",
     },

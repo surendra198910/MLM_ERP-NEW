@@ -55,12 +55,6 @@ const Template: React.FC = () => {
     preset: "thisMonth",
   });
 
-  const statsConfig = [
-    { key: "LifetimeIncome", title: "Lifetime Income", icon: "payments", variant: "income" },
-    { key: "ThisMonthIncome", title: "This Month Income", icon: "calendar_month", variant: "income" },
-    { key: "LastMonthIncome", title: "Last Month Income", icon: "history", variant: "income" },
-    { key: "TodayIncome", title: "Today Income", icon: "today", variant: "highlight" },
-  ];
   const fetchFormPermissions = async () => {
     try {
       setPermissionsLoading(true);
@@ -451,29 +445,13 @@ const Template: React.FC = () => {
       <div className="trezo-card-header mb-[10px] md:mb-[10px] sm:flex items-center justify-between pb-5 border-b border-gray-200 -mx-[20px] md:-mx-[25px] px-[20px] md:px-[25px]">
         <div className="trezo-card-title">
           <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
-            ROI Income Report
+            Contact Type Master
           </h5>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:w-auto w-full">
           <div className="flex flex-col sm:flex-row items-center gap-3 flex-wrap justify-end">
-            <div className="px-4">
-              <PermissionAwareTooltip
-                allowed={SmartActions.canDateFilter(formName)}
-                allowedText="Filter by Date"
-              >
-                <DateRangeFilter
-                  disabled={!SmartActions.canDateFilter(formName)}
-                  onChange={(r) => {
-                    if (!SmartActions.canDateFilter(formName)) return; // safety
-
-                    setPage(1); // reset pagination
-                    setDateRange(r);
-                    setSearchTrigger((p) => p + 1);
-                  }}
-                />
-              </PermissionAwareTooltip>
-            </div>
+          
             {/* 1. Filter Dropdown (Exactly from your design) */}
             <div className="relative w-full sm:w-[180px]">
               <PermissionAwareTooltip
@@ -625,12 +603,7 @@ const Template: React.FC = () => {
       )}
       {showTable && (
         <div>
-          <StatsCards
-            stats={stats}
-            config={statsConfig}
-            loading={tableLoading}
-          />
-
+          
           {tableLoading ? (
             <div className="flex justify-between items-center py-2 animate-pulse">
               <div className="h-8 w-[120px] bg-gray-200 dark:bg-gray-700 rounded-md" />

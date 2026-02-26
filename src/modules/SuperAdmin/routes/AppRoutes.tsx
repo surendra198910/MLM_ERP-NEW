@@ -71,6 +71,7 @@ import IncomeSetting from "../components/settings/IncomeSetting.js";
 import ROIIncomeReport from "../components/Commission/ROIIncomeReport.js";
 import AddReport from "../components/AdministrativeTools/AddReport/AddReport.js"
 import ManageReports from "../components/AdministrativeTools/AddReport/ManageReport.js";
+import ContactTypeV2 from "../components/Common/ContactTypeV2.js";
 const AppRoutes = () => {
   const [active, setActive] = useState(false);
 
@@ -276,6 +277,7 @@ const AppRoutes = () => {
             <Route path="/superadmin/commission/roi-income-report" element={<ROIIncomeReport />} />
             <Route path="/superadmin/mlm-setting/add-report/:id?" element={<AddReport />} />
             <Route path="/superadmin/mlm-setting/manage-report" element={<ManageReports />} />
+            <Route path="/superadmin/mlm-setting/testing" element={<ContactTypeV2 />} />
 
           </Routes>
 

@@ -1,6 +1,6 @@
 "use client";
 import { format, startOfWeek, endOfWeek, subWeeks, subDays } from "date-fns";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { DateRange } from "react-date-range";
 import {
     startOfMonth,
@@ -21,7 +21,7 @@ const DateRangeFilterPro: React.FC<Props> = ({ onChange, disabled }) => {
     const [showCalendar, setShowCalendar] = useState(false);
     const [preset, setPreset] = useState("today");
     const [label, setLabel] = useState("");
-
+    const wrapperRef = useRef<HTMLDivElement | null>(null);
     const [state, setState] = useState<any>([
         {
             startDate: today,
@@ -103,15 +103,29 @@ const DateRangeFilterPro: React.FC<Props> = ({ onChange, disabled }) => {
     };
 
     /* ========= init ========= */
-
     useEffect(() => {
-        applyRange(today, today, "today");
+        const handleClickOutside = (event: MouseEvent) => {
+            if (!wrapperRef.current) return;
+
+            if (!wrapperRef.current.contains(event.target as Node)) {
+                setShowCalendar(false);
+            }
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+        };
+    }, []);
+    useEffect(() => {
+        applyRange(startOfMonth(today), today, "thisMonth");
     }, []);
 
     /* ========= UI ========= */
 
     return (
-        <div className="relative ">
+        <div ref={wrapperRef} className="relative">
 
             {/* SINGLE INPUT */}
             <div

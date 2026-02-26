@@ -1,7 +1,14 @@
 "use client";
 
 import React from "react";
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+} from "@hello-pangea/dnd";
+import type { DropResult } from "@hello-pangea/dnd";
 
+import { GripVertical } from "lucide-react";
 /* ================= TYPES ================= */
 
 export type ReportColumn = {
@@ -16,7 +23,7 @@ export type ReportColumn = {
   /* ✅ NEW */
   isSort: boolean;
   isHidden: boolean;
-  sortDirection: "ASC" | "DESC";
+  sortDirection: "ASC" | "DSC";
 };
 
 interface Props {
@@ -37,23 +44,34 @@ const ReportColumnsConfig: React.FC<Props> = ({
   ) => {
     setColumns((prev) => {
       const copy = [...prev];
+
+      /* ⭐ only one sort allowed */
+      if (key === "isSort" && value === true) {
+        return copy.map((c, i) => ({
+          ...c,
+          isSort: i === index,
+        }));
+      }
+
       copy[index] = { ...copy[index], [key]: value };
       return copy;
     });
   };
- const handleSortChange = (index: number, checked: boolean) => {
-  setColumns((prev) =>
-    prev.map((col, i) => ({
-      ...col,
-      isSort: i === index ? checked : false,
-      sortDirection:
-        i === index && checked
-          ? col.sortDirection || "DESC"
-          : col.sortDirection,
-    }))
-  );
-};
+  const onDragEnd = (result: DropResult) => {
+    if (!result.destination) return;
 
+    const items = Array.from(columns);
+    const [moved] = items.splice(result.source.index, 1);
+    items.splice(result.destination.index, 0, moved);
+
+    // 🔥 update displayOrder automatically
+    const updated = items.map((it, idx) => ({
+      ...it,
+      displayOrder: idx + 1,
+    }));
+
+    setColumns(updated);
+  };
   if (!columns.length) return null;
 
   return (
@@ -85,108 +103,144 @@ const ReportColumnsConfig: React.FC<Props> = ({
               <th className="px-4 py-3 text-center">Sort</th>
               <th className="px-4 py-3 text-center">Hidden</th>
               <th className="px-4 py-3 text-center">Sort Direction</th>
+              <th className="px-4 py-3 w-16 text-right">Move</th>
             </tr>
           </thead>
 
-          {/* BODY */}
-          <tbody>
-            {columns.map((col, i) => (
-              <tr
-                key={col.id}
-                className="border-b last:border-0 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-white/5 transition"
-              >
-                {/* INDEX */}
-                <td className="px-4 py-3 text-gray-400">{i + 1}</td>
+          <DragDropContext onDragEnd={onDragEnd}>
+            <Droppable droppableId="columns">
+              {(provided) => (
+                <tbody ref={provided.innerRef} {...provided.droppableProps}>
+                  {columns.map((col, i) => (
+                    <Draggable
+                      key={col.id}
+                      draggableId={String(col.id)}
+                      index={i}
+                      isDragDisabled={col.isHidden}
+                    >
+                      {(dragProvided, snapshot) => (
+                        <tr
+                          ref={dragProvided.innerRef}
+                          {...dragProvided.draggableProps}
+                          className={`border-b last:border-0 border-gray-200 dark:border-gray-700 transition
+    ${col.isHidden ? "opacity-50 bg-gray-100 dark:bg-gray-800" : "hover:bg-gray-50 dark:hover:bg-white/5"}
+    ${snapshot.isDragging ? "bg-blue-50 dark:bg-blue-900/20" : ""}
+  `}
+                        >
+                          {/* INDEX */}
+                          <td className="px-4 py-3 text-gray-400">{i + 1}</td>
 
-                {/* COLUMN NAME */}
-                <td className="px-4 py-2">
-                  <input
-                    value={col.columnName}
-                    readOnly
-                    className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 cursor-not-allowed"
-                  />
-                </td>
+                          {/* COLUMN NAME */}
+                          <td className="px-4 py-2">
+                            <input
+                              value={col.columnName}
+                              readOnly
+                              className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 cursor-not-allowed"
+                            />
+                          </td>
 
-                {/* DISPLAY NAME */}
-                <td className="px-4 py-2">
-                  <input
-                    value={col.displayName}
-                    onChange={(e) =>
-                      updateColumn(i, "displayName", e.target.value)
-                    }
-                    className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 outline-none"
-                  />
-                </td>
+                          {/* DISPLAY NAME */}
+                          <td className="px-4 py-2">
+                            <input
+                              value={col.displayName}
+                              disabled={col.isHidden}
+                              onChange={(e) =>
+                                updateColumn(i, "displayName", e.target.value)
+                              }
+                              className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 outline-none"
+                            />
+                          </td>
 
-                {/* ORDER */}
-                <td className="px-4 py-2">
-                  <input
-                    type="number"
-                    value={col.displayOrder}
-                    onChange={(e) =>
-                      updateColumn(i, "displayOrder", Number(e.target.value))
-                    }
-                    className="w-24 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 outline-none"
-                  />
-                </td>
+                          {/* ORDER */}
+                          <td className="px-4 py-2">
+                            <input
+                              type="number"
+                              value={col.displayOrder}
+                              disabled={col.isHidden}
+                              onChange={(e) =>
+                                updateColumn(i, "displayOrder", Number(e.target.value))
+                              }
+                              className="w-24 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 outline-none"
+                            />
+                          </td>
 
-                {/* OLD CHECKBOXES */}
-                {(["isDefault", "isCurrency", "isTotal"] as const).map((key) => (
-                  <td key={key} className="px-4 py-2 text-center">
-                    <input
-                      type="checkbox"
-                      checked={col[key]}
-                      onChange={(e) =>
-                        updateColumn(i, key, e.target.checked)
-                      }
-                      className="w-4 h-4 accent-primary-button-bg"
-                    />
-                  </td>
-                ))}
+                          {(["isDefault", "isCurrency", "isTotal"] as const).map((key) => (
+                            <td key={key} className="px-4 py-2 text-center">
+                              <input
+                                type="checkbox"
+                                checked={col[key]}
+                                disabled={col.isHidden}
+                                onChange={(e) =>
+                                  updateColumn(i, key, e.target.checked)
+                                }
+                                className="w-4 h-4 accent-primary-button-bg"
+                              />
+                            </td>
+                          ))}
 
-                {/* ✅ isSort */}
-                <td className="px-4 py-2 text-center">
-                  <input
-                    type="checkbox"
-                    checked={col.isSort}
-                    onChange={(e) => handleSortChange(i, e.target.checked)}
-                    className="w-4 h-4 accent-primary-button-bg"
-                  />
-                </td>
+                          {/* SORT */}
+                          <td className="px-4 py-2 text-center">
+                            <input
+                              type="checkbox"
+                              checked={col.isSort}
+                              disabled={col.isHidden}
+                              onChange={(e) =>
+                                updateColumn(i, "isSort", e.target.checked)
+                              }
+                              className="w-4 h-4 accent-primary-button-bg"
+                            />
+                          </td>
 
-                {/* ✅ isHidden */}
-                <td className="px-4 py-2 text-center">
-                  <input
-                    type="checkbox"
-                    checked={col.isHidden}
-                    onChange={(e) =>
-                      updateColumn(i, "isHidden", e.target.checked)
-                    }
-                    className="w-4 h-4 accent-primary-button-bg"
-                  />
-                </td>
+                          {/* HIDDEN */}
+                          <td className="px-4 py-2 text-center">
+                            <input
+                              type="checkbox"
+                              checked={col.isHidden}
+                             
+                              onChange={(e) =>
+                                updateColumn(i, "isHidden", e.target.checked)
+                              }
+                              className="w-4 h-4 accent-primary-button-bg"
+                            />
+                          </td>
 
-                {/* ✅ sortDirection */}
-                <td className="px-4 py-2">
-                  <select
-                    value={col.sortDirection}
-                    onChange={(e) =>
-                      updateColumn(
-                        i,
-                        "sortDirection",
-                      e.target.value as "ASC" | "DESC"
-                      )
-                    }
-                    className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 outline-none"
-                  >
-                    <option value="ASC">ASC</option>
-                    <option value="DESC">DESC</option>
-                  </select>
-                </td>
+                          {/* SORT DIRECTION */}
+                          <td className="px-4 py-2">
+                            <select
+                              value={col.sortDirection}
+                              disabled={col.isHidden}
+                              onChange={(e) =>
+                                updateColumn(
+                                  i,
+                                  "sortDirection",
+                                  e.target.value as "ASC" | "DSC"
+                                )
+                              }
+                              className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 outline-none"
+                            >
+                              <option value="ASC">ASC</option>
+                              <option value="DSC">DSC</option>
+                            </select>
+                          </td>
 
-              </tr>
-            ))}
-          </tbody>
+                          {/* ⭐ DRAG BUTTON RIGHT */}
+                          <td className="px-4 py-2 text-right">
+                            <button
+                              {...dragProvided.dragHandleProps}
+                              className="cursor-grab active:cursor-grabbing p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
+                            >
+                              <GripVertical size={18} />
+                            </button>
+                          </td>
+                        </tr>
+                      )}
+                    </Draggable>
+                  ))}
+                  {provided.placeholder}
+                </tbody>
+              )}
+            </Droppable>
+          </DragDropContext>
         </table>
       </div>
     </div>
