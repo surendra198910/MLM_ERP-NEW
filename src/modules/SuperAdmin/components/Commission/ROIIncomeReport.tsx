@@ -16,6 +16,7 @@ import { useLocation } from "react-router-dom";
 import Loader from "../../common/Loader";
 import AccessRestricted from "../../common/AccessRestricted";
 import ActionCell from "../../../../components/CommonFormElements/DataTableComponents/ActionCell";
+import { useCurrency } from "../../context/CurrencyContext";
 const Template: React.FC = () => {
   const [searchInput, setSearchInput] = useState("");
   const [filterColumn, setFilterColumn] = useState("");
@@ -36,6 +37,8 @@ const Template: React.FC = () => {
   const [permissionsLoading, setPermissionsLoading] = useState(true);
   const [hasPageAccess, setHasPageAccess] = useState(true);
   const todayStr = format(new Date(), "yyyy-MM-dd");
+  const [initialSortReady, setInitialSortReady] = useState(false);
+  const { currency } = useCurrency();
   const location = useLocation();
   const path = location.pathname;
   const formName = path.split("/").pop();
@@ -105,10 +108,9 @@ const Template: React.FC = () => {
     }
   };
   const handleSort = (column: any, direction: string) => {
-    console.log("Sorted Column:", column);
-
-    setSortIndex(column.columnIndex); // 1,2,3,4...
+    setSortIndex(column.columnIndex);
     setSortDirection(direction.toUpperCase());
+    setInitialSortReady(true); // ensures fetch triggers
   };
   const handlePageChange = (p) => {
     setPage(p);
@@ -136,28 +138,89 @@ const Template: React.FC = () => {
 
       const res = await universalService(payload);
       const data = res?.data || res;
+      if (Array.isArray(data)) {
+
+        const visibleSorted = data
+          .filter((c: any) => c.IsVisible)
+          .sort((a: any, b: any) => a.ColumnOrder - b.ColumnOrder);
+
+        const defaultSortCol = visibleSorted.find((c: any) => c.isSort);
+
+        if (defaultSortCol) {
+          const index = visibleSorted.findIndex(
+            (c: any) => c.ColumnKey === defaultSortCol.ColumnKey
+          ) + 1;
+
+          setSortIndex(index || 1);
+          setSortDirection(
+            (defaultSortCol.SortDir || "ASC").toUpperCase() === "DESC"
+              ? "DESC"
+              : "ASC"
+          );
+        }
+
+        setInitialSortReady(true);
+      }
+
+      setInitialSortReady(true);
 
       if (Array.isArray(data)) {
         const reactCols = data
           .filter((c: any) => c.IsVisible === true)
           .sort((a: any, b: any) => a.ColumnOrder - b.ColumnOrder)
           .map((c: any, index: number) => ({
-            id: index + 1, // ✅ IMPORTANT FOR DATATABLE
+            id: index + 1,
             name: c.DisplayName,
-            selector: (row: any) => row[c.ColumnKey],
             sortable: true,
             columnKey: c.ColumnKey,
-            columnIndex: index + 1, // ✅ THIS WILL MATCH SELECT ORDER
-          }));
+            columnIndex: index + 1,
+            isCurrency: c.IsCurrency,
+            isTotal: c.IsTotal,
+
+            selector: (row: any) => row[c.ColumnKey],
+
+            cell: (row: any) => {
+
+              // ⭐ TOTAL ROW
+              if (row.__isTotal) {
+
+                // 👉 show TOTAL text in first column
+                if (index === 0) return "Total";
+
+                if (c.IsTotal) {
+                  const value = row[c.ColumnKey] || 0;
+
+                  return c.IsCurrency
+                    ? `$${Number(value).toLocaleString()}`
+                    : Number(value).toLocaleString();
+                }
+
+                return "";
+              }
+
+              // ⭐ NORMAL ROW
+              const value = row[c.ColumnKey];
+
+              if (c.IsCurrency && value != null) {
+                return `$${Number(value).toLocaleString()}`;
+              }
+
+              return value ?? "-";
+            }
+          }))
         const actionColumn = {
           name: "Action",
-          cell: (row) => (
-            <ActionCell
-              row={row}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-            />
-          ),
+          cell: (row: any) => {
+            if (row.__isTotal) return null;   // ⭐ hide buttons on total row
+
+            return (
+              <ActionCell
+                row={row}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            );
+          },
           ignoreRowClick: true,
           button: true,
         };
@@ -300,18 +363,21 @@ const Template: React.FC = () => {
       setRefreshGrid((prev) => prev + 1);
     }
   };
+
+
   useEffect(() => {
     fetchGridColumns();
     GetStats();
   }, [refreshGrid]);
   useEffect(() => {
-    if (columns.length > 0) {
+    if (columns.length > 0 && initialSortReady) {
       fetchGridData();
     }
-  }, [columns, page, perPage, sortIndex, sortDirection, refreshGrid]);
+  }, [columns, page, perPage, sortIndex, sortDirection, refreshGrid, initialSortReady]);
   const applySearch = () => {
     fetchGridData();
   };
+
 
   const resetSearch = () => {
     setShowTable(false);
@@ -322,6 +388,37 @@ const Template: React.FC = () => {
   useEffect(() => {
     fetchFormPermissions();
   }, []);
+
+  const pageTotals: any = {};
+
+  columns.forEach((col: any) => {
+    if (!col.isTotal || !col.columnKey) return;
+
+    pageTotals[col.columnKey] = data.reduce((sum: number, row: any) => {
+      return sum + Number(row[col.columnKey] || 0);
+    }, 0);
+  });
+  const totalRow =
+    Object.keys(pageTotals).length > 0
+      ? columns.reduce((acc: any, col: any, index: number) => {
+        if (!col.columnKey) {
+          acc.__label = "Page Total";
+          return acc;
+        }
+
+        if (col.isTotal) {
+          acc[col.columnKey] = pageTotals[col.columnKey];
+        } else {
+          acc[col.columnKey] = "";
+        }
+
+        return acc;
+      }, {})
+      : null;
+  const tableData =
+    hasData && totalRow
+      ? [...data, { ...totalRow, __isTotal: true }]
+      : data;
   if (permissionsLoading) {
     return <Loader />;
   }
@@ -532,7 +629,7 @@ const Template: React.FC = () => {
           </div>
 
           {/* EXPORT */}
-                    <PermissionAwareTooltip allowed={canExport}>
+          <PermissionAwareTooltip allowed={canExport}>
             <div className={!canExport ? "pointer-events-none opacity-50" : ""}>
               <ExportButtons
                 title="ROI Income Report"
@@ -553,7 +650,7 @@ const Template: React.FC = () => {
         <DataTable
           title=""
           columns={columns}
-          data={data}
+          data={tableData}
           customStyles={customStyles}
           pagination
           paginationServer
@@ -580,9 +677,21 @@ const Template: React.FC = () => {
 
             />
           }
+          conditionalRowStyles={[
+            {
+              when: row => row.__isTotal,
+              style: {
+                fontWeight: 700,
+                backgroundColor: "#f1f5f9",
+
+              }
+            }
+          ]}
           noDataComponent={!tableLoading && <OopsNoData />}
-          defaultSortFieldId={1}
+          defaultSortFieldId={sortIndex}
+
         />
+
       </div>
     </div>
   );
