@@ -12,6 +12,11 @@ export type ReportColumn = {
   isDefault: boolean;
   isCurrency: boolean;
   isTotal: boolean;
+
+  /* ✅ NEW */
+  isSort: boolean;
+  isHidden: boolean;
+  sortDirection: "ASC" | "DESC";
 };
 
 interface Props {
@@ -36,6 +41,18 @@ const ReportColumnsConfig: React.FC<Props> = ({
       return copy;
     });
   };
+ const handleSortChange = (index: number, checked: boolean) => {
+  setColumns((prev) =>
+    prev.map((col, i) => ({
+      ...col,
+      isSort: i === index ? checked : false,
+      sortDirection:
+        i === index && checked
+          ? col.sortDirection || "DESC"
+          : col.sortDirection,
+    }))
+  );
+};
 
   if (!columns.length) return null;
 
@@ -47,8 +64,6 @@ const ReportColumnsConfig: React.FC<Props> = ({
         <h5 className="font-semibold text-lg text-black dark:text-white">
           Report Columns
         </h5>
-
-    
       </div>
 
       {/* TABLE */}
@@ -65,6 +80,11 @@ const ReportColumnsConfig: React.FC<Props> = ({
               <th className="px-4 py-3 text-center">Default</th>
               <th className="px-4 py-3 text-center">Currency</th>
               <th className="px-4 py-3 text-center">Total</th>
+
+              {/* ✅ NEW HEADERS */}
+              <th className="px-4 py-3 text-center">Sort</th>
+              <th className="px-4 py-3 text-center">Hidden</th>
+              <th className="px-4 py-3 text-center">Sort Direction</th>
             </tr>
           </thead>
 
@@ -82,11 +102,8 @@ const ReportColumnsConfig: React.FC<Props> = ({
                 <td className="px-4 py-2">
                   <input
                     value={col.columnName}
-                    onChange={(e) =>
-                      updateColumn(i, "columnName", e.target.value)
-                    }
-                    placeholder="Column name"
-                    className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-1 focus:ring-primary-button-bg outline-none"
+                    readOnly
+                    className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 cursor-not-allowed"
                   />
                 </td>
 
@@ -97,8 +114,7 @@ const ReportColumnsConfig: React.FC<Props> = ({
                     onChange={(e) =>
                       updateColumn(i, "displayName", e.target.value)
                     }
-                    placeholder="Display name"
-                    className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-1 focus:ring-primary-button-bg outline-none"
+                    className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 outline-none"
                   />
                 </td>
 
@@ -110,12 +126,12 @@ const ReportColumnsConfig: React.FC<Props> = ({
                     onChange={(e) =>
                       updateColumn(i, "displayOrder", Number(e.target.value))
                     }
-                    className="w-24 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:ring-1 focus:ring-primary-button-bg outline-none"
+                    className="w-24 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 outline-none"
                   />
                 </td>
 
-                {/* CHECKBOXES */}
-                {(["isDefault","isCurrency","isTotal"] as const).map((key) => (
+                {/* OLD CHECKBOXES */}
+                {(["isDefault", "isCurrency", "isTotal"] as const).map((key) => (
                   <td key={key} className="px-4 py-2 text-center">
                     <input
                       type="checkbox"
@@ -127,17 +143,52 @@ const ReportColumnsConfig: React.FC<Props> = ({
                     />
                   </td>
                 ))}
+
+                {/* ✅ isSort */}
+                <td className="px-4 py-2 text-center">
+                  <input
+                    type="checkbox"
+                    checked={col.isSort}
+                    onChange={(e) => handleSortChange(i, e.target.checked)}
+                    className="w-4 h-4 accent-primary-button-bg"
+                  />
+                </td>
+
+                {/* ✅ isHidden */}
+                <td className="px-4 py-2 text-center">
+                  <input
+                    type="checkbox"
+                    checked={col.isHidden}
+                    onChange={(e) =>
+                      updateColumn(i, "isHidden", e.target.checked)
+                    }
+                    className="w-4 h-4 accent-primary-button-bg"
+                  />
+                </td>
+
+                {/* ✅ sortDirection */}
+                <td className="px-4 py-2">
+                  <select
+                    value={col.sortDirection}
+                    onChange={(e) =>
+                      updateColumn(
+                        i,
+                        "sortDirection",
+                      e.target.value as "ASC" | "DESC"
+                      )
+                    }
+                    className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 outline-none"
+                  >
+                    <option value="ASC">ASC</option>
+                    <option value="DESC">DESC</option>
+                  </select>
+                </td>
+
               </tr>
             ))}
           </tbody>
-
         </table>
       </div>
-
-      {/* FOOTER */}
-      {/* <div className="px-5 py-3 text-xs text-gray-400 border-t border-gray-200 dark:border-gray-700">
-        {columns.length} columns detected from query
-      </div> */}
     </div>
   );
 };

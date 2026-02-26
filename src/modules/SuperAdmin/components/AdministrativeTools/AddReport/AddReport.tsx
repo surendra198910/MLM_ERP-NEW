@@ -10,7 +10,6 @@ import type { ReportColumn } from "./ReportColumnsConfig";
 import { ApiService } from "../../../../../services/ApiService";
 import { useNavigate, useParams } from "react-router-dom";
 import { useEffect, useRef } from "react";
-/* ================= TYPES ================= */
 
 interface ReportFormValues {
   reportName: string;
@@ -18,8 +17,6 @@ interface ReportFormValues {
   description: string;
   query: string;
 }
-
-/* ================= VALIDATION ================= */
 
 const schema: Yup.ObjectSchema<ReportFormValues> = Yup.object({
   reportName: Yup.string().required("Report name required"),
@@ -86,14 +83,10 @@ const TextareaField = ({
       name={name}
       placeholder={placeholder}
       value={values[name] || ""}
-      onChange={handleChange}
-      rows={10}
+      readOnly={name === "query"}
       className={`w-full border border-gray-300 dark:border-gray-700 rounded-md px-3 py-3 text-sm
-      bg-white dark:bg-gray-800 dark:text-gray-100
-      focus:outline-none focus:ring-1 focus:ring-primary-button-bg ${errors[name] && touched[name]
-          ? "border-red-500 focus:ring-red-500"
-          : ""
-        }`}
+  bg-gray-100 dark:bg-gray-900 dark:text-gray-100   // ⭐ show disabled style
+  focus:outline-none focus:ring-1 focus:ring-primary-button-bg`}
     />
 
     <div className="min-h-[16px] mt-1">
@@ -147,7 +140,7 @@ const AddReport: React.FC = () => {
       const res = await universalService(payload);
       const result = res?.data ?? res;
 
-      // ❌ SQL error
+
       if (!Array.isArray(result)) {
         Swal.fire("Error", result?.Msg || "Query failed", "error");
         return;
@@ -159,7 +152,7 @@ const AddReport: React.FC = () => {
         return;
       }
 
-      // ⭐ IMPORTANT → merge with existing columns
+
       setColumns(prev => {
         const existingMap = new Map(
           prev.map(c => [c.columnName.toLowerCase(), c])
@@ -170,7 +163,7 @@ const AddReport: React.FC = () => {
 
           if (old) {
             return {
-              ...old, // ⭐ keeps isCurrency / isTotal / isDefault
+              ...old,
               id: i + 1,
               displayOrder: i + 1,
             };
@@ -184,6 +177,9 @@ const AddReport: React.FC = () => {
             isDefault: true,
             isCurrency: false,
             isTotal: false,
+            isSort: false,
+            isHidden: false,
+            sortDirection: "DESC",
           };
         });
 
@@ -249,10 +245,19 @@ const AddReport: React.FC = () => {
               ColumnExpr: c.columnName,
               DisplayName: c.displayName,
               DisplayOrder: c.displayOrder,
-              IsHidden: !c.isDefault,
+
               DefaultVisible: c.isDefault,
               IsCurrency: c.isCurrency,
               IsTotal: c.isTotal,
+
+              // ✅ NEW
+              IsHidden: c.isHidden,
+              IsSort: c.isSort,
+              SortDirection:
+                (c.sortDirection || "ASC").toUpperCase() === "DESC"
+                  ? "DESC"
+                  : "ASC",
+
               TableAlias: null
             }))
           )
@@ -277,9 +282,6 @@ const AddReport: React.FC = () => {
           text: response?.Message || "Report saved successfully",
           confirmButtonText: "OK"
         });
-
-        // ⭐ redirect after success
-        navigate("/superadmin/mlm-setting/manage-report");
 
       } else {
         Swal.fire("Error", response?.Message || "Save failed", "error");
@@ -375,6 +377,38 @@ const AddReport: React.FC = () => {
       Swal.fire("Error", "Execution failed", "error");
     }
   };
+  const fetchProcedureQuery = async (
+    procedureName: string,
+    setFieldValue: any
+  ) => {
+    if (!procedureName) return;
+
+    // ⭐ remove USP_ prefix if exists
+    const cleanProcName = procedureName.startsWith("USP_")
+      ? procedureName.replace(/^USP_/, "")
+      : procedureName;
+
+    try {
+      const payload = {
+        procName: cleanProcName,   // ⭐ use cleaned name
+        Para: JSON.stringify({
+          IsFetchReportColumn: 1
+        })
+      };
+
+      const res = await universalService(payload);
+      const data = res?.data ?? res;
+
+      const query = data?.[0]?.Query;
+
+      if (query) {
+        setFieldValue("query", query);
+      }
+
+    } catch (e) {
+      console.error("Dynamic query fetch failed", e);
+    }
+  };
   useEffect(() => {
     if (!id) return;
 
@@ -415,7 +449,14 @@ const AddReport: React.FC = () => {
           displayOrder: c.DisplayOrder,
           isDefault: c.DefaultVisible,
           isCurrency: c.IsCurrency,
-          isTotal: c.IsTotal
+          isTotal: c.IsTotal,
+
+          // ✅ NEW
+          isSort: c.IsSort ?? false,
+          isHidden: c.IsHidden ?? false,
+          sortDirection: (c.SortDir ?? c.SortDirection ?? "ASC").toUpperCase() === "DESC"
+            ? "DESC"
+            : "ASC",
         }));
 
         setColumns(mapped);
@@ -461,7 +502,7 @@ const AddReport: React.FC = () => {
             className="px-6 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover
           text-white rounded-lg text-sm font-medium transition"
           >
-            {id ? "Edit Report" : "Create Report"}
+            {id ? "Update Report" : "Add Report"}
           </button>
         </div>
       </div>
@@ -478,6 +519,7 @@ const AddReport: React.FC = () => {
           handleSubmit,
           errors,
           touched,
+          setFieldValue,
         }) => (
           <form id="reportForm" onSubmit={handleSubmit} className="space-y-1">
 
@@ -499,19 +541,42 @@ const AddReport: React.FC = () => {
                 touched={touched}
               />
               {/* PROCEDURE NAME */}
-              <InputField
-                label={
-                  <>
-                    Procedure Name<span className="text-red-500">*</span>
-                  </>
-                }
-                name="procedureName"
-                placeholder="Enter procedure name"
-                values={values}
-                handleChange={handleChange}
-                errors={errors}
-                touched={touched}
-              />
+              <div className="flex flex-col">
+                <label className="text-sm text-gray-700 dark:text-gray-300 mb-1">
+                  Procedure Name<span className="text-red-500">*</span>
+                </label>
+
+                <div className="flex gap-2">
+                  <input
+                    name="procedureName"
+                    placeholder="Enter procedure name"
+                    value={values.procedureName || ""}
+                    onChange={handleChange}
+                    className={`${bigInputClasses} flex-1`}
+                  />
+
+                  {/* ⭐ GET QUERY BUTTON */}
+                  <button
+                    type="button"
+                    onClick={() =>
+                      fetchProcedureQuery(values.procedureName, setFieldValue)
+                    }
+                    className="px-4 h-10 rounded-md text-sm font-medium
+      bg-primary-button-bg hover:bg-primary-button-bg-hover
+      text-white whitespace-nowrap"
+                  >
+                    Get Query
+                  </button>
+                </div>
+
+                <div className="min-h-[16px] mt-1">
+                  {errors.procedureName && touched.procedureName && (
+                    <span className="text-xs text-red-600">
+                      {errors.procedureName}
+                    </span>
+                  )}
+                </div>
+              </div>
 
             </div>
 
@@ -534,7 +599,7 @@ const AddReport: React.FC = () => {
                 </>
               }
               name="query"
-              placeholder="Write SQL Query"
+              placeholder="SQL Query"
               values={values}
               handleChange={handleChange}
               errors={errors}
