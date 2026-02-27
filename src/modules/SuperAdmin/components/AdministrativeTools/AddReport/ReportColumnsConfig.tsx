@@ -94,14 +94,15 @@ const ReportColumnsConfig: React.FC<Props> = ({
               <th className="px-4 py-3 w-12">S.No.</th>
               <th className="px-4 py-3">Column Name</th>
               <th className="px-4 py-3">Display Name</th>
-              <th className="px-4 py-3 w-32">Order</th>
+              {/* <th className="px-4 py-3 w-32">Order</th> */}
               <th className="px-4 py-3 text-center">Default</th>
               <th className="px-4 py-3 text-center">Currency</th>
               <th className="px-4 py-3 text-center">Total</th>
 
               {/* ✅ NEW HEADERS */}
-              <th className="px-4 py-3 text-center">Sort</th>
+              
               <th className="px-4 py-3 text-center">Hidden</th>
+              <th className="px-4 py-3 text-center">Sort</th>
               <th className="px-4 py-3 text-center">Sort Direction</th>
               <th className="px-4 py-3 w-16 text-right">Move</th>
             </tr>
@@ -150,9 +151,8 @@ const ReportColumnsConfig: React.FC<Props> = ({
                               className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 outline-none"
                             />
                           </td>
-
                           {/* ORDER */}
-                          <td className="px-4 py-2">
+                          {/* <td className="px-4 py-2">
                             <input
                               type="number"
                               value={col.displayOrder}
@@ -162,7 +162,7 @@ const ReportColumnsConfig: React.FC<Props> = ({
                               }
                               className="w-24 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 outline-none"
                             />
-                          </td>
+                          </td> */}
 
                           {(["isDefault", "isCurrency", "isTotal"] as const).map((key) => (
                             <td key={key} className="px-4 py-2 text-center">
@@ -177,20 +177,7 @@ const ReportColumnsConfig: React.FC<Props> = ({
                               />
                             </td>
                           ))}
-
-                          {/* SORT */}
-                          <td className="px-4 py-2 text-center">
-                            <input
-                              type="checkbox"
-                              checked={col.isSort}
-                              disabled={col.isHidden}
-                              onChange={(e) =>
-                                updateColumn(i, "isSort", e.target.checked)
-                              }
-                              className="w-4 h-4 accent-primary-button-bg"
-                            />
-                          </td>
-
+                         
                           {/* HIDDEN */}
                           <td className="px-4 py-2 text-center">
                             <input
@@ -199,6 +186,18 @@ const ReportColumnsConfig: React.FC<Props> = ({
                              
                               onChange={(e) =>
                                 updateColumn(i, "isHidden", e.target.checked)
+                              }
+                              className="w-4 h-4 accent-primary-button-bg"
+                            />
+                          </td>
+                           {/* SORT */}
+                          <td className="px-4 py-2 text-center">
+                            <input
+                              type="checkbox"
+                              checked={col.isSort}
+                              disabled={col.isHidden}
+                              onChange={(e) =>
+                                updateColumn(i, "isSort", e.target.checked)
                               }
                               className="w-4 h-4 accent-primary-button-bg"
                             />

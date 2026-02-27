@@ -31,7 +31,7 @@ const LandingIllustration: React.FC<Props> = ({
         
 
         {/* DESCRIPTION */}
-        <div className="text-gray-600 dark:text-gray-300 leading-relaxed mb-8 mt-15 text-[15px] space-y-2">
+        <div className="text-gray-600 dark:text-gray-300 leading-relaxed mb-8 mt-10 text-[15px] space-y-2">
           {/* TITLE */}
         <h1 className="text-3xl font-semibold text-black dark:text-white mb-4 leading-tight">
           {title}
