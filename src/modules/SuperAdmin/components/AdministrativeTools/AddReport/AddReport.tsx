@@ -233,6 +233,7 @@ const AddReport: React.FC = () => {
         Para: JSON.stringify({
           ActionMode: actionMode,
           ReportId: reportId || 0,
+          IsActive : true,
           ReportName: values.reportName,
           Description: values.description,
           Query: values.query,
