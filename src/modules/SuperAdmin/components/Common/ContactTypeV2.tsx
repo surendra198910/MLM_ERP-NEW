@@ -31,7 +31,7 @@ const Template: React.FC = () => {
   const [totalRows, setTotalRows] = useState(0);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
-  const [sortIndex, setSortIndex] = useState(1);
+  const [sortColumnKey, setSortColumnKey] = useState<string>("");
   const [editLoading, setEditLoading] = useState(false);
   const [sortDirection, setSortDirection] = useState("ASC");
   const [visibleColumns, setVisibleColumns] = useState<any[]>([]);
@@ -106,9 +106,9 @@ const Template: React.FC = () => {
     }
   };
   const handleSort = (column: any, direction: string) => {
-    setSortIndex(column.columnIndex);
+    setSortColumnKey(column.columnKey);   // ⭐ send column name
     setSortDirection(direction.toUpperCase());
-    setInitialSortReady(true); // ensures fetch triggers
+    setInitialSortReady(true);
   };
   const handlePageChange = (p) => {
     setPage(p);
@@ -144,11 +144,7 @@ const Template: React.FC = () => {
         const defaultSortCol = visibleSorted.find((c: any) => c.isSort);
 
         if (defaultSortCol) {
-          const index = visibleSorted.findIndex(
-            (c: any) => c.ColumnKey === defaultSortCol.ColumnKey
-          ) + 1;
-
-          setSortIndex(index || 1);
+          setSortColumnKey(defaultSortCol.ColumnKey);
           setSortDirection(
             (defaultSortCol.SortDir || "ASC").toUpperCase() === "DESC"
               ? "DESC"
@@ -165,7 +161,7 @@ const Template: React.FC = () => {
         const reactCols = data
           .filter((c: any) => c.IsVisible === true)
           .sort((a: any, b: any) => a.ColumnOrder - b.ColumnOrder)
-          .map((c: any) => ({
+          .map((c: any, colIndex: number) => ({
             id: c.ColumnOrder,
             name: c.DisplayName,
             sortable: true,
@@ -181,8 +177,8 @@ const Template: React.FC = () => {
               // ⭐ TOTAL ROW
               if (row.__isTotal) {
 
-                // 👉 show TOTAL text in first column
-                if (index === 0) return "Total";
+                // 👉 show TOTAL label in first visible column
+                if (colIndex === 0) return "Total";
 
                 if (c.IsTotal) {
                   const value = row[c.ColumnKey] || 0;
@@ -254,7 +250,7 @@ const Template: React.FC = () => {
         Criteria: searchInput,
         Page: page,
         PageSize: 0,
-        SortIndex: sortIndex,
+        SortIndexColumn: sortColumnKey || "",
         SortDir: sortDirection,
       }),
     };
@@ -328,7 +324,7 @@ const Template: React.FC = () => {
           Criteria: options?.criteria ?? searchInput ?? "",
           Page: pageToUse,
           PageSize: perPageToUse,
-          SortIndex: sortIndex,
+          SortIndexColumn: sortColumnKey || "",
           SortDir: sortDirection,
         }),
       };
@@ -389,13 +385,23 @@ const Template: React.FC = () => {
   useEffect(() => {
     if (!showTable || !hasVisitedTable) return;
 
-    fetchGridData();
+    // wait until default sort is ready
+    if (!sortColumnKey && initialSortReady) {
+      fetchGridData();
+      return;
+    }
+
+    if (sortColumnKey) {
+      fetchGridData();
+    }
+
   }, [
     page,
     perPage,
-    sortIndex,
+    sortColumnKey,
     sortDirection,
-    searchTrigger
+    searchTrigger,
+    initialSortReady
   ]);
   const applySearch = () => {
     if (!SmartActions.canSearch(formName)) return;
@@ -693,7 +699,6 @@ const Template: React.FC = () => {
   border border-gray-200 dark:border-gray-700
   rounded-lg overflow-hidden">
             <DataTable
-              title=""
               columns={columns}
               data={tableData}
               customStyles={customStyles}
@@ -711,12 +716,15 @@ const Template: React.FC = () => {
               onChangeRowsPerPage={handlePerRowsChange}
               onSort={handleSort}
               sortServer
+              defaultSortFieldId={
+                columns.find(col => col.columnKey === sortColumnKey)?.id
+              }
+              defaultSortAsc={sortDirection === "ASC"}
               progressPending={tableLoading}
               progressComponent={
                 <TableSkeleton
                   rows={perPage}
                   columns={columns.length || 8}
-
                 />
               }
               conditionalRowStyles={[
@@ -729,7 +737,6 @@ const Template: React.FC = () => {
                 }
               ]}
               noDataComponent={!tableLoading && <OopsNoData />}
-              defaultSortFieldId={sortIndex}
             />
           </div>
         </div>

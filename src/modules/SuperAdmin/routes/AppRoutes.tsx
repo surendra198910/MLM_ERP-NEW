@@ -199,7 +199,7 @@ const AppRoutes = () => {
               element={<AddCompany />}
             />
             <Route
-              path="/superadmin/company/manage-company/branch"
+              path="/superadmin/company/branch"
               element={<ManageCompany />}
             />
             <Route

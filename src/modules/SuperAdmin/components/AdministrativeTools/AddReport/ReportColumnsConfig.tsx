@@ -16,11 +16,13 @@ export type ReportColumn = {
   columnName: string;
   displayName: string;
   displayOrder: number;
+
+  columnIndex: number;   // ⭐ NEW (IMPORTANT)
+
   isDefault: boolean;
   isCurrency: boolean;
   isTotal: boolean;
 
-  /* ✅ NEW */
   isSort: boolean;
   isHidden: boolean;
   sortDirection: "ASC" | "DSC";
@@ -64,10 +66,10 @@ const ReportColumnsConfig: React.FC<Props> = ({
     const [moved] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, moved);
 
-    // 🔥 update displayOrder automatically
     const updated = items.map((it, idx) => ({
       ...it,
       displayOrder: idx + 1,
+    
     }));
 
     setColumns(updated);
@@ -100,7 +102,7 @@ const ReportColumnsConfig: React.FC<Props> = ({
               <th className="px-4 py-3 text-center">Total</th>
 
               {/* ✅ NEW HEADERS */}
-              
+
               <th className="px-4 py-3 text-center">Hidden</th>
               <th className="px-4 py-3 text-center">Sort</th>
               <th className="px-4 py-3 text-center">Sort Direction</th>
@@ -177,20 +179,20 @@ const ReportColumnsConfig: React.FC<Props> = ({
                               />
                             </td>
                           ))}
-                         
+
                           {/* HIDDEN */}
                           <td className="px-4 py-2 text-center">
                             <input
                               type="checkbox"
                               checked={col.isHidden}
-                             
+
                               onChange={(e) =>
                                 updateColumn(i, "isHidden", e.target.checked)
                               }
                               className="w-4 h-4 accent-primary-button-bg"
                             />
                           </td>
-                           {/* SORT */}
+                          {/* SORT */}
                           <td className="px-4 py-2 text-center">
                             <input
                               type="checkbox"
