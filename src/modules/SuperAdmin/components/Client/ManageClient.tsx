@@ -27,7 +27,7 @@ const Template: React.FC = () => {
     const [totalRows, setTotalRows] = useState(0);
     const [page, setPage] = useState(1);
     const [perPage, setPerPage] = useState(10);
-    const [sortIndex, setSortIndex] = useState(1);
+    const [sortColumnKey, setSortColumnKey] = useState<string>("");
     const [sortDirection, setSortDirection] = useState("ASC");
     const [visibleColumns, setVisibleColumns] = useState<any[]>([]);
     const [columnsReady, setColumnsReady] = useState(false);
@@ -96,9 +96,9 @@ const Template: React.FC = () => {
         }
     };
     const handleSort = (column: any, direction: string) => {
-        setSortIndex(column.columnIndex);
+        setSortColumnKey(column.columnKey);  // ⭐ send column name
         setSortDirection(direction.toUpperCase());
-        setInitialSortReady(true); // ensures fetch triggers
+        setInitialSortReady(true);
     };
     const handlePageChange = (p) => {
         setPage(p);
@@ -134,11 +134,7 @@ const Template: React.FC = () => {
                 const defaultSortCol = visibleSorted.find((c: any) => c.isSort);
 
                 if (defaultSortCol) {
-                    const index = visibleSorted.findIndex(
-                        (c: any) => c.ColumnKey === defaultSortCol.ColumnKey
-                    ) + 1;
-
-                    setSortIndex(index || 1);
+                    setSortColumnKey(defaultSortCol.ColumnKey);
                     setSortDirection(
                         (defaultSortCol.SortDir || "ASC").toUpperCase() === "DESC"
                             ? "DESC"
@@ -155,12 +151,12 @@ const Template: React.FC = () => {
                 const reactCols = data
                     .filter((c: any) => c.IsVisible === true)
                     .sort((a: any, b: any) => a.ColumnOrder - b.ColumnOrder)
-                    .map((c: any, index: number) => ({
-                        id: index + 1,
+                    .map((c: any) => ({
+                        id: c.ColumnOrder,                // ⭐ use DB order
                         name: c.DisplayName,
                         sortable: true,
                         columnKey: c.ColumnKey,
-                        columnIndex: index + 1,
+                        columnIndex: c.ColumnOrder,
                         isCurrency: c.IsCurrency,
                         isTotal: c.IsTotal,
 
@@ -239,7 +235,7 @@ const Template: React.FC = () => {
                 Criteria: searchInput,
                 Page: page,
                 PageSize: 0,
-                SortIndex: sortIndex,
+                SortIndexColumn: sortColumnKey || "",
                 SortDir: sortDirection,
             }),
         };
@@ -257,7 +253,7 @@ const Template: React.FC = () => {
     };
 
     const fetchGridData = async (options?: any) => {
-        
+
         const pageToUse = options?.pageOverride ?? page;
         const perPageToUse = options?.perPageOverride ?? perPage;
 
@@ -271,7 +267,7 @@ const Template: React.FC = () => {
                     Criteria: options?.criteria ?? searchInput ?? "",
                     Page: pageToUse,
                     PageSize: perPageToUse,
-                    SortIndex: sortIndex,
+                    SortIndexColumn: sortColumnKey || "",
                     SortDir: sortDirection,
                 }),
             };
@@ -336,10 +332,9 @@ const Template: React.FC = () => {
     }, [
         page,
         perPage,
-        sortIndex,
+        sortColumnKey,
         sortDirection,
         searchTrigger
-    
     ]);
     const applySearch = () => {
         if (!SmartActions.canSearch(formName)) return;
@@ -404,7 +399,7 @@ const Template: React.FC = () => {
 
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:w-auto w-full">
                     <div className="flex flex-col sm:flex-row items-center gap-3 flex-wrap justify-end">
-                       
+
                         {/* 1. Filter Dropdown (Exactly from your design) */}
                         <div className="relative w-full sm:w-[180px]">
                             <PermissionAwareTooltip
@@ -553,7 +548,7 @@ const Template: React.FC = () => {
                             Search Client using filters above.<br />
                             Manage records, export reports and analyse performance.<br />
                             <span className="font-medium">OR</span><br />
-              Click add button to add a new client.
+                            Click add button to add a new client.
                         </>
                     }
                 />
@@ -628,7 +623,6 @@ const Template: React.FC = () => {
   border border-gray-200 dark:border-gray-700
   rounded-lg overflow-hidden">
                         <DataTable
-                            title=""
                             columns={columns}
                             data={tableData}
                             customStyles={customStyles}
@@ -646,12 +640,15 @@ const Template: React.FC = () => {
                             onChangeRowsPerPage={handlePerRowsChange}
                             onSort={handleSort}
                             sortServer
+                            defaultSortFieldId={
+                                columns.find(col => col.columnKey === sortColumnKey)?.id
+                            }
+                            defaultSortAsc={sortDirection === "ASC"}
                             progressPending={tableLoading}
                             progressComponent={
                                 <TableSkeleton
                                     rows={perPage}
                                     columns={columns.length || 8}
-
                                 />
                             }
                             conditionalRowStyles={[
@@ -664,7 +661,6 @@ const Template: React.FC = () => {
                                 }
                             ]}
                             noDataComponent={!tableLoading && <OopsNoData />}
-                            defaultSortFieldId={sortIndex}
                         />
                     </div>
                 </div>

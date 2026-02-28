@@ -166,6 +166,7 @@ const AddReport: React.FC = () => {
               ...old,
               id: i + 1,
               displayOrder: i + 1,
+              columnIndex: c.ColumnIndex,  // ✅ preserve original
             };
           }
 
@@ -174,6 +175,9 @@ const AddReport: React.FC = () => {
             columnName: c.name,
             displayName: c.name,
             displayOrder: i + 1,
+
+            columnIndex: c.ColumnIndex,   // ⭐ VERY IMPORTANT
+
             isDefault: true,
             isCurrency: false,
             isTotal: false,
@@ -233,7 +237,7 @@ const AddReport: React.FC = () => {
         Para: JSON.stringify({
           ActionMode: actionMode,
           ReportId: reportId || 0,
-          IsActive : true,
+          IsActive: true,
           ReportName: values.reportName,
           Description: values.description,
           Query: values.query,
@@ -241,19 +245,20 @@ const AddReport: React.FC = () => {
           USPName: values.procedureName,
 
           ColumnJson: JSON.stringify(
-            columns.map(c => ({
+            columns.map((c) => ({
               ColumnName: c.columnName,
               ColumnExpr: c.columnName,
               DisplayName: c.displayName,
+
               DisplayOrder: c.displayOrder,
+              ColumnIndex: c.columnIndex,   // ⭐ USE ORIGINAL / SWAPPED VALUE
 
               DefaultVisible: c.isDefault,
               IsCurrency: c.isCurrency,
               IsTotal: c.isTotal,
-
-              // ✅ NEW
               IsHidden: c.isHidden,
               IsSort: c.isSort,
+
               SortDirection:
                 (c.sortDirection || "ASC").toUpperCase() === "DESC"
                   ? "DESC"
@@ -318,18 +323,18 @@ const AddReport: React.FC = () => {
       const res = await universalService(payload);
       const data = res?.data ?? res;
 
-      /* ⭐ STATUS RESPONSE */
-      if (Array.isArray(data) && data[0]?.Status !== undefined) {
+      // /* ⭐ STATUS RESPONSE */
+      // if (Array.isArray(data)) {
 
-        const response = data[0];
+      //   const response = data[0];
 
-        if (response.Status === 1 || response.Status === "1") {
-          Swal.fire("Success", response.Message || "Query executed", "success");
-        } else {
-          Swal.fire("Error", response.Message || "Query failed", "error");
-        }
-        return;
-      }
+      //   if (response.Status === 1 || response.Status === "1") {
+      //     Swal.fire("Success", response.Message || "Query executed", "success");
+      //   } else {
+      //     Swal.fire("Error", response.Message || "Query failed", "error");
+      //   }
+      //   return;
+      // }
 
       /* ⭐ ROWS PREVIEW */
       if (Array.isArray(data)) {

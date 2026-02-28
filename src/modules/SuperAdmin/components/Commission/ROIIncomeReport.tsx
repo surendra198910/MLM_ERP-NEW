@@ -30,7 +30,7 @@ const Template: React.FC = () => {
   const [totalRows, setTotalRows] = useState(0);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
-  const [sortIndex, setSortIndex] = useState(1);
+  const [sortIndex, setSortIndex] = useState("");
   const [sortDirection, setSortDirection] = useState("ASC");
   const [visibleColumns, setVisibleColumns] = useState<any[]>([]);
   const [stats, setStats] = useState({});
@@ -80,20 +80,19 @@ const Template: React.FC = () => {
       const response = await universalService(payload);
       const data = response?.data ?? response;
 
-      // ❌ Invalid or empty response → deny access
       if (!Array.isArray(data)) {
         setHasPageAccess(false);
         return;
       }
 
-      // 🔍 Find permission for THIS form/page
+
       const pagePermission = data.find(
         (p) =>
           String(p.FormNameWithExt).trim().toLowerCase() ===
           formName?.trim().toLowerCase(),
       );
 
-      // ❌ No permission OR empty Action
+   
       if (
         !pagePermission ||
         !pagePermission.Action ||
@@ -114,9 +113,9 @@ const Template: React.FC = () => {
     }
   };
   const handleSort = (column: any, direction: string) => {
-    setSortIndex(column.columnIndex);
+    if (!column?.columnKey) return;
+    setSortIndex(column.columnKey);
     setSortDirection(direction.toUpperCase());
-    setInitialSortReady(true); // ensures fetch triggers
   };
   const handlePageChange = (p) => {
     setPage(p);
@@ -156,8 +155,8 @@ const Template: React.FC = () => {
           const index = visibleSorted.findIndex(
             (c: any) => c.ColumnKey === defaultSortCol.ColumnKey
           ) + 1;
-
-          setSortIndex(index || 1);
+     
+          setSortIndex("");
           setSortDirection(
             (defaultSortCol.SortDir || "ASC").toUpperCase() === "DESC"
               ? "DESC"
@@ -179,7 +178,7 @@ const Template: React.FC = () => {
             name: c.DisplayName,
             sortable: true,
             columnKey: c.ColumnKey,
-            columnIndex: index + 1,
+            columnIndex: c.ColumnKey,
             isCurrency: c.IsCurrency,
             isTotal: c.IsTotal,
 
@@ -217,7 +216,7 @@ const Template: React.FC = () => {
         const actionColumn = {
           name: "Action",
           cell: (row: any) => {
-            if (row.__isTotal) return null;   // ⭐ hide buttons on total row
+            if (row.__isTotal) return null;  
 
             return (
               <ActionCell
@@ -258,7 +257,7 @@ const Template: React.FC = () => {
         Criteria: searchInput,
         Page: page,
         PageSize: 0,
-        SortIndex: sortIndex,
+        SortIndexColumn: sortIndex,
         SortDir: sortDirection,
 
         /* ⭐ DATE FILTER */
@@ -311,7 +310,7 @@ const Template: React.FC = () => {
           Criteria: options?.criteria ?? searchInput ?? "",
           Page: pageToUse,
           PageSize: perPageToUse,
-          SortIndex: sortIndex,
+          SortIndexColumn: sortIndex,
           SortDir: sortDirection,
 
           FromDate: range.from || null,
@@ -377,33 +376,22 @@ const Template: React.FC = () => {
 
     fetchGridData();
   }, [
-    page,
-    perPage,
-    sortIndex,
-    sortDirection,
-    searchTrigger,
-    dateRange
-  ]);
+  page,
+  perPage,
+  sortIndex,
+  sortDirection,
+  searchTrigger,
+  dateRange
+]);
   const applySearch = () => {
     if (!SmartActions.canSearch(formName)) return;
 
     setShowTable(true);
     setHasVisitedTable(true);
     setPage(1);
-
     setSearchTrigger((p) => p + 1);
   };
-  const resetSearch = () => {
-    setSearchInput("");
-    setFilterColumn("");
-    setPage(1);
 
-    // keep table visible
-    setShowTable(true);
-    setHasVisitedTable(true);
-
-    setSearchTrigger((p) => p + 1);
-  };
   const hasData = data.length > 0;
   useEffect(() => {
     fetchFormPermissions();
