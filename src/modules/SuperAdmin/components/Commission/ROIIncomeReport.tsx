@@ -16,8 +16,8 @@ import { useLocation } from "react-router-dom";
 import Loader from "../../common/Loader";
 import AccessRestricted from "../../common/AccessRestricted";
 import ActionCell from "../../../../components/CommonFormElements/DataTableComponents/ActionCell";
-import { useCurrency } from "../../context/CurrencyContext";
 import LandingIllustration from "../../../../components/CommonFormElements/LandingIllustration/LandingIllustration";
+
 const Template: React.FC = () => {
   const [searchInput, setSearchInput] = useState("");
   const [filterColumn, setFilterColumn] = useState("");
@@ -40,7 +40,6 @@ const Template: React.FC = () => {
   const [permissionsLoading, setPermissionsLoading] = useState(true);
   const [hasPageAccess, setHasPageAccess] = useState(true);
   const [initialSortReady, setInitialSortReady] = useState(false);
-  const { currency } = useCurrency();
   const location = useLocation();
   const path = location.pathname;
   const formName = path.split("/").pop();
@@ -55,12 +54,12 @@ const Template: React.FC = () => {
     preset: "thisMonth",
   });
 
-  const statsConfig = [
-    { key: "LifetimeIncome", title: "Lifetime Income", icon: "payments", variant: "income" },
-    { key: "ThisMonthIncome", title: "This Month Income", icon: "calendar_month", variant: "income" },
-    { key: "LastMonthIncome", title: "Last Month Income", icon: "history", variant: "income" },
-    { key: "TodayIncome", title: "Today Income", icon: "today", variant: "highlight" },
-  ];
+ const statsConfig = [
+  { key: "LifetimeIncome", title: "Lifetime Income", icon: "payments", showCurrency: true },
+  { key: "ThisMonthIncome", title: "This Month Income", icon: "calendar_month", showCurrency: true },
+  { key: "LastMonthIncome", title: "Last Month Income", icon: "history", showCurrency: true },
+  { key: "TodayIncome", title: "Today Income", icon: "today", showCurrency: true }, 
+];
   const fetchFormPermissions = async () => {
     try {
       setPermissionsLoading(true);

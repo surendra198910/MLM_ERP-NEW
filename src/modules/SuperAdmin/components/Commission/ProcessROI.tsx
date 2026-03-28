@@ -70,24 +70,28 @@ const Template: React.FC = () => {
       title: "UnProcessed ROI",
       icon: "payments",
       variant: "income",
+      showCurrency: true
     },
     {
       key: "TotalIncome",
       title: "Total Income",
       icon: "calendar_month",
       variant: "income",
+      showCurrency: true
     },
     {
       key: "ThisMonthIncome",
       title: "This Month Income",
       icon: "history",
       variant: "income",
+      showCurrency: true
     },
     {
       key: "LastMonthIncome",
       title: "Last Month Income",
       icon: "today",
       variant: "highlight",
+      showCurrency: true
     },
   ];
   const fetchFormPermissions = async () => {

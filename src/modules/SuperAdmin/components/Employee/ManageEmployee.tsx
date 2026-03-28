@@ -249,7 +249,7 @@ const Template: React.FC = () => {
   const handleEdit = (row: any) => {
     if (!row?.EmployeeId) return;
 
-    navigate(`/superadmin/employee/edit/${row.EmployeeId}`);
+    navigate(`/superadmin/employee/add-employee/${row.EmployeeId}`);
   };
   const exportColumns = columns
     .filter(c => c.columnKey)

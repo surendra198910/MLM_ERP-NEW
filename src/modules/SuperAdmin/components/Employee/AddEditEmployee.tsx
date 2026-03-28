@@ -22,12 +22,20 @@ import * as Yup from "yup";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import Swal from "sweetalert2";
+//components
 import { ApiService } from "../../../../services/ApiService";
-import CropperModal from "../Cropper/Croppermodel";
 import { PostService } from "../../../../services/PostService";
-import { SmartActions } from "../Security/SmartAction";
+import { SmartActions } from "../Security/SmartActionWithFormName";
 import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
+import Loader from "../../common/Loader";
+import AccessRestricted from "../../common/AccessRestricted";
 import Pagination from "../../common/Pagination";
+// import { SmartActions } from "../../../../DT_components/SmartActionWithFormName";
+// import PermissionAwareTooltip from "../../../../DT_components/PermissionAwareTooltip";
+// import Loader from "../../../../DT_components/Loader";
+// import AccessRestricted from "../../../../DT_components/AccessRestricted";
+// import Pagination from "../../../../common/Pagination";
+import CropperModal from "../Cropper/Croppermodel";
 
 // ----------------------------------------------------------------------
 // TYPES
@@ -440,9 +448,11 @@ export default function AddEmployee() {
   const IMAGE_PREVIEW_URL = import.meta.env.VITE_IMAGE_PREVIEW_URL;
   const DOCUMENT_PREVIEW_URL = import.meta.env.VITE_IMAGE_PREVIEW_URL;
 
-  const CURRENT_FORM_ID = 4;
-  const canAddEmployee = SmartActions.canAdd(CURRENT_FORM_ID);
-  const canEditEmployee = SmartActions.canEdit(CURRENT_FORM_ID);
+  const location = window.location.pathname;
+  const segments = location.split("/").filter(Boolean);
+  const last = segments[segments.length - 1];
+  const isId = !isNaN(Number(last));
+  const formName = isId ? segments[segments.length - 2] : last;
 
   const openDocument = (fileName?: string) => {
     if (!fileName) return;
@@ -461,7 +471,7 @@ export default function AddEmployee() {
   // UPDATED: Added dark mode classes for bg, border, text, placeholder
   const bigInputClasses =
     "w-full border border-gray-200 rounded-md px-3 py-2 text-sm h-10 " +
-    "placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all " +
+    "placeholder-gray-400 focus:outline-none focus:border-primary-button-bg focus:ring-1 focus:ring-primary-button-bg transition-all " +
     "bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500";
 
   const normalizeDDL = useCallback(
@@ -505,8 +515,8 @@ export default function AddEmployee() {
       const payload = {
         procName: "AssignForm",
         Para: JSON.stringify({
-          ActionMode: "Forms",
-          FormCategoryId: 3,
+          ActionMode: "GetForms", // ✅ FIXED
+          FormName: formName, // ✅ IMPORTANT
           EmployeeId: employeeId,
         }),
       };
@@ -514,30 +524,25 @@ export default function AddEmployee() {
       const response = await universalService(payload);
       const data = response?.data ?? response;
 
-      // ❌ Invalid response
       if (!Array.isArray(data)) {
         setHasPageAccess(false);
         return;
       }
 
-      // 🔍 Find THIS PAGE permission
       const pagePermission = data.find(
         (p) =>
-          Number(p.FormId) === CURRENT_FORM_ID &&
-          Number(p.FormCategoryId) === 3,
+          String(p.FormNameWithExt).trim().toLowerCase() ===
+          formName?.trim().toLowerCase(),
       );
 
-      // ❌ No Action = No Access
-      if (!pagePermission || !pagePermission.Action?.trim()) {
+      if (!pagePermission || !pagePermission.Action) {
         setHasPageAccess(false);
         return;
       }
 
-      // ✅ Permission OK
       SmartActions.load(data);
       setHasPageAccess(true);
     } catch (err) {
-      console.error("Company permission fetch failed", err);
       setHasPageAccess(false);
     } finally {
       setPermissionLoading(false);
@@ -1229,7 +1234,7 @@ export default function AddEmployee() {
               setDocValues({});
               setTab(0);
             }
-            navigate("/superadmin/employee/manage-employee");
+            navigate("/hrms/employee/manage-employee");
           }
         });
       } else {
@@ -1355,7 +1360,7 @@ export default function AddEmployee() {
                 }}
                 className="
         px-3 py-2 rounded-md
-        bg-primary-500 hover:bg-primary-600
+        bg-primary-button-bg hover:bg-primary-button-bg-hover
         text-white text-sm
       "
               >
@@ -1534,7 +1539,7 @@ export default function AddEmployee() {
             ))}
           </select>
           {loading && (
-            <div className="absolute right-3 top-3 w-4 h-4 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
+            <div className="absolute right-3 top-3 w-4 h-4 border-2 border-primary-button-bg border-t-transparent rounded-full animate-spin" />
           )}
         </div>
         {errors?.[name] && touched?.[name] && (
@@ -1578,7 +1583,7 @@ export default function AddEmployee() {
               value={opt.value}
               checked={values[name] === opt.value}
               onChange={() => setFieldValue(name, opt.value)}
-              className="w-4 h-4 text-primary-500 focus:ring-primary-500"
+              className="w-4 h-4 text-primary-button-bg focus:ring-primary-button-bg"
             />
             {opt.label}
           </label>
@@ -1672,87 +1677,9 @@ export default function AddEmployee() {
   }
 
   if (permissionLoading) {
-    return (
-      <div className="flex items-center justify-center min-h-[400px] bg-white dark:bg-[#0c1427] rounded-md">
-        <div className="flex flex-col items-center gap-3">
-          <div className="theme-loader"></div>
-          {/* <p className="text-sm text-gray-500">
-          Loading permissions...
-        </p> */}
-        </div>
-      </div>
-    );
+    return <Loader />;
   }
-  if (!hasPageAccess) {
-    return (
-      <div
-        className="w-full bg-white dark:bg-[#0c1427] rounded-md border border-gray-200 
-                 dark:border-[#172036] p-25 flex flex-col md:flex-row 
-                 items-center md:items-start justify-center md:gap-x-40 min-h-[450px]"
-      >
-        {/* LEFT SECTION */}
-        <div className="md:max-w-md md:px-3 px-0 py-14">
-          <h1 className="text-3xl font-semibold text-black dark:text-white mb-4">
-            Access Restricted
-          </h1>
-
-          <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-6 text-[15px]">
-            You do not have the necessary permissions to view this module.
-            <br />
-            Please contact your administrator to request access or switch to an
-            authorized account.
-          </p>
-        </div>
-
-        {/* RIGHT ILLUSTRATION (Primary Themed Shield) */}
-        <div className="hidden md:flex">
-          <svg
-            viewBox="0 0 512 512"
-            className="w-[320px] h-auto opacity-100 select-none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
-            {/* Main Shield - Primary 500 */}
-            <path
-              d="M256 40C150 40 60 80 60 180C60 300 256 472 256 472C256 472 452 300 452 180C452 80 362 40 256 40Z"
-              className="fill-primary-500"
-            />
-
-            {/* Inner Highlight - Primary 400 */}
-            <path
-              d="M256 75C185 75 105 105 105 180C105 265 256 405 256 405C256 405 407 265 407 180C407 105 327 75 256 75Z"
-              className="fill-primary-400"
-            />
-
-            {/* White Padlock Body */}
-            <rect
-              x="186"
-              y="215"
-              width="140"
-              height="105"
-              rx="12"
-              className="fill-white"
-            />
-
-            {/* Padlock Shackle */}
-            <path
-              d="M210 215V175C210 149.5 230.5 129 256 129C281.5 129 302 149.5 302 175V215"
-              fill="none"
-              stroke="white"
-              strokeWidth="22"
-              strokeLinecap="round"
-            />
-
-            {/* Keyhole detail - Primary 500 */}
-            <circle cx="256" cy="265" r="10" className="fill-primary-500" />
-            <path
-              d="M251 270L261 270L264 290L248 290Z"
-              className="fill-primary-500"
-            />
-          </svg>
-        </div>
-      </div>
-    );
-  }
+  if (!hasPageAccess) return <AccessRestricted />;
 
   return (
     <Formik
@@ -1833,25 +1760,30 @@ export default function AddEmployee() {
                 <PermissionAwareTooltip
                   allowed={
                     !permissionLoading &&
-                    (isEditMode ? canEditEmployee : canAddEmployee)
+                    (isEditMode
+                      ? SmartActions.canEdit(formName)
+                      : SmartActions.canAdd(formName))
                   }
-                  allowedText="Submit Company"
                   deniedText="You do not have permission"
                 >
                   <button
                     type="submit"
                     disabled={
                       permissionLoading ||
-                      (isEditMode ? !canEditEmployee : !canAddEmployee)
+                      (isEditMode
+                        ? !SmartActions.canEdit(formName)
+                        : !SmartActions.canAdd(formName))
                     }
-                    className={`px-4 py-1.5 rounded text-sm font-medium flex items-center gap-2
-      ${
-        permissionLoading || (isEditMode ? !canEditEmployee : !canAddEmployee)
-          ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-          : "bg-primary-500 hover:bg-primary-600 text-primary-50"
-      }`}
+                    className={`px-4 py-1.5 rounded text-sm font-medium ${
+                      permissionLoading ||
+                      (isEditMode
+                        ? !SmartActions.canEdit(formName)
+                        : !SmartActions.canAdd(formName))
+                        ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                        : "bg-primary-button-bg hover:bg-primary-button-bg-hover text-white"
+                    }`}
                   >
-                    Submit
+                    {isEditMode ? "Update":"Submit"}
                   </button>
                 </PermissionAwareTooltip>
               </div>
@@ -1888,7 +1820,7 @@ export default function AddEmployee() {
                     </div>
                     {!loadingLogo && (
                       <>
-                        <label className="absolute -top-3 -right-3 w-9 h-9 flex items-center justify-center bg-white dark:bg-gray-800 dark:text-primary-400 text-primary-500 rounded-full shadow-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-all z-10 border border-gray-100 dark:border-gray-600">
+                        <label className="absolute -top-3 -right-3 w-9 h-9 flex items-center justify-center bg-white dark:bg-gray-800 dark:text-primary-button-bg-hover text-primary-button-bg rounded-full shadow-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-all z-10 border border-gray-100 dark:border-gray-600">
                           <FaPencilAlt size={14} />
                           <input
                             type="file"
@@ -2029,7 +1961,7 @@ export default function AddEmployee() {
                       // Added: flex-shrink-0 to prevent buttons from shrinking
                       className={`pb-2 text-sm font-medium transition-colors flex items-center gap-2 flex-shrink-0 ${
                         tab === i
-                          ? "border-b-2 border-primary-500 text-primary-500"
+                          ? "border-b-2 border-primary-button-bg text-primary-button-bg"
                           : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border-b-2 border-transparent"
                       }`}
                     >
@@ -2129,7 +2061,7 @@ export default function AddEmployee() {
                           setFieldValue("currentPincode", "");
                         }
                       }}
-                      className="w-4 h-4 text-primary-500 focus:ring-primary-500"
+                      className="w-4 h-4 text-primary-button-bg focus:ring-primary-button-bg"
                     />
                     <label className="text-sm text-gray-600 dark:text-gray-300">
                       Same as permanent address
@@ -2264,7 +2196,7 @@ export default function AddEmployee() {
           w-full h-10 pl-11 pr-3
           border border-gray-200 rounded-l-md
           text-sm placeholder-gray-400
-          focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500
+          focus:outline-none focus:border-primary-button-bg focus:ring-1 focus:ring-primary-button-bg
           bg-white dark:bg-gray-800
           dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500
         "
@@ -2273,7 +2205,7 @@ export default function AddEmployee() {
 
                         <button
                           type="button"
-                          className="px-4 bg-primary-500 text-white rounded-r-md text-sm"
+                          className="px-4 bg-primary-button-bg text-white rounded-r-md text-sm"
                           onClick={() => {
                             if (!values.companyId) {
                               Swal.fire({
@@ -2407,7 +2339,7 @@ export default function AddEmployee() {
                                 {/* flex-col on mobile, flex-row on desktop */}
                                 <div className="flex flex-col md:flex-row md:items-center gap-3 w-full">
                                   {/* Choose File Button - Fixed width */}
-                                  <label className="shrink-0 px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white text-xs font-medium rounded-md cursor-pointer whitespace-nowrap text-center transition shadow-sm">
+                                  <label className="shrink-0 px-4 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover text-white text-xs font-medium rounded-md cursor-pointer whitespace-nowrap text-center transition shadow-sm">
                                     Choose file
                                     <input
                                       type="file"
@@ -2438,7 +2370,7 @@ export default function AddEmployee() {
                                             </span>
                                             <div className="flex-1 h-[4px] bg-gray-300 dark:bg-gray-600 rounded-full overflow-hidden">
                                               <div
-                                                className="h-full bg-primary-600 transition-all duration-300"
+                                                className="h-full bg-primary-button-bg-hover transition-all duration-300"
                                                 style={{
                                                   width: `${
                                                     uploadProgress[
@@ -2660,7 +2592,7 @@ export default function AddEmployee() {
                       <div>
                         <button
                           type="button"
-                          className="px-5 py-2 bg-primary-500 text-white rounded-md text-sm font-medium"
+                          className="px-5 py-2 bg-primary-button-bg text-white rounded-md text-sm font-medium"
                         >
                           Net Salary: ₹{" "}
                           {salaryHeads
@@ -2812,7 +2744,7 @@ export default function AddEmployee() {
         ${
           isLoginTypeSelected
             ? "bg-gray-400 cursor-not-allowed"
-            : "bg-primary-500 hover:bg-primary-600"
+            : "bg-primary-button-bg hover:bg-primary-button-bg-hover"
         }`}
                           onClick={() => {
                             if (!values.companyId) {
