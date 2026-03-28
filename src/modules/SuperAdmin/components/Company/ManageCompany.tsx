@@ -224,7 +224,7 @@ const Template: React.FC = () => {
     if (!row?.CompanyId) return;
 
     navigate(
-      `/superadmin/company/add-company/edit/${row.CompanyId}`
+      `/superadmin/company/add-company/${row.CompanyId}`
     );
   };
   const exportColumns = columns

@@ -55,6 +55,7 @@ import Geneaology from "../components/Client/GenerationTree/Geneaology.js";
 import Template from "../../../components/CommonFormElements/Template.js";
 import MemberWallet from "../components/Client/MemberWallet.js";
 // import DummyTabForm from "../BindedComponent/DummyTabForm.js";
+import ProcessROIIncome from "../components/Commission/ProcessROI.js";
 
 import GlobalSetting from "../components/settings/GlobalSetting"
 import ManageClient from "../components/Client/ManageClient"
@@ -66,7 +67,7 @@ import SponsorSetting from "../components/settings/SponsorSetting.js"
 import APIManager from "../components/settings/APIManager.js"
 import LevelSetting from "../components/settings/LevelSetting.js"
 import BinaryIncomeSetting from "../components/settings/BinaryIncomeSetting.js"
-import ProcessROIIncome from "../components/Commission/ProcessROIIncome.js";
+// import ProcessROIIncome from "../components/Commission/ProcessROIIncome.js";
 import IncomeSetting from "../components/settings/IncomeSetting.js";
 import ROIIncomeReport from "../components/Commission/ROIIncomeReport.js";
 import AddReport from "../components/AdministrativeTools/AddReport/AddReport.js"
@@ -132,7 +133,7 @@ const AppRoutes = () => {
               element={<AddEditEmployee />}
             />
             <Route
-              path="superadmin/employee/edit/:id?"
+              path="superadmin/employee/add-employee/:id?"
               element={<AddEditEmployee key={location.pathname} />}
             />
             <Route
@@ -210,7 +211,7 @@ const AppRoutes = () => {
               element={<AddCompany />}
             />
             <Route
-              path="/superadmin/company/add-company/edit/:id"
+              path="/superadmin/company/add-company/:id"
               element={<AddCompany />}
             />
             <Route

@@ -5,6 +5,7 @@ type StatsConfig = {
   key: string;
   title: string;
   icon: string;
+  showCurrency?: boolean; // 👈 NEW
 };
 
 type Props = {
@@ -47,7 +48,7 @@ const StatsCardsTrezo: React.FC<Props> = ({ stats, config, loading }) => {
                     <div className="h-6 w-24 bg-gray-200 dark:bg-gray-700 rounded animate-pulse mt-2" />
                   ) : (
                     <h5 className="!mb-0 !mt-[3px] !text-[20px] font-semibold">
-                      {currency.symbol}
+                      {c.showCurrency ? currency.symbol : ""}
                       {Number(value).toLocaleString()}
                     </h5>
                   )}
