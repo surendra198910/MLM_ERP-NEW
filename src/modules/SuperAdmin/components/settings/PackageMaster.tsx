@@ -133,8 +133,10 @@ export default function AddCompany() {
 
 
     const path = location.pathname;
-    // const formName = path.split("/").pop();
-    const formName = "add-package";
+    const segments = path.split("/").filter(Boolean);
+    const last = segments[segments.length - 1];
+    const isId = !isNaN(Number(last));
+    const formName = isId ? segments[segments.length - 2] : last;
     const isEditable = isEditMode
         ? SmartActions.canEdit(formName)
         : SmartActions.canAdd(formName);  // must match DB
@@ -593,7 +595,7 @@ export default function AddCompany() {
                     setTab(0);
                 }
 
-                navigate("/superadmin/mlm-setting/manage-package");
+                navigate("/superadmin/package/manage-package");
 
             } else {
 
@@ -723,7 +725,7 @@ export default function AddCompany() {
             </div>
         );
     }
-   
+
 
     return (
         <Formik
@@ -782,6 +784,7 @@ export default function AddCompany() {
                                         }`}
                                 >
                                     {isEditMode ? "Update Package" : "Add Package"}
+                                    
                                 </button>
                             </PermissionAwareTooltip>
 
