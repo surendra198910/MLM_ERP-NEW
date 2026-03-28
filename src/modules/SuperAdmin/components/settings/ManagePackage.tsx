@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FaEdit } from "react-icons/fa";
@@ -370,7 +369,7 @@ from-primary-button-bg to-primary-button-bg bg-clip-text text-transparent">
                                         disabled={!canEdit}
                                         onClick={() => {
                                             if (!canEdit) return;
-                                            navigate(`/superadmin/mlm-setting/add-package/${pkg.ProductId}`);
+                                            navigate(`/superadmin/package/add-package/${pkg.ProductId}`);
                                         }}
                                         className="flex items-center gap-1 px-3 py-1.5
         bg-primary-button-bg hover:bg-button-bg-hover

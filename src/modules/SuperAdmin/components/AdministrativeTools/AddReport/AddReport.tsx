@@ -659,6 +659,8 @@ transition"
           </form>
         )}
       </Formik>
+
+
       {showColumns && (
         <ReportColumnsConfig
           columns={columns}

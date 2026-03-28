@@ -303,9 +303,9 @@ const ManageUserPermission: React.FC = () => {
         }),
       });
       ShowSuccessAlert("Permissions updated successfully!");
-      setTimeout(() => {
-        window.location.reload();
-      }, 800);
+      // setTimeout(() => {
+      //   window.location.reload();
+      // }, 800);
       if (selectedModule) await loadCategories(Number(selectedModule), true);
     } catch (err) {
       console.error(err);

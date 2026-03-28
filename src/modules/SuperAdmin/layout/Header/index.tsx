@@ -1,8 +1,8 @@
 import React, { useEffect } from "react";
 import Settings from "./Settings/index";
 import DarkMode from "./DarkMode";
-import SearchForm from "./SearchForm/index";
-import AppsMenu from "./AppsMenu";
+
+
 import ChooseLanguage from "./ChooseLanguage";
 import Fullscreen from "./Fullscreen";
 import Notifications from "./Notifications";
@@ -95,7 +95,7 @@ const Header: React.FC<HeaderProps> = ({ toggleActive }) => {
 
             <ProfileMenu />
 
-            <Settings />
+            {/* <Settings /> */}
           </div>
         </div>
       </div>
