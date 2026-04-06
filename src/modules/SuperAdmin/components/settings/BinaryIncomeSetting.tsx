@@ -72,7 +72,8 @@ export default function PairIncomeSetting({ }: Props) {
 
     const path = location.pathname;
     const formName = path.split("/").pop();
-    const isEditable = SmartActions.canEdit(formName);
+    const isEditable = SmartActions.canAdd(formName);
+    const isSave = SmartActions.canSave(formName);
     // must match DB
     const fetchFormPermissions = async () => {
         try {
@@ -547,16 +548,16 @@ if (!hasPageAccess) {
             {/* SAVE BUTTON */}
             <div className="mt-6 flex justify-end">
                 <PermissionAwareTooltip
-                    allowed={isEditable}
+                    allowed={isSave}
                     allowedText="Save Settings"
                     deniedText="Permission required"
                 >
                     <button
                         onClick={() => {
-                            if (!isEditable) return;
+                            if (!isSave) return;
                             handleSave();
                         }}
-                        disabled={!isEditable || loading}
+                        disabled={!isSave || loading}
                         className="px-6 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover
         text-white rounded-md text-sm disabled:opacity-50"
                     >

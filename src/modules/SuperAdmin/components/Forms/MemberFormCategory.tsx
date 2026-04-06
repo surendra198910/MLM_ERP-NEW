@@ -1,138 +1,116 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useState, useEffect } from "react";
+import DataTable from "react-data-table-component";
 import { Dialog, DialogBackdrop, DialogPanel } from "@headlessui/react";
-import { Formik, Form, Field, ErrorMessage } from "formik";
+import { ErrorMessage, Field, Form, Formik } from "formik";
+import Swal from "sweetalert2";
 import * as Yup from "yup";
+import { useLocation } from "react-router-dom";
+
+// Common Route Imports
 import { ApiService } from "../../../../services/ApiService";
-import { useSweetAlert } from "../../context/SweetAlertContext";
-import ColumnSelector from "../ColumnSelector/ColumnSelector";
-import * as XLSX from "xlsx";
-import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
-import TableSkeleton from "./TableSkeleton";
-import { SmartActions } from "../Security/SmartAction";
-import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
-import IconsPopUpPage from "../../components/Icons/IconsPopUpPage";
-import ColorPickerPopup from "../../components/Colors/ColorPickerPopup";
-import Pagination from "../../common/Pagination";
-import { formatDate } from "../../../../utils/dateFormatter";
-import AccessRestricted from "../../common/AccessRestricted";
+import { SmartActions } from "../Security/SmartActionWithFormName";
+import ActionCell from "../../../../components/CommonFormElements/DataTableComponents/ActionCell";
 import Loader from "../../common/Loader";
+import AccessRestricted from "../../common/AccessRestricted";
+import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
+import ColumnSelector from "../ColumnSelector/ColumnSelectorV1";
+import LandingIllustration from "../../../../components/CommonFormElements/LandingIllustration/LandingIllustration";
+import ExportButtons from "../../../../components/CommonFormElements/ExportButtons/ExportButtons";
+import CustomPagination from "../../../../components/CommonFormElements/Pagination/CustomPagination";
+import customStyles from "../../../../components/CommonFormElements/DataTableComponents/CustomStyles";
+import TableSkeleton from "./TableSkeleton";
+import OopsNoData from "../../../../components/CommonFormElements/DataNotFound/OopsNoData";
+import { useSweetAlert } from "../../context/SweetAlertContext";
+import IconsPopUpPage from "../Icons/IconsPopUpPage";
+import ColorPickerPopup from "../Colors/ColorPickerPopup";
 
-type Task = {
-  FormCategoryId: number;
-  ParentCategoryId: number;
-  FormCategoryName: string;
-  FormNameWithExt: string;
-  Icon: string;
-  IconColor: string;
-  Position: number;
-  ParentCategoryName?: string;
-  EntryDate?: string;
-  ModifiedDate?: string;
-};
 
-type FormCategoryEdit = {
-  FormCategoryId: number;
-  ParentCategoryId: number;
-  FormCategoryName: string;
-  FormNameWithExt: string;
-  Icon: string;
-  IconColor: string;
-  Position: number;
-};
-type ParentCategory = {
-  id: number;
-  name: string;
-};
+const Template: React.FC = () => {
+  const formSchema = Yup.object().shape({
+    module: Yup.string().required("Module is required"),
+    formCategoryName: Yup.string().required("Category name is required"),
+  });
 
-const FormCategory: React.FC = () => {
-  const [open, setOpen] = useState(false);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [searchQuery, setSearchQuery] = useState<string>("");
-  const [currentPage, setCurrentPage] = useState<number>(1);
   const [searchInput, setSearchInput] = useState("");
-  const [parentCategories, setParentCategories] = useState<ParentCategory[]>([]);
-  const [isEdit, setIsEdit] = useState(false);
-  const [editData, setEditData] = useState<FormCategoryEdit | null>(null);
-  const [openIconPopup, setOpenIconPopup] = useState(false);
-  const { universalService } = ApiService();
-  const [saving, setSaving] = useState(false);
-  const { ShowConfirmAlert, ShowSuccessAlert } = useSweetAlert();
-  const [showTable, setShowTable] = useState(false);
   const [filterColumn, setFilterColumn] = useState("");
-  const [itemsPerPage, setItemsPerPage] = useState(10);
-  const [totalCount, setTotalCount] = useState(0);
-  const [tableLoading, setTableLoading] = useState(false);
-  const [sortColumn, setSortColumn] = useState("FormCategoryId");
+  const [showTable, setShowTable] = useState(false);
+  const { universalService } = ApiService();
+  const [hasVisitedTable, setHasVisitedTable] = useState(false);
+  const [searchTrigger, setSearchTrigger] = useState(0);
+  const [columns, setColumns] = useState<any[]>([]);
+  const [data, setData] = useState([]);
+  const [totalRows, setTotalRows] = useState(0);
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [sortColumnKey, setSortColumnKey] = useState<string>("FormCategoryId");
   const [sortDirection, setSortDirection] = useState("DESC");
   const [visibleColumns, setVisibleColumns] = useState<any[]>([]);
-  const [openColorPopup, setOpenColorPopup] = useState(false);
   const [columnsReady, setColumnsReady] = useState(false);
-  const [searchTrigger, setSearchTrigger] = useState(0);
+  const [tableLoading, setTableLoading] = useState(true);
+  const [refreshGrid, setRefreshGrid] = useState(0);
   const [permissionsLoading, setPermissionsLoading] = useState(true);
   const [hasPageAccess, setHasPageAccess] = useState(true);
+  const [initialSortReady, setInitialSortReady] = useState(false);
 
-  // 👇 Columns that should be formatted as dates
-  const DATE_COLUMNS = ["EntryDate", "ModifiedDate"];
+  const location = useLocation();
+  const path = location.pathname;
+  const segments = path.split("/").filter(Boolean);
+  const last = segments[segments.length - 1];
+  const isId = !isNaN(Number(last));
+  const formName = isId ? segments[segments.length - 2] : last;
+  const canExport = SmartActions.canExport(formName);
 
-  const CURRENT_FORM_ID = 6;
-  const NO_FILTER = "__NONE__";
+  const [open, setOpen] = useState(false);
+  const [isEdit, setIsEdit] = useState(false);
+  const [editData, setEditData] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const { ShowSuccessAlert, ShowConfirmAlert } = useSweetAlert();
 
-  const totalPages = Math.ceil(totalCount / itemsPerPage);
+  // Custom States
+  const [modules, setModules] = useState<any[]>([]);
+  const [selectedModule, setSelectedModule] = useState("");
+  const [parentCategories, setParentCategories] = useState<any[]>([]);
+  const [openIconPopup, setOpenIconPopup] = useState(false);
+  const [openColorPopup, setOpenColorPopup] = useState(false);
 
-  const getCellValue = (row: any, columnName: string) => {
-    const value = row[columnName];
+  // Formik refs for external access (popups)
+  const formikRef = React.useRef<any>(null);
 
-    if (DATE_COLUMNS.includes(columnName)) {
-      return formatDate(value, "readable");
-    }
-
-    return value ?? "-";
-  };
+  const EmployeeIdLocalSTG = JSON.parse(
+    localStorage.getItem("EmployeeDetails") || "{}"
+  ).EmployeeId || 0;
 
   const fetchFormPermissions = async () => {
     try {
       setPermissionsLoading(true);
-
-      const saved = localStorage.getItem("EmployeeDetails");
-      const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
-
       const payload = {
         procName: "AssignForm",
         Para: JSON.stringify({
-          ActionMode: "Forms",
-          FormCategoryId: 5,
-          EmployeeId: employeeId,
+          ActionMode: "GetForms",
+          FormName: formName,
+          EmployeeId: EmployeeIdLocalSTG,
         }),
       };
-
       const response = await universalService(payload);
       const data = response?.data ?? response;
 
-      // ❌ Invalid response → deny access
       if (!Array.isArray(data)) {
         setHasPageAccess(false);
         return;
       }
 
-      // 🔍 Find permission for THIS page
       const pagePermission = data.find(
         (p) =>
-          Number(p.FormId) === CURRENT_FORM_ID &&
-          Number(p.FormCategoryId) === 5
+          String(p.FormNameWithExt).trim().toLowerCase() ===
+          formName?.trim().toLowerCase(),
       );
 
-      // ❌ No permission OR empty Action
-      if (
-        !pagePermission ||
-        !pagePermission.Action ||
-        pagePermission.Action.trim() === ""
-      ) {
+      if (!pagePermission || !pagePermission.Action || pagePermission.Action.trim() === "") {
         setHasPageAccess(false);
         return;
       }
 
-      // ✅ Permission allowed → load SmartActions
       SmartActions.load(data);
       setHasPageAccess(true);
     } catch (error) {
@@ -143,195 +121,205 @@ const FormCategory: React.FC = () => {
     }
   };
 
+  // --- Fetch Lookups ---
+  const fetchModules = async () => {
+    try {
+      const payload = {
+        procName: "Modules",
+        Para: JSON.stringify({ Action: "GetModules" }),
+      };
+      const response = await universalService(payload);
+      const res = response?.data ?? response;
+      const apiRes = Array.isArray(res) ? res[0] : res;
 
-  const fetchExportData = async () => {
-    const filters = getFilterPayload(filterColumn, searchQuery);
-    const payload = {
-      procName: "MemberFormCategory",
-      Para: JSON.stringify({
-        ActionMode: "Export",
-        ...filters,
-        SortColumn: sortColumn,
-        SortDir: sortDirection,
-      }),
-    };
-
-    await new Promise((res) => setTimeout(res, 400));
-    const response = await universalService(payload);
-    const apiRes = response?.data || response;
-    if (!Array.isArray(apiRes)) return [];
-
-    return apiRes.map((item: any) => ({
-      FormCategoryId: item.FormCategoryId,
-      FormCategoryName: item.FormCategoryName,
-      ParentCategoryName: item.ParentCategoryName,
-      FormNameWithExt: item.FormNameWithExt,
-      Icon: item.Icon,
-      IconColor: item.IconColor,
-      Position: item.Position,
-    }));
-  };
-
-  const applySearch = () => {
-    if (!SmartActions.canSearch(CURRENT_FORM_ID)) return;
-
-    setShowTable(true);
-    setCurrentPage(1);
-    setSearchQuery(searchInput.trim());
-    setSearchTrigger((prev) => prev + 1);
-  };
-
-  const exportCSV = async () => {
-    const data = await fetchExportData();
-    if (!data.length) return;
-
-    const header = displayedColumns.map((c) => c.DisplayName).join(",");
-
-    const rows = data.map((item: any) =>
-      displayedColumns
-        .map((col) => `"${getCellValue(item, col.ColumnName)}"`)
-        .join(","),
-    );
-
-    const csvContent = [header, ...rows].join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "form_categories.csv";
-    a.click();
-  };
-
-  const exportExcel = async () => {
-    const data = await fetchExportData();
-    if (!data.length) return;
-
-    const rows = data.map((item: any) =>
-      displayedColumns.reduce((obj: any, col) => {
-        obj[col.DisplayName] = getCellValue(item, col.ColumnName);
-        return obj;
-      }, {}),
-    );
-
-    const worksheet = XLSX.utils.json_to_sheet(rows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Member Form Categories");
-    XLSX.writeFile(workbook, "form_categories.xlsx");
-  };
-
-  const exportPDF = async () => {
-    const data = await fetchExportData();
-    if (!data.length) return;
-
-    const doc = new jsPDF();
-    const tableColumn = displayedColumns.map((c) => c.DisplayName);
-    const tableRows = data.map((item: any) =>
-      displayedColumns.map((col) => getCellValue(item, col.ColumnName)),
-    );
-
-    autoTable(doc, {
-      head: [tableColumn],
-      body: tableRows,
-      styles: { fontSize: 9 },
-      headStyles: { fillColor: [25, 118, 210] },
-    });
-
-    doc.save("form_categories.pdf");
-  };
-
-  const printTable = async () => {
-    const data = await fetchExportData();
-    if (!data.length) return;
-
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-
-    const tableHeaders = displayedColumns
-      .map((c) => `<th>${c.DisplayName}</th>`)
-      .join("");
-
-    const tableRows = data
-      .map(
-        (row: any) => `
-      <tr>
-        ${displayedColumns
-            .map((col) => `<td>${getCellValue(row, col.ColumnName)}</td>`)
-            .join("")}
-      </tr>`,
-      )
-      .join("");
-
-    printWindow.document.write(`
-    <html>
-      <head>
-        <title>Print Member Form Categories</title>
-        <style>
-          body { font-family: Arial, sans-serif; padding: 20px; }
-          h2 { margin-bottom: 15px; }
-          table { width: 100%; border-collapse: collapse; }
-          th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-          th { background-color: #1976d2; color: #fff; }
-        </style>
-      </head>
-      <body>
-        <h2>Member Form Categories</h2>
-        <table>
-          <thead>
-            <tr>${tableHeaders}</tr>
-          </thead>
-          <tbody>${tableRows}</tbody>
-        </table>
-      </body>
-    </html>
-  `);
-
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-  };
-
-  const fetchVisibleColumns = async () => {
-    const saved = localStorage.getItem("EmployeeDetails");
-    const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
-
-    const payload = {
-      procName: "UniversalColumnSelector",
-      Para: JSON.stringify({
-        EmployeeId: employeeId,
-        USPName: "USP_MemberFormCategory",
-        ActionMode: "List",
-        Mode: "Get",
-      }),
-    };
-
-    const response = await universalService(payload);
-    const cols = response?.data ?? response;
-
-    if (Array.isArray(cols)) {
-      setVisibleColumns(
-        cols
-          .map((c) => ({
-            ...c,
-            IsVisible:
-              c.IsVisible === true || c.IsVisible === 1 || c.IsVisible === "1",
-            IsHidden:
-              c.IsHidden === false || c.IsHidden === 0 || c.IsHidden === "0",
-          }))
-          .sort((a, b) => a.DisplayOrder - b.DisplayOrder),
-      );
-
-      setColumnsReady(true);
+      if (apiRes?.ModuleList) {
+        const moduleArray = JSON.parse(apiRes.ModuleList);
+        setModules(moduleArray.map((m: any) => ({ id: m.ModuleID, name: m.ModuleTitle })));
+      }
+    } catch (error) {
+      console.error("Module fetch error:", error);
     }
   };
 
-  const displayedColumns = React.useMemo(() => {
-    return visibleColumns
-      .filter((c) => c.IsVisible && c.IsHidden)
-      .sort((a, b) => a.DisplayOrder - b.DisplayOrder);
-  }, [visibleColumns]);
+  const fetchParentCategories = async (moduleId: string) => {
+    if (!moduleId) {
+      setParentCategories([]);
+      return;
+    }
+    try {
+      const payload = {
+        procName: "Modules",
+        Para: JSON.stringify({
+          Action: "GetParentCategoryByModuleID",
+          ModuleID: moduleId,
+        }),
+      };
+      const response = await universalService(payload);
+      const res = response?.data ?? response;
+      const apiRes = Array.isArray(res) ? res[0] : res;
 
-  const handleDelete = async (formCategoryId: number) => {
-    const result = await ShowConfirmAlert("Are you sure?");
+      if (apiRes?.FormCategoryList) {
+        const parsed = JSON.parse(apiRes.FormCategoryList);
+        setParentCategories(parsed.map((c: any) => ({ id: c.FormCategoryId, name: c.FormCategoryName })));
+      } else {
+        setParentCategories([]);
+      }
+    } catch (error) {
+      console.error("Parent category fetch error:", error);
+      setParentCategories([]);
+    }
+  };
+
+  useEffect(() => {
+    if (hasPageAccess) {
+      fetchModules();
+    }
+  }, [hasPageAccess]);
+
+  useEffect(() => {
+    if (selectedModule) {
+      fetchParentCategories(selectedModule);
+    }
+  }, [selectedModule]);
+
+  // --- Grid Logic ---
+  const handleSort = (column: any, direction: string) => {
+    setSortColumnKey(column.columnKey);
+    setSortDirection(direction.toUpperCase());
+    setInitialSortReady(true);
+  };
+
+  const handlePageChange = (p: number) => {
+    setPage(p);
+    fetchGridData({ pageOverride: p });
+  };
+
+  const handlePerRowsChange = (newPerPage: number, page: number) => {
+    setPerPage(newPerPage);
+    setPage(page);
+  };
+
+  const fetchGridColumns = async () => {
+    try {
+      const payload = {
+        procName: "GetUserGridColumns",
+        Para: JSON.stringify({
+          UserId: EmployeeIdLocalSTG,
+          GridName: "USP_MemberFormCategory",
+        }),
+      };
+
+      const res = await universalService(payload);
+      const data = res?.data || res;
+      if (Array.isArray(data)) {
+        const visibleSorted = data
+          .filter((c: any) => c.IsVisible)
+          .sort((a: any, b: any) => a.ColumnOrder - b.ColumnOrder);
+
+        const defaultSortCol = visibleSorted.find((c: any) => c.isSort);
+
+        if (defaultSortCol) {
+          setSortColumnKey(defaultSortCol.ColumnKey);
+          setSortDirection((defaultSortCol.SortDir || "ASC").toUpperCase());
+        }
+        setInitialSortReady(true);
+      }
+
+      if (Array.isArray(data)) {
+        const reactCols = data
+          .filter((c: any) => c.IsVisible === true)
+          .sort((a: any, b: any) => a.ColumnOrder - b.ColumnOrder)
+          .map((c: any, colIndex: number) => ({
+            id: c.ColumnOrder,
+            name: c.DisplayName,
+            sortable: true,
+            columnKey: c.ColumnKey,
+            columnIndex: c.ColumnOrder,
+            isCurrency: c.IsCurrency,
+            isTotal: c.IsTotal,
+            selector: (row: any) => row[c.ColumnKey],
+            cell: (row: any) => {
+              if (row.__isTotal) {
+                if (colIndex === 0) return "Total";
+                if (c.IsTotal) {
+                  const value = row[c.ColumnKey] || 0;
+                  return c.IsCurrency ? `$${Number(value).toLocaleString()}` : Number(value).toLocaleString();
+                }
+                return "";
+              }
+
+              // Custom render for FormCategoryName to show Icon & Color
+              if (c.ColumnKey === "FormCategoryName") {
+                return (
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[20px]" style={{ color: row.FormCategoryIconColor || "#1976d2" }}>
+                      {row.FormCategoryIcon || "category"}
+                    </span>
+                    <span>{row.FormCategoryName}</span>
+                  </div>
+                );
+              }
+
+              // Custom render for ParentCategoryName to show Icon & Color
+              if (c.ColumnKey === "ParentCategoryName") {
+                return row.ParentCategoryName ? (
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[20px]" style={{ color: row.ParentCategoryIconColor || "#1976d2" }}>
+                      {row.ParentCategoryIcon || "folder"}
+                    </span>
+                    <span>{row.ParentCategoryName}</span>
+                  </div>
+                ) : (
+                  "-"
+                );
+              }
+
+              const value = row[c.ColumnKey];
+              if (c.IsCurrency && value != null) {
+                return `$${Number(value).toLocaleString()}`;
+              }
+              return value ?? "-";
+            },
+          }));
+
+        const actionColumn = {
+          name: "Action",
+          cell: (row: any) => {
+            if (row.__isTotal) return null;
+            return <ActionCell row={row} onEdit={handleEdit} onDelete={handleDelete} />;
+          },
+          ignoreRowClick: true,
+          button: true,
+        };
+        setColumns([...reactCols, actionColumn]);
+      } else {
+        setColumns([]);
+      }
+    } catch (err) {
+      console.error("Grid columns fetch failed", err);
+      setColumns([]);
+    }
+  };
+
+  const fetchExportData = async () => {
+    const payload = {
+      procName: "MemberFormCategory",
+      Para: JSON.stringify({
+        SearchBy: filterColumn,
+        Criteria: searchInput,
+        Page: page,
+        PageSize: 0,
+        SortIndexColumn: sortColumnKey || "",
+        SortDir: sortDirection,
+        ActionMode: "Export"
+      }),
+    };
+    const res = await universalService(payload);
+    return res?.data ?? res ?? [];
+  };
+
+  const handleDelete = async (row: any) => {
+    const result = await ShowConfirmAlert("Are you sure?", "You won't be able to revert this!");
     if (!result) return;
 
     try {
@@ -339,248 +327,193 @@ const FormCategory: React.FC = () => {
         procName: "MemberFormCategory",
         Para: JSON.stringify({
           ActionMode: "Delete",
-          EditId: Number(formCategoryId),
-          EntryBy: 1,
+          EditId: row.FormCategoryId,
+          EntryBy: EmployeeIdLocalSTG,
         }),
       };
-
       const response = await universalService(payload);
       const res = Array.isArray(response) ? response[0] : response;
 
-      if (res?.StatusCode === "1" || res?.StatusCode === 1) {
-        ShowSuccessAlert("Category deleted successfully");
-        setCurrentPage(1);
-        await fetchTableData();
+      if (res?.StatusCode === 1 || res?.StatusCode === "1" || res?.Status === 1) {
+        await ShowSuccessAlert("Category Deleted Successfully");
+        setSearchTrigger(p => p + 1);
+        setRefreshGrid(p => p + 1);
       } else {
-        console.error("Delete failed:", res);
-        ShowSuccessAlert("Unable to delete category");
+        Swal.fire("Error", res?.Msg || "Delete failed", "error");
       }
     } catch (err) {
-      console.error("Delete Error:", err);
+      console.error(err);
+      Swal.fire("Error", "Server error", "error");
     }
   };
 
-  const fetchTableData = async () => {
+  const fetchGridData = async (options?: any) => {
+    const pageToUse = options?.pageOverride ?? page;
+    const perPageToUse = options?.perPageOverride ?? perPage;
+
     try {
       setTableLoading(true);
-      setTasks([]);
-
-      const filters = getFilterPayload(filterColumn, searchQuery);
       const payload = {
         procName: "MemberFormCategory",
         Para: JSON.stringify({
-          ActionMode: "List",
-          Start: (currentPage - 1) * itemsPerPage,
-          Length: itemsPerPage,
-          ...filters,
-          SortColumn: sortColumn,
+          ActionMode: "GetReport",
+          SearchBy: options?.searchBy ?? filterColumn ?? "",
+          Criteria: options?.criteria ?? searchInput ?? "",
+          Page: pageToUse,
+          PageSize: perPageToUse,
+          SortIndexColumn: sortColumnKey || "",
           SortDir: sortDirection,
         }),
       };
 
-      await new Promise((res) => setTimeout(res, 400));
-      const response = await universalService(payload);
-      const apiRes = response?.data || response;
+      const res = await universalService(payload);
+      const result = res?.data || res;
 
-      if (!Array.isArray(apiRes) || apiRes.length === 0) {
-        setTasks([]);
-        setTotalCount(0);
-        return;
+      if (result?.rows && Array.isArray(result.rows)) {
+        setData(result.rows);
+        setTotalRows(result[0]?.TotalRecords || 0);
+      } else if (Array.isArray(result)) {
+        setData(result);
+        setTotalRows(result[0]?.TotalRecords || 0);
+      } else {
+        setData([]);
+        setTotalRows(0);
       }
-
-      setTotalCount(apiRes[0].TotalRecords ?? 0);
-
-      const formatted: Task[] = apiRes.map((item: any) => ({
-        FormCategoryId: item.FormCategoryId || 0,
-        ParentCategoryId: item.ParentCategoryId || 0,
-        FormCategoryName: item.FormCategoryName || "",
-        FormNameWithExt: item.FormNameWithExt || "",
-        Icon: item.Icon || "",
-        IconColor: item.IconColor || "#1976d2",
-        Position: item.Position || 0,
-        ParentCategoryName: item.ParentCategoryName || "",
-        EntryDate: item.EntryDate,
-        ModifiedDate: item.ModifiedDate,
-      }));
-      setTasks(formatted);
-    } catch (error) {
-      console.error("Menu Error:", error);
+    } catch (err) {
+      console.error(err);
     } finally {
       setTableLoading(false);
     }
   };
-  const fetchParentCategories = async () => {
-    try {
-      const payload = {
-        procName: "Modules",
-        Para: JSON.stringify({
-          Action: "GetMemberParentCategory",
-        }),
-      };
 
-      const response = await universalService(payload);
-
-      const res = response?.data ?? response;
-
-      if (!Array.isArray(res) || res.length === 0) {
-        setParentCategories([]);
-        return;
-      }
-
-      const result = res[0];
-
-      if (result.StatusCode !== 1) {
-        setParentCategories([]);
-        return;
-      }
-
-      const parsed = result.FormCategoryList
-        ? JSON.parse(result.FormCategoryList)
-        : [];
-
-      const formatted = parsed.map((item: any) => ({
-        id: item.FormCategoryId,
-        name: item.FormCategoryName,
-      }));
-
-      setParentCategories(formatted);
-    } catch (error) {
-      console.error("Parent category fetch failed:", error);
-      setParentCategories([]);
-    }
-  };
-
-  const renderColumnValue = (row: any, columnName: string) => {
-    const value = row[columnName];
-
-    /* DATE FORMAT */
-    if (DATE_COLUMNS.includes(columnName)) {
-      return formatDate(value, "readable");
-    }
-
-    /* CATEGORY NAME WITH ICON */
-    if (columnName === "FormCategoryName" || columnName === "ParentCategoryName") {
-      if (!value) return "-";
-
-      return (
-        <div className="flex items-center gap-2">
-          <span
-            className="material-symbols-outlined text-[20px]"
-            style={{ color: row.IconColor || "#1976d2" }}
-          >
-            {row.Icon || "folder"}
-          </span>
-
-          <span>{value}</span>
-        </div>
+  const fetchVisibleColumns = async () => {
+    const payload = {
+      procName: "UniversalColumnSelector",
+      Para: JSON.stringify({
+        EmployeeId: EmployeeIdLocalSTG,
+        USPName: "USP_MemberFormCategory",
+        ActionMode: "List",
+        Mode: "Get",
+      }),
+    };
+    const response = await universalService(payload);
+    const cols = response?.data ?? response;
+    if (Array.isArray(cols)) {
+      setVisibleColumns(
+        cols
+          .map((c) => ({
+            ...c,
+            IsVisible: c.IsVisible === true || c.IsVisible === 1 || c.IsVisible === "1",
+            IsHidden: c.IsHidden === false || c.IsHidden === 0 || c.IsHidden === "0",
+          }))
+          .sort((a, b) => a.DisplayOrder - b.DisplayOrder),
       );
-    }
-
-    /* ICON COLUMN */
-    if (columnName === "Icon") {
-      if (!row.Icon) return "-";
-
-      return (
-        <div className="flex items-center gap-2">
-         
-            {row.Icon}
-         
-          <span>{row.Icon}</span>
-        </div>
-      );
-    }
-
-    /* ICON COLOR COLUMN */
-    if (columnName === "IconColor") {
-      if (!row.IconColor) return "-";
-
-      return (
-        <div className="flex items-center gap-2">
-          <div
-            className="w-4 h-4 rounded border"
-            style={{ backgroundColor: row.IconColor }}
-          ></div>
-          <span>{row.IconColor}</span>
-        </div>
-      );
-    }
-
-    return value ?? "-";
-  };
-
-  const handleSort = (column: string) => {
-    if (!displayedColumns.some((c) => c.ColumnName === column)) return;
-
-    setCurrentPage(1);
-    if (sortColumn === column) {
-      setSortDirection(sortDirection === "ASC" ? "DESC" : "ASC");
-    } else {
-      setSortColumn(column);
-      setSortDirection("ASC");
+      setColumnsReady(true);
+      setRefreshGrid((prev) => prev + 1);
     }
   };
 
-  const getFilterPayload = (filter: string, value: string) => {
-    if (!value) return {};
-    switch (filter) {
-      case "FormCategoryName":
-        return { FormCategoryNameFilter: value };
-      case "ParentCategoryName":
-        return { ParentCategoryNameFilter: value };
-      case "FormNameWithExt":
-        return { SearchTerm: value };
-      default:
-        return { SearchTerm: value };
+  useEffect(() => {
+    fetchGridColumns();
+  }, [refreshGrid]);
+
+  useEffect(() => {
+    if (!showTable || !hasVisitedTable) return;
+    if (!sortColumnKey && initialSortReady) {
+      fetchGridData();
+      return;
     }
+    if (sortColumnKey) {
+      fetchGridData();
+    }
+  }, [page, perPage, sortColumnKey, sortDirection, searchTrigger, initialSortReady]);
+
+  const applySearch = () => {
+    if (!SmartActions.canSearch(formName)) return;
+    setShowTable(true);
+    setHasVisitedTable(true);
+    setPage(1);
+    setSearchTrigger((p) => p + 1);
   };
+
+  const hasData = data.length > 0;
 
   useEffect(() => {
     fetchFormPermissions();
   }, []);
 
+  const pageTotals: any = {};
+  columns.forEach((col: any) => {
+    if (!col.isTotal || !col.columnKey) return;
+    pageTotals[col.columnKey] = data.reduce((sum: number, row: any) => {
+      return sum + Number(row[col.columnKey] || 0);
+    }, 0);
+  });
 
+  const totalRow =
+    Object.keys(pageTotals).length > 0
+      ? columns.reduce((acc: any, col: any, index: number) => {
+        if (!col.columnKey) {
+          acc.__label = "Page Total";
+          return acc;
+        }
+        if (col.isTotal) {
+          acc[col.columnKey] = pageTotals[col.columnKey];
+        } else {
+          acc[col.columnKey] = "";
+        }
+        return acc;
+      }, {})
+      : null;
 
+  const tableData = hasData && totalRow ? [...data, { ...totalRow, __isTotal: true }] : data;
 
+  // --- Add / Edit Handlers ---
+  const handleAdd = () => {
+    if (!SmartActions.canAdd(formName)) return;
+    setIsEdit(false);
+    setEditData(null);
+    setSelectedModule("");
+    setOpen(true);
+  };
 
+  const handleEdit = async (row: any) => {
+    setEditLoading(true);
+    setOpen(true);
+    setIsEdit(true);
 
+    try {
+      const payload = {
+        procName: "MemberFormCategory",
+        Para: JSON.stringify({
+          ActionMode: "Select",
+          EditId: row.FormCategoryId,
+        }),
+      };
+      const response = await universalService(payload);
+      const data = Array.isArray(response?.data || response) ? (response?.data || response)[0] : (response?.data || response);
 
-  useEffect(() => {
-    if (!showTable) return;
-
-    const loadInitialTable = async () => {
-      await fetchTableData();
-      await fetchVisibleColumns();
-    };
-
-    loadInitialTable();
-  }, [showTable]);
-
-  useEffect(() => {
-    if (!showTable) return;
-    fetchTableData();
-  }, [
-    currentPage,
-    itemsPerPage,
-    searchQuery,
-    sortColumn,
-    sortDirection,
-    showTable,
-    searchTrigger,
-  ]);
-
-  useEffect(() => {
-    if (!displayedColumns.some((c) => c.ColumnName === sortColumn)) {
-      setSortColumn("FormCategoryId");
-      setSortDirection("DESC");
+      setEditData(data || row);
+      setSelectedModule(String(data?.ModuleId || row.ModuleId || ""));
+    } catch (error) {
+      console.error(error);
+      setEditData(row);
     }
-  }, [displayedColumns]);
+    setTimeout(() => setEditLoading(false), 200);
+  };
 
-  const skeletonColumns = React.useMemo(() => {
-    if (displayedColumns.length > 0) {
-      return displayedColumns.length + 1;
+  useEffect(() => {
+    if (!open) {
+      const t = setTimeout(() => {
+        setIsEdit(false);
+        setEditData(null);
+      }, 200);
+      return () => clearTimeout(t);
     }
-    return 6;
-  }, [displayedColumns]);
+  }, [open]);
+
+  const exportColumns = columns.filter(c => c.columnKey).map(c => ({ key: c.columnKey, label: c.name }));
+
   if (permissionsLoading) {
     return <Loader />;
   }
@@ -590,581 +523,220 @@ const FormCategory: React.FC = () => {
   }
 
   return (
-    <>
-      <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-md">
-        {/* Header and Filters */}
-        <div className="trezo-card-header mb-[10px] md:mb-[10px] sm:flex items-center justify-between pb-5 border-b border-gray-200 -mx-[20px] md:-mx-[25px] px-[20px] md:px-[25px]">
-          <div className="trezo-card-title">
-            <h5 className="!mb-0">Manage Member Form Categories</h5>
-          </div>
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:w-auto w-full">
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-end gap-[7px] w-full">
-              {/* 1. Filter Dropdown */}
-              <div className="relative">
-                <PermissionAwareTooltip
-                  allowed={SmartActions.canAdvancedSearch(CURRENT_FORM_ID)}
-                  allowedText="Filter records"
-                  deniedText="Permission required"
-                >
-                  <div className="relative w-full sm:w-[180px]">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-500">
-                      <i className="material-symbols-outlined !text-[18px]">
-                        filter_list
-                      </i>
-                    </span>
-                    <select
-                      disabled={
-                        !SmartActions.canAdvancedSearch(CURRENT_FORM_ID)
-                      }
-                      value={filterColumn}
-                      onChange={(e) => {
-                        const value = e.target.value;
-                        setFilterColumn(value === NO_FILTER ? "" : value);
-                        setSearchInput("");
-                        setSearchQuery("");
-                        setCurrentPage(1);
-                      }}
-                      className={`w-full h-[34px] pl-8 pr-8 text-xs rounded-md appearance-none outline-none border transition-all
-            ${SmartActions.canAdvancedSearch(CURRENT_FORM_ID)
-                          ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
-                          : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                        }`}
-                    >
-                      <option value={NO_FILTER}>Select Filter Option</option>
-                      <option value="FormCategoryName">Category Name</option>
-                      <option value="ParentCategoryName">
-                        Parent Category
-                      </option>
-
-                    </select>
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
-                      <i className="material-symbols-outlined !text-[18px]">
-                        expand_more
-                      </i>
-                    </span>
-                  </div>
-                </PermissionAwareTooltip>
-              </div>
-
-              {/* 2. Search Input */}
-              <div className="relative">
-                <PermissionAwareTooltip
-                  allowed={SmartActions.canSearch(CURRENT_FORM_ID)}
-                  allowedText="Enter Criteria"
-                  deniedText="Permission required"
-                >
-                  <div className="relative">
-                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-500">
-                      <i className="material-symbols-outlined !text-[18px]">
-                        search
-                      </i>
-                    </span>
-                    <input
-                      type="text"
-                      value={searchInput}
-                      disabled={!SmartActions.canSearch(CURRENT_FORM_ID)}
-                      placeholder="Enter Criteria..."
-                      onChange={(e) => setSearchInput(e.target.value)}
-                      onKeyDown={(e) => e.key === "Enter" && applySearch()}
-                      className={`h-[34px] w-full pl-8 pr-3 text-xs rounded-md outline-none border transition-all
-            ${SmartActions.canSearch(CURRENT_FORM_ID)
-                          ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
-                          : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                        }`}
-                    />
-                  </div>
-                </PermissionAwareTooltip>
-              </div>
-
-              {/* 3, 4, 5. Action Buttons Group */}
-              <div className="flex items-center justify-end gap-[7px]">
-                {/* Search Button */}
-                <PermissionAwareTooltip
-                  allowed={SmartActions.canSearch(CURRENT_FORM_ID)}
-                  allowedText="Search"
-                >
-                  <button
-                    type="button"
-                    onClick={applySearch}
-                    disabled={!SmartActions.canSearch(CURRENT_FORM_ID)}
-                    className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-primary-button-bg text-primary-button-bg hover:bg-primary-button-bg hover:text-white transition-all disabled:opacity-50"
-                  >
-                    <i className="material-symbols-outlined text-[20px]">
-                      search
-                    </i>
-                  </button>
-                </PermissionAwareTooltip>
-
-                {/* Column Selector */}
-                <PermissionAwareTooltip
-                  allowed={SmartActions.canManageColumns(CURRENT_FORM_ID)}
-                  allowedText="Manage Columns"
-                  deniedText="You do not have permission to manage columns"
-                >
-                  <div
-                    className={`h-[34px] flex items-center ${SmartActions.canManageColumns(CURRENT_FORM_ID)
-                      ? ""
-                      : "pointer-events-none opacity-50"
-                      }`}
-                  >
-                    <ColumnSelector
-                      procName="USP_MemberFormCategory"
-                      onApply={fetchVisibleColumns}
-                      disabled={!SmartActions.canManageColumns(CURRENT_FORM_ID)}
-                    />
-                  </div>
-                </PermissionAwareTooltip>
-
-                {/* Add Button */}
-                <PermissionAwareTooltip
-                  allowed={SmartActions.canAdd(CURRENT_FORM_ID)}
-                  allowedText="Add New"
-                >
-                  <button
-                    type="button"
-                    onClick={async () => {
-                      setIsEdit(false);
-                      setEditData(null);
-                      await fetchParentCategories();
-                      setOpen(true);
-                    }}
-                    disabled={!SmartActions.canAdd(CURRENT_FORM_ID)}
-                    className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-white text-white bg-primary-button-bg hover:bg-white hover:border-primary-button-bg hover:text-primary-button-bg transition-all disabled:opacity-50"
-                  >
-                    <i className="material-symbols-outlined text-[20px]">add</i>
-                  </button>
-                </PermissionAwareTooltip>
-
-                {/* Refresh Button */}
-                {showTable && (filterColumn || searchQuery) && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setFilterColumn("");
-                      setSearchInput("");
-                      setSearchQuery("");
-                      setCurrentPage(1);
-                      fetchTableData();
-                    }}
-                    className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-gray-400 text-gray-500 hover:bg-gray-100 transition-all"
-                  >
-                    <i className="material-symbols-outlined text-[20px]">
-                      refresh
-                    </i>
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
+    <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-md">
+      {/* --- HEADER & SEARCH SECTION --- */}
+      <div className="trezo-card-header mb-[10px] md:mb-[10px] sm:flex items-center justify-between pb-5 border-b border-gray-200 -mx-[20px] md:-mx-[25px] px-[20px] md:px-[25px]">
+        <div className="trezo-card-title">
+          <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
+            Manage Member Form Categories
+          </h5>
         </div>
 
-        {/* Table or Placeholder */}
-        {!showTable && (
-          <div className="w-full bg-white dark:bg-[#0c1427] rounded-md border border-gray-200 dark:border-[#172036] p-10 flex flex-col md:flex-row items-center md:items-start justify-center md:gap-x-80 min-h-[450px]">
-            <div className="md:max-w-md md:px-3 px-0 py-14">
-              <h1 className="text-3xl font-semibold text-black dark:text-white mb-4">
-                Manage Member Form Categories
-              </h1>
-              <p className="text-gray-600 dark:text-gray-300 leading-relaxed mb-6 text-[15px]">
-                Search Member Form Categories data by <br />
-                using above filters to edit, delete etc.
-                <br />
-                OR <br />
-                Click below to add New Form Category.
-              </p>
-              <PermissionAwareTooltip
-                allowed={SmartActions.canAdd(CURRENT_FORM_ID)}
-                allowedText="Add New"
-                deniedText="You do not have permission to add forms"
-              >
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!SmartActions.canAdd(CURRENT_FORM_ID)) return;
-                    setIsEdit(false);
-                    setEditData(null);
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:w-auto w-full">
+          <div className="flex flex-col sm:flex-row items-center gap-3 flex-wrap justify-end">
 
-                    setOpen(true);
-                  }}
-                  disabled={!SmartActions.canAdd(CURRENT_FORM_ID)}
-                  className={`px-[26.5px] py-[12px] rounded-md transition-all
-      ${SmartActions.canAdd(CURRENT_FORM_ID)
-                      ? "bg-primary-button-bg text-white hover:bg-primary-button-bg-hover"
-                      : "bg-gray-300 text-gray-500 cursor-not-allowed"
+            {/* 1. Filter Dropdown */}
+            <div className="relative w-full sm:w-[180px]">
+              <PermissionAwareTooltip allowed={SmartActions.canAdvancedSearch(formName)} allowedText="Search By">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-500">
+                  <i className="material-symbols-outlined !text-[18px]">filter_list</i>
+                </span>
+                <select
+                  value={filterColumn}
+                  onChange={(e) => setFilterColumn(e.target.value)}
+                  className={`w-full h-[34px] pl-8 pr-8 text-xs rounded-md appearance-none outline-none border transition-all
+                           ${SmartActions.canAdvancedSearch(formName)
+                      ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
+                      : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
                     }`}
                 >
-                  Add Form Category
+                  <option value="">Select Filter Option</option>
+                  <option value="FormCategoryName">Category Name</option>
+                  <option value="ParentCategoryName">Parent Category Name</option>
+                 
+                </select>
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
+                  <i className="material-symbols-outlined !text-[18px]">expand_more</i>
+                </span>
+              </PermissionAwareTooltip>
+            </div>
+
+            {/* 2. Search Input */}
+            <div className="relative">
+              <PermissionAwareTooltip allowed={SmartActions.canSearch(formName)} allowedText="Enter Criteria">
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-500">
+                  <i className="material-symbols-outlined !text-[18px]">search</i>
+                </span>
+                <input
+                  type="text"
+                  value={searchInput}
+                  placeholder="Enter Criteria..."
+                  disabled={!SmartActions.canSearch(formName)}
+                  onChange={(e) => setSearchInput(e.target.value)}
+                  onKeyDown={(e) => e.key === "Enter" && applySearch()}
+                  className={`h-[34px] w-full pl-8 pr-3 text-xs rounded-md outline-none border transition-all
+                           ${SmartActions.canSearch(formName)
+                      ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
+                      : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                    }`}
+                />
+              </PermissionAwareTooltip>
+            </div>
+
+            {/* 3. BUTTONS GROUP */}
+            <div className="flex items-center gap-2">
+              <PermissionAwareTooltip allowed={SmartActions.canSearch(formName)} allowedText="Search">
+                <button
+                  type="button"
+                  onClick={applySearch}
+                  disabled={!SmartActions.canSearch(formName)}
+                  className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-primary-button-bg text-primary-button-bg hover:bg-primary-button-bg hover:text-white transition-all shadow-sm disabled:opacity-50"
+                >
+                  <i className="material-symbols-outlined text-[20px]">search</i>
+                </button>
+              </PermissionAwareTooltip>
+
+              <PermissionAwareTooltip allowed={SmartActions.canManageColumns(formName)} allowedText="Manage Columns">
+                <div className={`h-[34px] flex items-center ${!SmartActions.canManageColumns(formName) ? "pointer-events-none opacity-50" : ""}`}>
+                  <ColumnSelector procName="USP_MemberFormCategory" onApply={fetchVisibleColumns} />
+                </div>
+              </PermissionAwareTooltip>
+
+              <PermissionAwareTooltip allowed={SmartActions.canAdd(formName)} allowedText="Add New">
+                <button
+                  type="button"
+                  disabled={!SmartActions.canAdd(formName)}
+                  onClick={handleAdd}
+                  className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-white text-white bg-primary-button-bg hover:bg-white hover:border-primary-button-bg hover:text-primary-button-bg transition-all shadow-sm disabled:opacity-50"
+                >
+                  <i className="material-symbols-outlined text-[20px]">add</i>
                 </button>
               </PermissionAwareTooltip>
             </div>
-            {/* RIGHT ILLUSTRATION */}
-            <div className="hidden md:flex">
-              <svg
-                viewBox="0 0 512 512"
-                className="w-[320px] h-auto opacity-100 select-none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                {/* Main Card Background - using primary-button-bg */}
-                <rect
-                  x="40"
-                  y="80"
-                  width="432"
-                  height="340"
-                  rx="30"
-                  className="fill-primary-button-bg"
-                />
 
-                {/* Card Header - using primary-600 (darker) */}
-                <path
-                  d="M70 80H442C458.569 80 472 93.4315 472 110V130H40V110C40 93.4315 53.4315 80 70 80Z"
-                  className="fill-primary-200"
-                />
-
-                {/* Content Lines/Items - also using primary-600 for contrast */}
-                <g className="fill-primary-200">
-                  <rect x="90" y="210" width="25" height="25" rx="6" />
-                  <rect x="140" y="210" width="240" height="15" rx="7.5" />
-
-                  <rect x="90" y="265" width="25" height="25" rx="6" />
-                  <rect x="140" y="265" width="240" height="15" rx="7.5" />
-
-                  <rect x="90" y="320" width="25" height="25" rx="6" />
-                  <rect x="140" y="320" width="240" height="15" rx="7.5" />
-                </g>
-
-                {/* Magnifying Glass Handle - using primary-600 */}
-                <rect
-                  x="430"
-                  y="420"
-                  width="20"
-                  height="80"
-                  rx="5"
-                  transform="rotate(-45 430 420)"
-                  className="fill-primary-button-bg"
-                />
-
-                {/* Magnifying Glass Lens - using primary-50 (lightest) */}
-                <circle
-                  cx="380"
-                  cy="380"
-                  r="90"
-                  className="fill-primary-50 stroke-primary-200"
-                  strokeWidth="8"
-                />
-              </svg>
-            </div>
-          </div>
-        )}
-
-        {showTable && (
-          <div className="trezo-card-content -mx-[20px] md:-mx-[25px]">
-            {tableLoading || !columnsReady ? (
-              <div className="table-responsive overflow-x-auto">
-                <TableSkeleton
-                  rows={itemsPerPage > 10 ? 10 : itemsPerPage}
-                  columns={skeletonColumns}
-                  showExportSkeleton
-                  showPageSizeSkeleton
-                />
-              </div>
-            ) : totalCount === 0 && tasks.length === 0 ? (
-              /* ✅ OOPS UI */
-              <div className="flex flex-col md:flex-row items-center justify-center p-10 gap-10 min-h-[300px]">
-                <div className="text-center md:text-left max-w-md">
-                  <h3 className="text-xl font-bold text-purple-600 mb-1">
-                    Oops!
-                  </h3>
-                  <h2 className="text-3xl font-extrabold text-gray-800 dark:text-white mb-4">
-                    No records found!
-                  </h2>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">
-                    Please adjust the data filter and search again.
-                  </p>
-                </div>
-
-                <img
-                  src="https://cdn-icons-png.flaticon.com/512/7486/7486744.png"
-                  className="w-48 h-48 opacity-80"
-                />
-              </div>
-            ) : (
-              <>
-                {/* Export Buttons */}
-                <div className="flex justify-between items-center px-7 py-2 mb-2">
-                  {/* Page Size Selector */}
-                  <PermissionAwareTooltip
-                    allowed={true}
-                    allowedText="Items per page"
-                  >
-                    <div className="relative group">
-                      <select
-                        value={itemsPerPage}
-                        onChange={(e) => {
-                          setItemsPerPage(Number(e.target.value));
-                          setCurrentPage(1);
-                        }}
-                        className="h-8 w-[120px] px-3 pr-7 text-xs font-semibold text-gray-600 dark:text-gray-300 bg-transparent border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-all appearance-none"
-                      >
-                        <option value="10">10 / page</option>
-                        <option value="25">25 / page</option>
-                        <option value="50">50 / page</option>
-                        <option value="100">100 / page</option>
-                      </select>
-
-                      <span className="absolute inset-y-0 right-2 flex items-center pointer-events-none">
-                        <i className="material-symbols-outlined text-[18px] text-gray-500">
-                          expand_more
-                        </i>
-                      </span>
-                    </div>
-                  </PermissionAwareTooltip>
-
-                  <div className="flex items-center gap-2 leading-none">
-                    {/* PDF */}
-                    <PermissionAwareTooltip
-                      allowed={SmartActions.canSearch(CURRENT_FORM_ID)}
-                      allowedText="Export PDF"
-                      deniedText="You do not have permission to export"
-                    >
-                      <button
-                        type="button"
-                        disabled={!SmartActions.canSearch(CURRENT_FORM_ID)}
-                        onClick={() => {
-                          if (!SmartActions.canSearch(CURRENT_FORM_ID)) return;
-                          exportPDF();
-                        }}
-                        className={`h-8 px-3 inline-flex items-center justify-center text-xs font-semibold uppercase rounded-md transition-all
-        ${SmartActions.canSearch(CURRENT_FORM_ID)
-                            ? "text-primary-button-bg border border-primary-button-bg hover:bg-primary-button-bg hover:text-white"
-                            : "text-gray-300 border border-gray-300 cursor-not-allowed"
-                          }`}
-                      >
-                        PDF
-                      </button>
-                    </PermissionAwareTooltip>
-
-                    {/* EXCEL */}
-                    <PermissionAwareTooltip
-                      allowed={SmartActions.canSearch(CURRENT_FORM_ID)}
-                      allowedText="Export Excel"
-                      deniedText="You do not have permission to export"
-                    >
-                      <button
-                        type="button"
-                        disabled={!SmartActions.canSearch(CURRENT_FORM_ID)}
-                        onClick={() => {
-                          if (!SmartActions.canSearch(CURRENT_FORM_ID)) return;
-                          exportExcel();
-                        }}
-                        className={`h-8 px-3 inline-flex items-center justify-center text-xs font-semibold uppercase rounded-md transition-all
-        ${SmartActions.canSearch(CURRENT_FORM_ID)
-                            ? "text-primary-button-bg border border-primary-button-bg hover:bg-primary-button-bg hover:text-white"
-                            : "text-gray-300 border border-gray-300 cursor-not-allowed"
-                          }`}
-                      >
-                        Excel
-                      </button>
-                    </PermissionAwareTooltip>
-
-                    {/* CSV */}
-                    <PermissionAwareTooltip
-                      allowed={SmartActions.canSearch(CURRENT_FORM_ID)}
-                      allowedText="Export CSV"
-                      deniedText="You do not have permission to export"
-                    >
-                      <button
-                        type="button"
-                        disabled={!SmartActions.canSearch(CURRENT_FORM_ID)}
-                        onClick={() => {
-                          if (!SmartActions.canSearch(CURRENT_FORM_ID)) return;
-                          exportCSV();
-                        }}
-                        className={`h-8 px-3 inline-flex items-center justify-center text-xs font-semibold uppercase rounded-md transition-all
-        ${SmartActions.canSearch(CURRENT_FORM_ID)
-                            ? "text-primary-button-bg border border-primary-button-bg hover:bg-primary-button-bg hover:text-white"
-                            : "text-gray-300 border border-gray-300 cursor-not-allowed"
-                          }`}
-                      >
-                        CSV
-                      </button>
-                    </PermissionAwareTooltip>
-
-                    {/* PRINT */}
-                    <PermissionAwareTooltip
-                      allowed={SmartActions.canSearch(CURRENT_FORM_ID)}
-                      allowedText="Print"
-                      deniedText="You do not have permission to print"
-                    >
-                      <button
-                        type="button"
-                        disabled={!SmartActions.canSearch(CURRENT_FORM_ID)}
-                        onClick={() => {
-                          if (!SmartActions.canSearch(CURRENT_FORM_ID)) return;
-                          printTable();
-                        }}
-                        className={`h-8 px-3 inline-flex items-center justify-center text-xs font-semibold uppercase rounded-md transition-all
-      ${SmartActions.canSearch(CURRENT_FORM_ID)
-                            ? "text-primary-button-bg border border-primary-button-bg hover:bg-primary-button-bg hover:text-white"
-                            : "text-gray-300 border border-gray-300 cursor-not-allowed"
-                          }`}
-                      >
-                        PRINT
-                      </button>
-                    </PermissionAwareTooltip>
-                  </div>
-                </div>
-
-                {/* Table */}
-                <div className="table-responsive overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="text-black dark:text-white">
-                      <tr>
-                        {displayedColumns.map((col) => (
-                          <th
-                            key={col.ColumnName}
-                            onClick={() => handleSort(col.ColumnName)}
-                            className={`font-medium ltr:text-left rtl:text-right px-[20px] py-[11px] whitespace-nowrap cursor-pointer transition-colors ${sortColumn === col.ColumnName
-                              ? "bg-primary-table-bg-hover dark:bg-[#1e2a4a]"
-                              : "bg-primary-table-bg dark:bg-[#15203c]"
-                              }`}
-                          >
-                            <div className="flex items-center gap-1 group font-semibold">
-                              <span className="transition-colors">
-                                {col.DisplayName}
-                              </span>
-                              <i
-                                className={`material-symbols-outlined text-sm transition-all ${sortColumn === col.ColumnName
-                                  ? "text-gray-400 dark:text-primary-400 opacity-100"
-                                  : "text-gray-400 dark:text-gray-500 opacity-40"
-                                  }`}
-                              >
-                                {sortDirection === "ASC"
-                                  ? "arrow_drop_up"
-                                  : "arrow_drop_down"}
-                              </i>
-                            </div>
-                          </th>
-                        ))}
-                        <th className="px-[20px] py-[11px] text-left bg-primary-table-bg dark:bg-[#15203c]">
-                          Action
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="text-black dark:text-white">
-                      {tasks.map((task) => (
-                        <tr key={task.FormCategoryId}>
-                          {displayedColumns.map((col) => (
-                            <td
-                              key={`${task.FormCategoryId}_${col.ColumnName}`}
-                              className="px-[20px] py-[15px] border-b border-gray-100 dark:border-[#172036]"
-                            >
-                              {renderColumnValue(task, col.ColumnName)}
-                            </td>
-                          ))}
-
-                          <td className="ltr:text-left rtl:text-right whitespace-nowrap px-[20px] py-[15px] border-b border-gray-100 dark:border-[#172036]">
-                            <div className="flex items-center gap-[9px]">
-                              {/* EDIT */}
-                              <PermissionAwareTooltip
-                                allowed={SmartActions.canEdit(CURRENT_FORM_ID)}
-                                allowedText="Edit"
-                                deniedText="You do not have permission to edit"
-                              >
-                                <button
-                                  type="button"
-                                  disabled={
-                                    !SmartActions.canEdit(CURRENT_FORM_ID)
-                                  }
-                                  onClick={async () => {
-                                    if (!SmartActions.canEdit(CURRENT_FORM_ID))
-                                      return;
-
-                                    const payload = {
-                                      procName: "MemberFormCategory",
-                                      Para: JSON.stringify({
-                                        ActionMode: "Select",
-                                        EditId: task.FormCategoryId,
-                                      }),
-                                    };
-
-                                    const response =
-                                      await universalService(payload);
-                                    const data = Array.isArray(response)
-                                      ? response[0]
-                                      : response;
-                                    if (!data) return;
-
-                                    setIsEdit(true);
-                                    setEditData(data);
-                                    await fetchParentCategories();
-                                    setOpen(true);
-                                  }}
-                                  className={`leading-none
-      ${SmartActions.canEdit(CURRENT_FORM_ID)
-                                      ? "text-gray-500 hover:text-primary-button-bg"
-                                      : "text-gray-300 cursor-not-allowed"
-                                    }`}
-                                >
-                                  <i className="material-symbols-outlined !text-md">
-                                    edit
-                                  </i>
-                                </button>
-                              </PermissionAwareTooltip>
-
-                              {/* DELETE */}
-                              <PermissionAwareTooltip
-                                allowed={SmartActions.canDelete(
-                                  CURRENT_FORM_ID,
-                                )}
-                                allowedText="Delete"
-                                deniedText="You do not have permission to delete"
-                              >
-                                <button
-                                  type="button"
-                                  disabled={
-                                    !SmartActions.canDelete(CURRENT_FORM_ID)
-                                  }
-                                  onClick={() => {
-                                    if (
-                                      !SmartActions.canDelete(CURRENT_FORM_ID)
-                                    )
-                                      return;
-                                    handleDelete(task.FormCategoryId);
-                                  }}
-                                  className={`leading-none
-      ${SmartActions.canDelete(CURRENT_FORM_ID)
-                                      ? "text-danger-500 hover:text-danger-700"
-                                      : "text-gray-300 cursor-not-allowed"
-                                    }`}
-                                >
-                                  <i className="material-symbols-outlined !text-md">
-                                    delete
-                                  </i>
-                                </button>
-                              </PermissionAwareTooltip>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Pagination */}
-                <Pagination
-                  currentPage={currentPage}
-                  totalPages={totalPages}
-                  totalCount={totalCount}
-                  pageSize={itemsPerPage}
-                  onPageChange={setCurrentPage}
-                />
-              </>
+            {(filterColumn || searchInput) && (
+              <PermissionAwareTooltip allowed={SmartActions.canSearch(formName)} allowedText="Reset filter">
+                <button
+                  type="button"
+                  disabled={!SmartActions.canSearch(formName)}
+                  onClick={() => {
+                    setFilterColumn("");
+                    setSearchInput("");
+                    setPage(1);
+                    setSearchTrigger((p) => p + 1);
+                  }}
+                  className={`w-[34px] h-[34px] flex items-center justify-center rounded-md
+                    ${SmartActions.canSearch(formName) ? "border border-gray-400 text-gray-600 hover:bg-gray-200" : "border border-gray-300 text-gray-300 cursor-not-allowed"}`}
+                >
+                  <i className="material-symbols-outlined text-[20px]">refresh</i>
+                </button>
+              </PermissionAwareTooltip>
             )}
           </div>
-        )}
+        </div>
       </div>
 
-      {/* Add/Edit Modal */}
+      {!showTable && (
+        <LandingIllustration
+          title="Manage Member Form Categories"
+          addLabel="Add Category"
+          formName={formName}
+          description={
+            <>
+              Search Category data by using above filters to edit, delete etc.<br />
+              <span className="font-medium">OR</span><br />
+              Click on Add button to create a new category entry.
+            </>
+          }
+        />
+      )}
+
+      {showTable && (
+        <div>
+          {tableLoading ? (
+            <div className="flex justify-between items-center py-2 animate-pulse">
+              <div className="h-8 w-[120px] bg-gray-200 dark:bg-gray-700 rounded-md" />
+              <div className="flex gap-2">
+                <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded-md" />
+                <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded-md" />
+                <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded-md" />
+                <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded-md" />
+              </div>
+            </div>
+          ) : hasData ? (
+            <div className="flex justify-between items-center py-2 mb-[10px]">
+              {/* PAGE SIZE */}
+              <div className="relative">
+                <select
+                  value={perPage}
+                  onChange={(e) => {
+                    const size = Number(e.target.value);
+                    setPerPage(size);
+                    setPage(1);
+                    fetchGridData({ pageOverride: 1, perPageOverride: size });
+                  }}
+                  className="h-8 w-[120px] px-3 pr-7 text-xs font-semibold text-gray-600 dark:text-gray-300 bg-transparent border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-all appearance-none"
+                >
+                  <option value="10">10 / page</option>
+                  <option value="25">25 / page</option>
+                  <option value="50">50 / page</option>
+                  <option value="100">100 / page</option>
+                </select>
+                <span className="absolute inset-y-0 right-2 flex items-center pointer-events-none">
+                  <i className="material-symbols-outlined text-[18px] text-gray-500">expand_more</i>
+                </span>
+              </div>
+
+              {/* EXPORT */}
+              <PermissionAwareTooltip allowed={canExport}>
+                <div className={!canExport ? "pointer-events-none opacity-50" : ""}>
+                  <ExportButtons
+                    title="Form Categories Report"
+                    columns={exportColumns}
+                    fetchData={fetchExportData}
+                    disabled={!canExport}
+                  />
+                </div>
+              </PermissionAwareTooltip>
+            </div>
+          ) : null}
+
+          {/* --- CONTENT CONTAINER --- */}
+          <div className="trezo-card-content bg-white dark:bg-[#0f172a] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
+            <DataTable
+              columns={columns}
+              data={tableData}
+              customStyles={customStyles}
+              pagination
+              paginationServer
+              paginationTotalRows={totalRows}
+              paginationComponent={(props) => (
+                <CustomPagination {...props} currentPage={page} rowsPerPage={perPage} />
+              )}
+              onChangePage={handlePageChange}
+              onChangeRowsPerPage={handlePerRowsChange}
+              onSort={handleSort}
+              sortServer
+              defaultSortFieldId={columns.find(col => col.columnKey === sortColumnKey)?.id}
+              defaultSortAsc={sortDirection === "ASC"}
+              progressPending={tableLoading}
+              progressComponent={<TableSkeleton rows={perPage} columns={columns.length || 8} />}
+              conditionalRowStyles={[
+                {
+                  when: row => row.__isTotal,
+                  style: {
+                    fontWeight: 700,
+                    backgroundColor: "var(--color-primary-table-bg)",
+                  }
+                }
+              ]}
+              noDataComponent={!tableLoading && <OopsNoData />}
+            />
+          </div>
+        </div>
+      )}
+
+      {/* --- ADD/EDIT MODAL --- */}
       <Dialog open={open} onClose={setOpen} className="relative z-60">
         <DialogBackdrop
           transition
@@ -1186,7 +758,7 @@ const FormCategory: React.FC = () => {
                 >
                   <div className="trezo-card-title">
                     <h5 className="!mb-0">
-                      {isEdit ? "Edit Form Category" : "Add Form Category"}
+                      {isEdit ? "Edit Member Form Category" : "Add Member Form Category"}
                     </h5>
                   </div>
                   <button
@@ -1407,8 +979,8 @@ const FormCategory: React.FC = () => {
           </div>
         </div>
       </Dialog>
-    </>
+    </div>
   );
 };
 
-export default FormCategory;
+export default Template;

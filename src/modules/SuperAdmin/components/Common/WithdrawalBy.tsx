@@ -20,56 +20,8 @@ import Swal from "sweetalert2";
 import * as Yup from "yup";
 
 const Template: React.FC = () => {
-
-    const incomeSchema = Yup.object().shape({
-        IncomeName: Yup.string()
-            .trim()
-            .required("Income Name is required")
-            .max(100, "Maximum 100 characters allowed"),
-
-        DisplayName: Yup.string()
-            .trim()
-            .required("Display Name is required")
-            .max(200, "Maximum 200 characters allowed"),
-
-        TriggerType: Yup.number()
-            .typeError("Trigger Type is required")
-            .transform((value, originalValue) =>
-                originalValue === "" ? undefined : Number(originalValue)
-            )
-            .required("Trigger Type is required")
-            .moreThan(0, "Trigger Type is required"),
-
-        TriggerTime: Yup.string()
-            .required("Trigger Time is required"),
-
-        TriggerValueType: Yup.number()
-            .typeError("Trigger Value Type is required")
-            .transform((value, originalValue) =>
-                originalValue === "" ? undefined : Number(originalValue)
-            )
-            .required("Trigger Value Type is required")
-            .moreThan(0, "Trigger Value Type is required"),
-
-        WalletId: Yup.number()
-            .typeError("Wallet is required")
-            .transform((value, originalValue) =>
-                originalValue === "" ? undefined : Number(originalValue)
-            )
-            .required("Wallet is required")
-            .moreThan(0, "Wallet is required"),
-
-        IncomeType: Yup.string()
-            .required("Income Type is required"),
-
-        MaxLevel: Yup.number()
-            .typeError("Max Level must be a number")
-            .transform((value, originalValue) =>
-                originalValue === "" ? undefined : Number(originalValue)
-            )
-            .required("Max Level is required")
-            .min(1, "Max Level must be at least 1"),
-
+    const formSchema = Yup.object().shape({
+        WithdrawalMode: Yup.string().required("Withdrawal By is required"),
     });
     const [searchInput, setSearchInput] = useState("");
     const [filterColumn, setFilterColumn] = useState("");
@@ -92,18 +44,9 @@ const Template: React.FC = () => {
     const [permissionsLoading, setPermissionsLoading] = useState(true);
     const [hasPageAccess, setHasPageAccess] = useState(true);
     const [initialSortReady, setInitialSortReady] = useState(false);
-    const [openROI, setOpenROI] = useState(false);
-    const [editingIncome, setEditingIncome] = useState<IncomeRecord | null>(null);
-    const [triggerTypes, setTriggerTypes] = useState<any[]>([]);
-    const [triggerValueTypes, setTriggerValueTypes] = useState<any[]>([]);
-    const [wallets, setWallets] = useState<any[]>([]);
-    const [processingROI, setProcessingROI] = useState(false);
     const location = useLocation();
     const path = location.pathname;
-    const segments = path.split("/").filter(Boolean);
-    const last = segments[segments.length - 1];
-    const isId = !isNaN(Number(last));
-    const formName = isId ? segments[segments.length - 2] : last;
+    const formName = path.split("/").pop();
     const canExport = SmartActions.canExport(formName);
     const [open, setOpen] = useState(false);
     const [isEdit, setIsEdit] = useState(false);
@@ -112,55 +55,7 @@ const Template: React.FC = () => {
     const closeModal = () => {
         setOpen(false);
     };
-    const fetchIncomeList = async () => {
-        try {
-            setTableLoading(true);
 
-            const payload = {
-                procName: "IncomeSetting",
-                Para: JSON.stringify({
-                    ActionMode: "GET_ALL",
-                }),
-            };
-
-            const response = await universalService(payload);
-            const data = response?.data ?? response;
-
-            setRecords(Array.isArray(data) ? data : []);
-            setTotalCount(Array.isArray(data) ? data.length : 0);
-
-        } catch (error) {
-            console.error("Income list fetch error:", error);
-            setRecords([]);
-        } finally {
-            setTableLoading(false);
-        }
-    };
-    const fetchDropdownData = async () => {
-        try {
-            const [ttRes, tvRes, walletRes] = await Promise.all([
-                universalService({
-                    procName: "IncomeSetting",
-                    Para: JSON.stringify({ ActionMode: "GET_ALL_TRIGGER_TYPE" }),
-                }),
-                universalService({
-                    procName: "IncomeSetting",
-                    Para: JSON.stringify({ ActionMode: "GET_ALL_TRIGGER_VALUE_TYPE" }),
-                }),
-                universalService({
-                    procName: "IncomeSetting",
-                    Para: JSON.stringify({ ActionMode: "GET_ALL_WALLETS" }),
-                }),
-            ]);
-
-            setTriggerTypes(ttRes?.data ?? ttRes ?? []);
-            setTriggerValueTypes(tvRes?.data ?? tvRes ?? []);
-            setWallets(walletRes?.data ?? walletRes ?? []);
-
-        } catch (error) {
-            console.error("Dropdown fetch error:", error);
-        }
-    };
     const fetchFormPermissions = async () => {
         try {
             setPermissionsLoading(true);
@@ -213,68 +108,6 @@ const Template: React.FC = () => {
             setPermissionsLoading(false);
         }
     };
-    const handleSaveIncome = async (values: any) => {
-        const isEdit = values.IncomeId && values.IncomeId > 0;
-
-        const result = await Swal.fire({
-            title: isEdit ? "Confirm Update?" : "Confirm Add?",
-            text: isEdit
-                ? "Are you sure you want to update this income setting?"
-                : "Are you sure you want to add this income setting?",
-            icon: "question",
-            showCancelButton: true,
-            confirmButtonColor: "#3085d6",
-            cancelButtonColor: "#d33",
-            confirmButtonText: isEdit ? "Yes, Update" : "Yes, Add",
-        });
-
-        if (!result.isConfirmed) return;
-
-        try {
-            setProcessingROI(true);
-
-            const payload = {
-                procName: "IncomeSetting",
-                Para: JSON.stringify({
-                    ActionMode: isEdit ? "UPDATE" : "INSERT",
-                    IncomeId: values.IncomeId,
-                    IncomeName: values.IncomeName,
-                    DisplayName: values.DisplayName,
-                    Status: 1,
-                    TriggerTypeId: Number(values.TriggerType),
-                    TriggerTime: values.TriggerTime,
-                    IsIncludedInCapping: values.IsCapping ? 1 : 0,
-                    TriggerValueTypeId: Number(values.TriggerValueType),
-                    WalletId: Number(values.WalletId),
-                    IncomeType: values.IncomeType,
-                    MaxLevel: values.MaxLevel ? Number(values.MaxLevel) : null,
-                    EntryBy: 1,
-                }),
-            };
-
-            const response = await universalService(payload);
-            const res = Array.isArray(response) ? response[0] : response;
-
-            if (res?.StatusCode === 1) {
-                Swal.fire(
-                    "Success",
-                    res.Message,
-                    "success"
-                );
-                fetchIncomeList();
-                setOpenROI(false);
-                setEditingIncome(null);
-            } else {
-                Swal.fire("Error", res?.Message || "Operation failed", "error");
-            }
-
-        } catch (error) {
-            console.error("Save error:", error);
-            Swal.fire("Error", "Server error", "error");
-        } finally {
-            setProcessingROI(false);
-        }
-    };
     const handleSort = (column: any, direction: string) => {
         setSortColumnKey(column.columnKey);   // ⭐ send column name
         setSortDirection(direction.toUpperCase());
@@ -299,7 +132,7 @@ const Template: React.FC = () => {
                 procName: "GetUserGridColumns",
                 Para: JSON.stringify({
                     UserId: employeeId,
-                    GridName: "USP_IncomeSetting",
+                    GridName: "USP_ManageWithdrawalByMaster",
                 }),
             };
 
@@ -396,47 +229,15 @@ const Template: React.FC = () => {
             setColumns([]);
         }
     };
-    const handleEdit = async (row: any) => {
-        try {
-            setEditLoading(true);
-            setOpenROI(true); // open modal first (for loader)
+    const handleEdit = async (row) => {
+        setEditLoading(true);
+        setOpen(true);
+        setIsEdit(true);
 
-            const payload = {
-                procName: "IncomeSetting", // ✅ FIXED
-                Para: JSON.stringify({
-                    ActionMode: "GET",
-                    IncomeId: row.IncomeId,
-                }),
-            };
+        // if you later fetch select API → do it here
+        setEditData(row);
 
-            const res = await universalService(payload);
-            const data = res?.data ?? res;
-
-            const record = Array.isArray(data) ? data[0] : data;
-
-            if (!record) {
-                console.error("No record found");
-                return;
-            }
-
-            setEditingIncome({
-                IncomeId: record.IncomeId,
-                IncomeName: record.IncomeName,
-                DisplayName: record.DisplayName,
-                TriggerTypeId: record.TriggerTypeId,
-                TriggerTime: record.TriggerTime,
-                TriggerValueTypeId: record.TriggerValueTypeId,
-                WalletId: record.WalletId,
-                IncomeType: record.IncomeType,
-                MaxLevel: record.MaxLevel,
-                IsIncludedInCapping: record.IsIncludedInCapping,
-            });
-
-        } catch (err) {
-            console.error("Edit fetch error:", err);
-        } finally {
-            setEditLoading(false);
-        }
+        setTimeout(() => setEditLoading(false), 200);
     };
     const exportColumns = columns
         .filter(c => c.columnKey)
@@ -446,7 +247,7 @@ const Template: React.FC = () => {
         }));
     const fetchExportData = async () => {
         const payload = {
-            procName: "IncomeSetting",
+            procName: "ManageWithdrawalByMaster",
             Para: JSON.stringify({
                 SearchBy: filterColumn,
                 Criteria: searchInput,
@@ -464,7 +265,7 @@ const Template: React.FC = () => {
     const handleDelete = async (row: any) => {
         const result = await Swal.fire({
             title: "Are you sure?",
-            text: `Delete "${row.CountryName}" ?`,
+            text: `Delete "${row.WithdrawalMode}" ?`,
             icon: "warning",
             showCancelButton: true,
             confirmButtonColor: "#d33",
@@ -477,12 +278,11 @@ const Template: React.FC = () => {
 
         try {
             const payload = {
-                procName: "IncomeSetting",
+                procName: "ManageWithdrawalByMaster",
                 Para: JSON.stringify({
                     ActionMode: "Delete",
-                    EditId: row.CountryId,
-                    // CompanyId: 1,
-                    // ModifiedBy: 1,
+                    EditId: row.Id,
+                    ModifiedBy: 1,
                 }),
             };
 
@@ -519,7 +319,7 @@ const Template: React.FC = () => {
             setTableLoading(true);
 
             const payload = {
-                procName: "IncomeSetting",
+                procName: "ManageWithdrawalByMaster",
                 Para: JSON.stringify({
                     ActionMode: "GetReport",
                     SearchBy: options?.searchBy ?? filterColumn ?? "",
@@ -557,7 +357,7 @@ const Template: React.FC = () => {
             procName: "UniversalColumnSelector",
             Para: JSON.stringify({
                 EmployeeId: employeeId,
-                USPName: "USP_IncomeSetting",
+                USPName: "USP_ManageWithdrawalByMaster",
                 ActionMode: "List",
                 Mode: "Get",
             }),
@@ -620,12 +420,6 @@ const Template: React.FC = () => {
         fetchFormPermissions();
     }, []);
 
-    useEffect(() => {
-        if (openROI) {
-            fetchDropdownData();
-        }
-    }, [openROI]);
-
     const pageTotals: any = {};
     columns.forEach((col: any) => {
         if (!col.isTotal || !col.columnKey) return;
@@ -678,7 +472,7 @@ const Template: React.FC = () => {
             <div className="trezo-card-header mb-[10px] md:mb-[10px] sm:flex items-center justify-between pb-5 border-b border-gray-200 -mx-[20px] md:-mx-[25px] px-[20px] md:px-[25px]">
                 <div className="trezo-card-title">
                     <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
-                        Manage IncomeSetting
+                        Manage Withdrawal By Master
                     </h5>
                 </div>
 
@@ -706,8 +500,7 @@ const Template: React.FC = () => {
                                         }`}
                                 >
                                     <option value="">Select Filter Option</option>
-                                    <option value="CountryName">IncomeSetting Name</option>
-                                    <option value="Language">Language</option>
+                                    <option value="WithdrawalMode">Withdrawal By</option>
                                 </select>
                                 <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
                                     <i className="material-symbols-outlined !text-[18px]">
@@ -770,7 +563,7 @@ const Template: React.FC = () => {
                                         }`}
                                 >
                                     <ColumnSelector
-                                        procName="USP_IncomeSetting"
+                                        procName="USP_ManageWithdrawalByMaster"
                                         onApply={fetchVisibleColumns}
                                     />
                                 </div>
@@ -784,8 +577,7 @@ const Template: React.FC = () => {
                                     type="button"
                                     disabled={!SmartActions.canAdd(formName)}
                                     onClick={() => {
-                                        setEditingIncome(null); // reset form
-                                        setOpenROI(true);       // 🔥 correct state
+                                        setOpen(true);
                                     }}
                                     className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-primary-button-bg text-white bg-primary-button-bg hover:bg-white hover:border-primary-button-bg hover:text-primary-button-bg transition-all shadow-sm disabled:opacity-50"
                                 >
@@ -826,15 +618,15 @@ const Template: React.FC = () => {
             </div>
             {!showTable && (
                 <LandingIllustration
-                    title="Manage IncomeSetting"
-                    addLabel="Add IncomeSetting"
+                    title="Withdrawal By Master"
+                    addLabel="Add Withdrawal By"
                     formName={formName}
                     description={
                         <>
-                            Search IncomeSetting using filters above.<br />
+                            Search Withdrawal By using filters above.<br />
                             Manage records, export reports and analyse performance.<br />
                             <span className="font-medium">OR</span><br />
-                            Click on Add button to create a new country entry.
+                            Click on Add button to create a new Withdrawal By entry.
                         </>
                     }
                 />
@@ -893,7 +685,7 @@ const Template: React.FC = () => {
                             <PermissionAwareTooltip allowed={canExport}>
                                 <div className={!canExport ? "pointer-events-none opacity-50" : ""}>
                                     <ExportButtons
-                                        title="IncomeSetting Report"
+                                        title="Withdrawal By Report"
                                         columns={exportColumns}
                                         fetchData={fetchExportData}
                                         disabled={!canExport}
@@ -953,326 +745,196 @@ const Template: React.FC = () => {
             )}
 
             <Dialog
-                open={openROI}
-                onClose={() => {
-                    setOpenROI(false);
-                    setEditingIncome(null);
-                }}
-
+                open={open}
+                onClose={() => setOpen(false)}
                 className="relative z-60"
             >
-                <DialogBackdrop className="fixed inset-0 bg-gray-500/75 transition-opacity" />
+                <DialogBackdrop
+                    transition
+                    className="fixed inset-0 bg-gray-500/75 transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
+                />
 
                 <div className="fixed inset-0 z-60 w-screen overflow-y-auto">
-                    <div className="flex min-h-full items-center justify-center p-4 sm:p-0">
+                    <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
                         <DialogPanel
-                            className="relative transform overflow-hidden rounded-lg 
-      bg-white dark:bg-[#0c1427]
-      text-left shadow-xl transition-all 
-      sm:my-8 sm:w-full sm:max-w-[900px]"
+                            transition
+                            className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all
+data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200
+data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-[550px]
+data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
                         >
-
-                            <div className="trezo-card w-full p-[20px] md:p-[25px]">
-
+                            <div className="trezo-card w-full bg-white dark:bg-[#0c1427] p-[20px] md:p-[25px] rounded-md">
                                 {/* Header */}
-                                <div className="trezo-card-header bg-gray-50 dark:bg-[#15203c]
-                            mb-[20px] flex items-center justify-between
-                            -mx-[20px] md:-mx-[25px] -mt-[20px] md:-mt-[25px]
-                            p-[20px] md:p-[25px] rounded-t-md"
+                                <div
+                                    className="trezo-card-header bg-gray-50 dark:bg-[#15203c] mb-[20px] md:mb-[25px]
+flex items-center justify-between -mx-[20px] md:-mx-[25px] -mt-[20px] md:-mt-[25px]
+p-[20px] md:p-[25px] rounded-t-md"
                                 >
-                                    <h5 className="!mb-0">{editingIncome ? "Edit Income Setting" : "Add Income Setting"}</h5>
-
+                                    <div className="trezo-card-title">
+                                        <h5 className="!mb-0">
+                                            {isEdit ? "Edit Withdrawal By" : "Add Withdrawal By"}
+                                        </h5>
+                                    </div>
                                     <button
                                         type="button"
-                                        className="text-[23px] hover:text-primary-button-bg"
-                                        onClick={() => {
-                                            setOpenROI(false);
-                                            setEditingIncome(null);
-                                        }}
+                                        className="text-[23px] transition-all leading-none text-black dark:text-white hover:text-primary-button-bg"
+                                        onClick={() => setOpen(false)}
                                     >
                                         <i className="ri-close-fill"></i>
                                     </button>
                                 </div>
+
+                                {/* Formik */}
+                                {/* BODY */}
                                 {editLoading ? (
-                                    <div className="flex justify-center items-center h-[200px]">
-                                        <div className="theme-loader"></div>
+                                    <div className="flex items-center justify-center min-h-[280px]">
+                                        <div className="flex flex-col items-center gap-3">
+                                            <div className="theme-loader"></div>
+                                            <p className="text-sm text-gray-500">
+                                                Loading document...
+                                            </p>
+                                        </div>
                                     </div>
                                 ) : (
                                     <Formik
                                         initialValues={{
-                                            IncomeId: editingIncome?.IncomeId || 0,
-                                            IncomeName: editingIncome?.IncomeName || "",
-                                            DisplayName: editingIncome?.DisplayName || "",
-                                            TriggerType: editingIncome?.TriggerTypeId || "",
-                                            TriggerTime: editingIncome?.TriggerTime || "",
-                                            TriggerValueType: editingIncome?.TriggerValueTypeId || "",
-                                            WalletId: editingIncome?.WalletId || "",
-                                            IncomeType: editingIncome?.IncomeType || "",
-                                            MaxLevel: editingIncome?.MaxLevel || "",
-                                            IsCapping: editingIncome?.IsIncludedInCapping ?? true,
+                                            WithdrawalMode: editData?.WithdrawalMode || "",
                                         }}
-
                                         enableReinitialize
-                                        validationSchema={incomeSchema}
-                                        onSubmit={handleSaveIncome}
+                                        validationSchema={formSchema}
+                                        onSubmit={async (values, { resetForm }) => {
+                                            const actionText = isEdit ? "update" : "add";
+
+                                            const confirm = await Swal.fire({
+                                                title: `Confirm ${actionText}?`,
+                                                text: `Do you want to ${actionText} "${values.WithdrawalMode}" ?`,
+                                                icon: "question",
+                                                showCancelButton: true,
+                                                confirmButtonColor: "#2563eb",
+                                                cancelButtonColor: "#6b7280",
+                                                confirmButtonText: "Yes, continue",
+                                                cancelButtonText: "Cancel",
+                                            });
+
+                                            if (!confirm.isConfirmed) return;
+
+                                            try {
+                                                setSaving(true);
+
+                                                Swal.fire({
+                                                    title: "Processing...",
+                                                    allowOutsideClick: false,
+                                                    didOpen: () => Swal.showLoading(),
+                                                });
+
+                                                const payload = {
+                                                    procName: "ManageWithdrawalByMaster",
+                                                    Para: JSON.stringify({
+                                                        ActionMode: isEdit ? "Update" : "Insert",
+                                                        WithdrawalByName: values.WithdrawalMode,
+                                                        EditId: isEdit ? editData?.Id : 0,
+                                                        EntryBy: 1,
+                                                        ModifiedBy: 1,
+                                                    }),
+                                                };
+
+                                                const response = await universalService(payload);
+                                                const res = Array.isArray(response) ? response[0] : response;
+
+                                                Swal.close();
+
+                                                if (res?.Status == 1 || res?.Status === "1") {
+                                                    await Swal.fire({
+                                                        icon: "success",
+                                                        title: isEdit ? "Updated!" : "Added!",
+                                                        text: res?.Msg || "Saved successfully",
+                                                        timer: 1500,
+                                                        showConfirmButton: false,
+                                                    });
+
+                                                    resetForm();
+                                                    closeModal();
+
+                                                    setPage(1);
+                                                    setSearchTrigger((p) => p + 1);
+                                                    setRefreshGrid((p) => p + 1);
+                                                } else {
+                                                    Swal.fire("Error", res?.Msg || "Server error", "error");
+                                                }
+                                            } catch (err) {
+                                                console.error(err);
+                                                Swal.fire("Error", "Server error", "error");
+                                            } finally {
+                                                setSaving(false);
+                                            }
+                                        }}
                                     >
+                                        {({ setFieldValue }) => {
+
+                                            return (
+                                                <Form className="space-y-5">
 
 
-                                        <Form className="space-y-6">
-
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-                                                {/* Income Name */}
-                                                <div>
-                                                    <label className="mb-[10px] text-black dark:text-white font-medium block">
-                                                        Income Name<span className="text-red-500">*</span>
-                                                    </label>
-                                                    <Field
-                                                        type="text"
-                                                        name="IncomeName"
-                                                        placeholder="Enter System Income Name (e.g. ROI)"
-                                                        className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
-            dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
-            transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
-            focus:border-primary-button-bg"
-                                                    />
-                                                    <ErrorMessage name="IncomeName" component="p" className="text-red-500 text-sm" />
-                                                </div>
-
-                                                {/* Display Name */}
-                                                <div>
-                                                    <label className="mb-[10px] text-black dark:text-white font-medium block">
-                                                        Display Name<span className="text-red-500">*</span>
-                                                    </label>
-                                                    <Field
-                                                        type="text"
-                                                        name="DisplayName"
-                                                        placeholder="Enter UI Display Name"
-                                                        className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
-            dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
-            transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
-            focus:border-primary-button-bg"
-                                                    />
-                                                    <ErrorMessage name="DisplayName" component="p" className="text-red-500 text-sm" />
-                                                </div>
-
-                                                {/* Trigger Type */}
-                                                <div>
-                                                    <label className="mb-[10px] text-black dark:text-white font-medium block">
-                                                        Trigger Type<span className="text-red-500">*</span>
-                                                    </label>
-                                                    <Field
-                                                        as="select"
-                                                        name="TriggerType"
-                                                        className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
-        dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[14px] block w-full
-        outline-0 cursor-pointer transition-all focus:border-primary-button-bg"
-                                                    >
-                                                        <option value="">Select Trigger Type</option>
-
-                                                        {triggerTypes.map((item: any) => (
-                                                            <option key={item.Value} value={item.Value}>
-                                                                {item.Label}
-                                                            </option>
-                                                        ))}
-                                                    </Field>
-
-
-                                                    <ErrorMessage name="TriggerType" component="p" className="text-red-500 text-sm" />
-                                                </div>
-
-                                                {/* Trigger Time */}
-                                                <div>
-                                                    <label className="mb-[10px] text-black dark:text-white font-medium block">
-                                                        Trigger Time<span className="text-red-500">*</span>
-                                                    </label>
-                                                    <Field
-                                                        as="select"
-                                                        name="TriggerTime"
-                                                        className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
-            dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[14px] block w-full
-            outline-0 cursor-pointer transition-all focus:border-primary-button-bg"
-                                                    >
-                                                        <option value="">Select Trigger Time</option>
-                                                        <option value="Instant">Instant</option>
-                                                        <option value="Daily">Daily</option>
-                                                        <option value="Weekly">Weekly</option>
-                                                        <option value="Monthly">Monthly</option>
-                                                    </Field>
-                                                    <ErrorMessage
-                                                        name="TriggerTime"
-                                                        component="p"
-                                                        className="text-red-500 text-sm"
-                                                    />
-                                                </div>
-
-                                                {/* Trigger Value Type */}
-                                                <div>
-                                                    <label className="mb-[10px] text-black dark:text-white font-medium block">
-                                                        Trigger Value Type<span className="text-red-500">*</span>
-                                                    </label>
-                                                    <Field
-                                                        as="select"
-                                                        name="TriggerValueType"
-                                                        className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
-        dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[14px] block w-full
-        outline-0 cursor-pointer transition-all focus:border-primary-button-bg"
-                                                    >
-                                                        <option value="">Select Trigger Value Type</option>
-
-                                                        {triggerValueTypes.map((item: any) => (
-                                                            <option key={item.Value} value={item.Value}>
-                                                                {item.Label}
-                                                            </option>
-                                                        ))}
-                                                    </Field>
-
-                                                    <ErrorMessage name="TriggerValueType" component="p" className="text-red-500 text-sm" />
-                                                </div>
-
-                                                {/* Wallet Id */}
-                                                <div>
-                                                    <label className="mb-[10px] text-black dark:text-white font-medium block">
-                                                        Wallet<span className="text-red-500">*</span>
-                                                    </label>
-                                                    <Field
-                                                        as="select"
-                                                        name="WalletId"
-                                                        className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
-        dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[14px] block w-full
-        outline-0 cursor-pointer transition-all focus:border-primary-button-bg"
-                                                    >
-                                                        <option value="">Select Wallet</option>
-
-                                                        {wallets.map((item: any) => (
-                                                            <option key={item.Value} value={item.Value}>
-                                                                {item.Label}
-                                                            </option>
-                                                        ))}
-                                                    </Field>
-
-                                                    <ErrorMessage
-                                                        name="WalletId"
-                                                        component="p"
-                                                        className="text-red-500 text-sm"
-                                                    />
-
-                                                </div>
-
-                                                {/* Income Type */}
-                                                <div>
-                                                    <label className="mb-[10px] text-black dark:text-white font-medium block">
-                                                        Income Type<span className="text-red-500">*</span>
-                                                    </label>
-                                                    <Field
-                                                        as="select"
-                                                        name="IncomeType"
-                                                        className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
-            dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[14px] block w-full
-            outline-0 cursor-pointer transition-all focus:border-primary-button-bg"
-                                                    >
-                                                        <option value="">Select Income Type</option>
-                                                        <option value="Percentage">Percentage</option>
-                                                        <option value="Fixed">Fixed</option>
-                                                    </Field>
-                                                    <ErrorMessage
-                                                        name="IncomeType"
-                                                        component="p"
-                                                        className="text-red-500 text-sm"
-                                                    />
-                                                </div>
-
-                                                {/* Max Level */}
-                                                <div>
-                                                    <label className="mb-[10px] text-black dark:text-white font-medium block">
-                                                        Max Level<span className="text-red-500">*</span>
-                                                    </label>
-                                                    <Field
-                                                        type="number"
-                                                        name="MaxLevel"
-                                                        placeholder="Enter Max Level (for level income)"
-                                                        className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
-            dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
-            transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
-            focus:border-primary-button-bg"
-                                                    />
-                                                    <ErrorMessage
-                                                        name="MaxLevel"
-                                                        component="p"
-                                                        className="text-red-500 text-sm"
-                                                    />
-                                                </div>
-
-                                            </div>
-
-                                            {/* Toggle Section */}
-                                            <div className="flex items-center justify-between mt-4 pr-195">
-                                                <label className="font-medium text-black dark:text-white">
-                                                    Include In Capping
-                                                </label>
-
-                                                <Field name="IsCapping">
-                                                    {({ field }) => (
-                                                        <label className="relative inline-flex items-center cursor-pointer">
-                                                            <input
-                                                                type="checkbox"
-                                                                checked={field.value}
-                                                                onChange={(e) =>
-                                                                    field.onChange({
-                                                                        target: {
-                                                                            name: field.name,
-                                                                            value: e.target.checked,
-                                                                        },
-                                                                    })
-                                                                }
-                                                                className="sr-only peer"
-                                                            />
-                                                            <div className="w-11 h-6 bg-gray-200 rounded-full peer-checked:bg-primary-button-bg"></div>
-                                                            <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all peer-checked:translate-x-5"></div>
+                                                    {/* Category Name */}
+                                                    <div>
+                                                        <label className="mb-[10px] text-black dark:text-white font-medium block">
+                                                            Withdrawal Method Name:
+                                                            <span className="text-red-500">*</span>
                                                         </label>
-                                                    )}
-                                                </Field>
-                                            </div>
-
-                                            <hr className="border-0 border-t border-gray-200 dark:border-gray-700 mt-8 -mx-8" />
-
-                                            {/* Footer */}
-                                            <div className="text-right mt-[20px]">
-                                                <button
-                                                    type="button"
-                                                    className="mr-[15px] px-[26.5px] py-[12px] rounded-md bg-danger-500 text-white hover:bg-danger-400"
-                                                    onClick={() => {
-                                                        setOpenROI(false);
-                                                        setEditingIncome(null);
-                                                    }}
-
-                                                >
-                                                    Cancel
-                                                </button>
-
-                                                <button
-                                                    type="submit"
-                                                    disabled={processingROI}
-                                                    className="px-[26.5px] py-[12px] rounded-md bg-primary-button-bg text-white hover:bg-primary-button-bg-hover"
-                                                >
-                                                    {processingROI ? (
-                                                        <div className="flex items-center gap-2">
-                                                            <div className="theme-loader"></div>
-                                                            <span>Processing...</span>
-                                                        </div>
-                                                    ) : (
-                                                        editingIncome ? "Update Setting" : "Add Setting"
-                                                    )}
-                                                </button>
-                                            </div>
-
-                                        </Form>
+                                                        <Field
+                                                            type="text"
+                                                            name="WithdrawalMode"
+                                                            placeholder="Enter Withdrawal By"
+                                                            className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
+dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
+transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
+focus:border-primary-button-bg"
+                                                        />
+                                                        <ErrorMessage
+                                                            name="WithdrawalMode"
+                                                            component="p"
+                                                            className="text-red-500 text-sm"
+                                                        />
+                                                    </div>
 
 
-                                    </Formik>)}
+                                                    <hr className="border-0 border-t border-gray-200 dark:border-gray-700 my-4 mt-10 md:-mx-[25px] px-[20px] md:px-[25px]" />
 
+                                                    {/* Footer */}
+                                                    <div className="text-right mt-[20px]">
+                                                        <button
+                                                            type="button"
+                                                            className="mr-[15px] px-[26.5px] py-[12px] rounded-md bg-danger-500 text-white hover:bg-danger-400"
+                                                            onClick={() => setOpen(false)}
+                                                        >
+                                                            Cancel
+                                                        </button>
+
+                                                        <button
+                                                            type="submit"
+                                                            disabled={saving}
+                                                            className="px-[26.5px] py-[12px] rounded-md bg-primary-button-bg text-white hover:bg-primary-button-bg-hover"
+                                                        >
+                                                            {saving ? (
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="theme-loader"></div>
+                                                                    <span>Processing...</span>
+                                                                </div>
+                                                            ) : isEdit ? (
+                                                                "Update Withdrawal By"
+                                                            ) : (
+                                                                "Add Withdrawal By"
+                                                            )}
+                                                        </button>
+                                                    </div>
+                                                </Form>
+                                            );
+                                        }}
+                                    </Formik>
+                                )}
                             </div>
                         </DialogPanel>
+                        {/* Popup inside Formik */}
                     </div>
                 </div>
             </Dialog>

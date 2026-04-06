@@ -924,7 +924,7 @@ p-[20px] md:p-[25px] rounded-t-md"
 
                             <Field
                               type="date"
-                              name="FromDate"   // ✅ CORRECT
+                              name="FromDate"   
                               className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
       dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full
       outline-0 transition-all focus:border-primary-button-bg"

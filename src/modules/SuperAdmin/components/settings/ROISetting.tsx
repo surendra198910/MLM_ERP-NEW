@@ -36,6 +36,7 @@ const Template: React.FC = () => {
   const path = location.pathname;
   const formName = path.split("/").pop(); // must match DB
   const isSave = SmartActions.canSave(formName);
+  const isAdd = SmartActions.canAdd(formName);
 
   const { currency } = useCurrency();
   const fetchPackages = async () => {
@@ -288,15 +289,15 @@ if (!hasPageAccess) {
             <div className="flex items-center gap-2">
               {/* ADD BUTTON */}
               <PermissionAwareTooltip
-                allowed={isSave}
+                allowed={isAdd}
                 allowedText="ROI Capping"
                 deniedText="Permission required"
               >
                 <button
                   type="button"
-                  disabled={!isSave}
+                  disabled={!isAdd}
                   onClick={() => {
-                    if (!isSave) return;
+                    if (!isAdd) return;
                     handleROICapping();
                   }}
                   className="px-6 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover 

@@ -49,7 +49,8 @@ class SmartAction {
   canDateFilter = (form: string) => this.can(form, "date-filter");
   canExport = (form: string) => this.can(form, "export");
   canAssignUser =(form:string)=>this.can(form,"Assign-User");
-  canRemoveTicketUser=(form:string)=>this.can(form,"remove-ticket-user")
+  canRemoveTicketUser=(form:string)=>this.can(form,"remove-ticket-user");
+  canUpdate =(form:string)=>this.can(form,"update")
 }
 
 export const SmartActions = new SmartAction();

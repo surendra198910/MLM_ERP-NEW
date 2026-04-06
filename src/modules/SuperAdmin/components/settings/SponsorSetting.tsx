@@ -28,7 +28,7 @@ const Template: React.FC = () => {
 
     const path = location.pathname;
     const formName = path.split("/").pop();   // must match DB
-    const isEditable = SmartActions.canAdd(formName);
+    const isEditable = SmartActions.canSave(formName);
 
     const [sponsorMap, setSponsorMap] = useState<{
         [key: number]: number;

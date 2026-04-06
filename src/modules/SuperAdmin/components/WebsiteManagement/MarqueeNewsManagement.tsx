@@ -16,15 +16,11 @@ import ActionCell from "../../../../components/CommonFormElements/DataTableCompo
 import LandingIllustration from "../../../../components/CommonFormElements/LandingIllustration/LandingIllustration";
 import { Dialog, DialogBackdrop, DialogPanel } from "@headlessui/react";
 import { ErrorMessage, Field, Form, Formik } from "formik";
-import Swal from "sweetalert2";
 import * as Yup from "yup";
+import Swal from "sweetalert2";
+import StatusToggleCell from "../../../../components/CommonFormElements/DataTableComponents/StatusToggleCell";
 
 const Template: React.FC = () => {
-  const formSchema = Yup.object().shape({
-    CurrencyName: Yup.string().required("Currency Name is required"),
-    CurrencyCode: Yup.string().required("Currency Code is required"),
-    Rate: Yup.number().required("Rate is required"),
-  });
   const [searchInput, setSearchInput] = useState("");
   const [filterColumn, setFilterColumn] = useState("");
   const [showTable, setShowTable] = useState(false); // Toggle to show 'Oops' or 'Welcome'
@@ -57,6 +53,11 @@ const Template: React.FC = () => {
   const closeModal = () => {
     setOpen(false);
   };
+
+  const formSchema = Yup.object().shape({
+    Type: Yup.string().required("Type is required"),
+    Message: Yup.string().required("Message is required"),
+  });
 
   const fetchFormPermissions = async () => {
     try {
@@ -126,22 +127,26 @@ const Template: React.FC = () => {
     setPerPage(newPerPage);
     setPage(page);
   };
+
   const fetchGridColumns = async () => {
     const saved = localStorage.getItem("EmployeeDetails");
     const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
+
     try {
       const payload = {
         procName: "GetUserGridColumns",
         Para: JSON.stringify({
           UserId: employeeId,
-          GridName: "USP_CurrencyMaster",
+          GridName: "USP_ManageMarqueeNews",
         }),
       };
 
       const res = await universalService(payload);
       const data = res?.data || res;
+
       if (Array.isArray(data)) {
 
+        // ⭐ SORT DEFAULT
         const visibleSorted = data
           .filter((c: any) => c.IsVisible)
           .sort((a: any, b: any) => a.ColumnOrder - b.ColumnOrder);
@@ -158,58 +163,77 @@ const Template: React.FC = () => {
         }
 
         setInitialSortReady(true);
-      }
 
-      setInitialSortReady(true);
+        // ⭐ BUILD COLUMNS
+        const reactCols = visibleSorted.map((c: any, colIndex: number) => ({
+          id: c.ColumnOrder,
+          name: c.DisplayName,
+          sortable: true,
+          columnKey: c.ColumnKey,
+          columnIndex: c.ColumnOrder,
+          isCurrency: c.IsCurrency,
+          isTotal: c.IsTotal,
 
-      if (Array.isArray(data)) {
-        const reactCols = data
-          .filter((c: any) => c.IsVisible === true)
-          .sort((a: any, b: any) => a.ColumnOrder - b.ColumnOrder)
-          .map((c: any, colIndex: number) => ({
-            id: c.ColumnOrder,
-            name: c.DisplayName,
-            sortable: true,
-            columnKey: c.ColumnKey,
-            columnIndex: c.ColumnOrder,
-            isCurrency: c.IsCurrency,
-            isTotal: c.IsTotal,
+          selector: (row: any) => row?.[c.ColumnKey],
 
-            selector: (row: any) => row[c.ColumnKey],
+          cell: (row: any) => {
 
-            cell: (row: any) => {
+            // ⭐ TOTAL ROW
+            if (row?.__isTotal) {
+              if (colIndex === 0) return "Total";
 
-              // ⭐ TOTAL ROW
-              if (row.__isTotal) {
+              if (c.IsTotal) {
+                const value = row[c.ColumnKey] || 0;
 
-                // 👉 show TOTAL label in first visible column
-                if (colIndex === 0) return "Total";
-
-                if (c.IsTotal) {
-                  const value = row[c.ColumnKey] || 0;
-
-                  return c.IsCurrency
-                    ? `$${Number(value).toLocaleString()}`
-                    : Number(value).toLocaleString();
-                }
-
-                return "";
+                return c.IsCurrency
+                  ? `$${Number(value).toLocaleString()}`
+                  : Number(value).toLocaleString();
               }
 
-              // ⭐ NORMAL ROW
-              const value = row[c.ColumnKey];
-
-              if (c.IsCurrency && value != null) {
-                return `$${Number(value).toLocaleString()}`;
-              }
-
-              return value ?? "-";
+              return "";
             }
-          }))
+
+            // ⭐ STATUS TOGGLE (🔥 FIXED CASE SAFE)
+            if ((c.ColumnKey || "").toLowerCase() === "status") {
+              return (
+                <StatusToggleCell
+                  row={row}
+                  onSuccess={() => {
+                    // ✅ instant UI update (fast UX)
+                    setData(prev =>
+                      prev.map(item =>
+                        item.Id === row.Id
+                          ? { ...item, Status: item.Status ? 0 : 1 }
+                          : item
+                      )
+                    );
+
+                    // ✅ optional sync with backend (safe)
+                    fetchGridData({
+                      pageOverride: page,
+                      perPageOverride: perPage,
+                    });
+                  }}
+                />
+              );
+            }
+
+            // ⭐ NORMAL VALUE
+            const value = row?.[c.ColumnKey];
+
+            if (c.IsCurrency && value != null) {
+              return `$${Number(value).toLocaleString()}`;
+            }
+
+            return value ?? "-";
+          },
+        }));
+
+        // ⭐ ACTION COLUMN
         const actionColumn = {
           name: "Action",
           cell: (row: any) => {
-            if (row.__isTotal) return null;  
+            if (row?.__isTotal) return null;
 
             return (
               <ActionCell
@@ -222,10 +246,13 @@ const Template: React.FC = () => {
           ignoreRowClick: true,
           button: true,
         };
+
         setColumns([...reactCols, actionColumn]);
+
       } else {
         setColumns([]);
       }
+
     } catch (err) {
       console.error("Grid columns fetch failed", err);
       setColumns([]);
@@ -235,6 +262,8 @@ const Template: React.FC = () => {
     setEditLoading(true);
     setOpen(true);
     setIsEdit(true);
+
+    // if you later fetch select API → do it here
     setEditData(row);
 
     setTimeout(() => setEditLoading(false), 200);
@@ -247,7 +276,7 @@ const Template: React.FC = () => {
     }));
   const fetchExportData = async () => {
     const payload = {
-      procName: "CurrencyMaster",
+      procName: "ManageMarqueeNews",
       Para: JSON.stringify({
         SearchBy: filterColumn,
         Criteria: searchInput,
@@ -265,7 +294,7 @@ const Template: React.FC = () => {
   const handleDelete = async (row: any) => {
     const result = await Swal.fire({
       title: "Are you sure?",
-      text: `Delete "${row.CurrencyName}" ?`,
+      text: `Delete this message?`,
       icon: "warning",
       showCancelButton: true,
       confirmButtonColor: "#d33",
@@ -278,31 +307,32 @@ const Template: React.FC = () => {
 
     try {
       const payload = {
-        procName: "CurrencyMaster",
+        procName: "ManageMarqueeNews",
         Para: JSON.stringify({
           ActionMode: "Delete",
-          EditId: row.CurrencyId,
-          CompanyId: 1,
-          ModifiedBy: 1,
+          EditId: row.Id,
+          // CompanyId: 1,
+          // ModifiedBy: 1,
         }),
       };
 
       const response = await universalService(payload);
       const res = Array.isArray(response) ? response[0] : response;
 
-      if (res?.Status == 1 || res?.Status === "1") {
+      if (res?.Status === 1 || res?.Status === "1") {
         await Swal.fire({
           icon: "success",
           title: "Deleted!",
-          text: res?.Msg || "Deleted successfully",
+          text: res?.msg || "Deleted successfully",
           timer: 1500,
           showConfirmButton: false,
         });
 
-        setSearchTrigger((p) => p + 1);
-        setRefreshGrid((p) => p + 1);
+        setSearchTrigger(p => p + 1);
+        setRefreshGrid(p => p + 1);
+
       } else {
-        Swal.fire("Error", res?.Msg || "Delete failed", "error");
+        Swal.fire("Error", res?.msg || "Delete failed", "error");
       }
     } catch (err) {
       console.error(err);
@@ -319,7 +349,7 @@ const Template: React.FC = () => {
       setTableLoading(true);
 
       const payload = {
-        procName: "CurrencyMaster",
+        procName: "ManageMarqueeNews",
         Para: JSON.stringify({
           ActionMode: "GetReport",
           SearchBy: options?.searchBy ?? filterColumn ?? "",
@@ -357,7 +387,7 @@ const Template: React.FC = () => {
       procName: "UniversalColumnSelector",
       Para: JSON.stringify({
         EmployeeId: employeeId,
-        USPName: "USP_EnquiryTypeMaster",
+        USPName: "USP_ManageMarqueeNews",
         ActionMode: "List",
         Mode: "Get",
       }),
@@ -472,7 +502,7 @@ const Template: React.FC = () => {
       <div className="trezo-card-header mb-[10px] md:mb-[10px] sm:flex items-center justify-between pb-5 border-b border-gray-200 -mx-[20px] md:-mx-[25px] px-[20px] md:px-[25px]">
         <div className="trezo-card-title">
           <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
-            Manage Currency
+            Manage Marquee News
           </h5>
         </div>
 
@@ -500,8 +530,7 @@ const Template: React.FC = () => {
                     }`}
                 >
                   <option value="">Select Filter Option</option>
-                  <option value="CurrencyName">Currency Name</option>
-                  <option value="CurrencyCode">Currency Code</option>
+                  <option value="ContactTypeName">Marquee News</option>
                 </select>
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
                   <i className="material-symbols-outlined !text-[18px]">
@@ -564,7 +593,7 @@ const Template: React.FC = () => {
                     }`}
                 >
                   <ColumnSelector
-                    procName="USP_CurrencyMaster"
+                    procName="USP_ManageMarqueeNews"
                     onApply={fetchVisibleColumns}
                   />
                 </div>
@@ -619,15 +648,15 @@ const Template: React.FC = () => {
       </div>
       {!showTable && (
         <LandingIllustration
-          title="Currency Master"
-          addLabel="Add Currency"
+          title="Manage Marquee News"
+          addLabel="Add Marquee News"
           formName={formName}
           description={
             <>
-              Search Currency using filters above.<br />
+              Search Marquee News using filters above.<br />
               Manage records, export reports and analyse performance.<br />
               <span className="font-medium">OR</span><br />
-              Click on Add button to create a new Currency entry.
+              Click on Add button to create a new Marquee News entry.
             </>
           }
         />
@@ -686,7 +715,7 @@ const Template: React.FC = () => {
               <PermissionAwareTooltip allowed={canExport}>
                 <div className={!canExport ? "pointer-events-none opacity-50" : ""}>
                   <ExportButtons
-                    title="Currency Report"
+                    title="Marquee News Report"
                     columns={exportColumns}
                     fetchData={fetchExportData}
                     disabled={!canExport}
@@ -747,7 +776,7 @@ const Template: React.FC = () => {
 
       <Dialog
         open={open}
-        onClose={() => setOpen(false)}
+        onClose={closeModal}
         className="relative z-60"
       >
         <DialogBackdrop
@@ -773,39 +802,30 @@ p-[20px] md:p-[25px] rounded-t-md"
                 >
                   <div className="trezo-card-title">
                     <h5 className="!mb-0">
-                      {isEdit ? "Edit Currency" : "Add New Currency"}
+                      {isEdit ? "Edit Marquee News" : "Add New Marquee News"}
                     </h5>
                   </div>
                   <button
                     type="button"
                     className="text-[23px] transition-all leading-none text-black dark:text-white hover:text-primary-button-bg"
-                    onClick={() => setOpen(false)}
+                    onClick={() => {
+                      closeModal();
+                    }}
                   >
                     <i className="ri-close-fill"></i>
                   </button>
                 </div>
 
-                {/* Formik */}
-                {/* BODY */}
                 {editLoading ? (
-                  <div className="flex items-center justify-center min-h-[280px]">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="theme-loader"></div>
-                      <p className="text-sm text-gray-500">
-                        Loading document...
-                      </p>
-                    </div>
+                  <div className="flex items-center justify-center min-h-[200px]">
+                    <div className="theme-loader"></div>
                   </div>
                 ) : (
                   <Formik
                     initialValues={{
-                      CurrencyName: editData?.CurrencyName || "",
-                      CurrencyCode: editData?.CurrencyCode || "",
-                      Rate: editData?.Rate || "",
-                      IsBaseCurrency: editData?.IsBaseCurrency === "Yes",
-                      IsPublished: editData?.IsPublished === "Yes",
+                      Type: editData?.Type || "",
+                      Message: editData?.Message || "",
                     }}
-
                     enableReinitialize
                     validationSchema={formSchema}
                     onSubmit={async (values, { resetForm }) => {
@@ -813,7 +833,7 @@ p-[20px] md:p-[25px] rounded-t-md"
 
                       const confirm = await Swal.fire({
                         title: `Confirm ${actionText}?`,
-                        text: `Do you want to ${actionText} "${values.CurrencyName}" ?`,
+                        text: `Do you want to ${actionText} "${values.Type}" ?`,
                         icon: "question",
                         showCancelButton: true,
                         confirmButtonColor: "#2563eb",
@@ -834,16 +854,13 @@ p-[20px] md:p-[25px] rounded-t-md"
                         });
 
                         const payload = {
-                          procName: "CurrencyMaster",
+                          procName: "ManageMarqueeNews",
                           Para: JSON.stringify({
+                            Type: values.Type,
+                            Message: values.Message,
                             ActionMode: isEdit ? "Update" : "Insert",
-                            CurrencyName: values.CurrencyName,
-                            CurrencyCode: values.CurrencyCode,
-                            Rate: Number(values.Rate),
-                            IsBaseCurrency: values.IsBaseCurrency,
-                            IsPublished: values.IsPublished,
-                            EditId: isEdit ? editData?.CurrencyId : 0,
-                            CompanyId: Number(localStorage.getItem("CompanyId")),
+                            EditId: isEdit ? editData.Id : 0,
+                            Status:1,
                             EntryBy: 1,
                             ModifiedBy: 1,
                           }),
@@ -854,171 +871,90 @@ p-[20px] md:p-[25px] rounded-t-md"
 
                         Swal.close();
 
-                        if (res?.Status == 1 || res?.Status === "1") {
+                        if (res?.Status === "1" || res?.Status === 1) {
                           await Swal.fire({
                             icon: "success",
                             title: isEdit ? "Updated!" : "Added!",
-                            text: res?.Msg || "Saved successfully",
+                            text: res?.msg || "Saved successfully",
                             timer: 1500,
                             showConfirmButton: false,
                           });
 
                           resetForm();
                           closeModal();
-
                           setPage(1);
-                          setSearchTrigger((p) => p + 1);
-                          setRefreshGrid((p) => p + 1);
+                          setSearchTrigger(p => p + 1);
+                          setRefreshGrid(p => p + 1);
                         } else {
-                          Swal.fire("Error", res?.Msg || "Server error", "error");
+                          Swal.fire("Error", res?.msg || "Server error", "error");
                         }
-                      } catch (err) {
-                        console.error(err);
-                        Swal.fire("Error", "Server error", "error");
                       } finally {
                         setSaving(false);
                       }
                     }}
-
                   >
-                    {({ setFieldValue }) => {
-
+                    {({ resetForm }) => {
 
                       return (
                         <Form className="space-y-5">
-                     
-                          {/* Currency Name */}
+
                           <div>
                             <label className="mb-[10px] text-black dark:text-white font-medium block">
-                              Currency Name:
+                              Select Type:
+                              <span className="text-red-500">*</span>
+                            </label>
+
+                            <Field
+                              as="select"
+                              name="Type"   // ✅ MUST be CountryId
+                              className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
+                                dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[14px] block w-full
+                                outline-0 cursor-pointer transition-all focus:border-primary-button-bg"
+                            >
+                              <option value="">Select Type</option>
+                              <option value="News">News</option>
+                              <option value="Announcement">Announcement</option>
+
+                            </Field>
+
+                            <ErrorMessage
+                              name="Type"
+                              component="p"
+                              className="text-red-500 text-sm"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="mb-[10px] text-black dark:text-white font-medium block">
+                              Message:
                               <span className="text-red-500">*</span>
                             </label>
                             <Field
                               type="text"
-                              name="CurrencyName"
-                              placeholder="Enter Currency Name"
+                              name="Message"
+                              placeholder="Enter Message"
                               className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
 dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
 transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
 focus:border-primary-button-bg"
                             />
                             <ErrorMessage
-                              name="CurrencyName"
-                              component="p"
-                              className="text-red-500 text-sm"
-                            />
-                          </div>
-                          {/* Currency Code */}
-                          <div>
-                            <label className="mb-[10px] text-black dark:text-white font-medium block">
-                              Currency Code:
-                              <span className="text-red-500">*</span>
-                            </label>
-                            <Field
-                              type="text"
-                              name="CurrencyCode"
-                              placeholder="Enter Currency Code (₹, $, €)"
-                              className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
-dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
-transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
-focus:border-primary-button-bg"
-                            />
-                            <ErrorMessage
-                              name="CurrencyCode"
-                              component="p"
-                              className="text-red-500 text-sm"
-                            />
-                          </div>
-                          {/* Rate */}
-                          <div>
-                            <label className="mb-[10px] text-black dark:text-white font-medium block">
-                              Rate:
-                              <span className="text-red-500">*</span>
-                            </label>
-                            <Field
-                              type="number"
-                              step="0.0001"
-                              name="Rate"
-                              placeholder="Enter Rate"
-                              className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
-dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
-transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
-focus:border-primary-button-bg"
-                            />
-                            <ErrorMessage
-                              name="Rate"
+                              name="Message"
                               component="p"
                               className="text-red-500 text-sm"
                             />
                           </div>
 
-                          {/* TOGGLES */}
-                          <div className="grid grid-cols-2 gap-[25px] mb-6">
-                            <div className="flex items-center justify-between pr-4">
-                              <label className="font-medium">
-                                Is Published:
-                              </label>
-
-                              <Field name="IsPublished">
-                                {({ field }) => (
-                                  <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      checked={field.value}
-                                      onChange={(e) =>
-                                        field.onChange({
-                                          target: {
-                                            name: field.name,
-                                            value: e.target.checked,
-                                          },
-                                        })
-                                      }
-                                      className="sr-only peer"
-                                    />
-                                    <div className="w-11 h-6 bg-gray-200 rounded-full peer-checked:bg-primary-button-bg"></div>
-                                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all peer-checked:translate-x-5"></div>
-                                  </label>
-                                )}
-                              </Field>
-                            </div>
-                          </div>
-                          {/* TOGGLES */}
-                          <div className="grid grid-cols-2 gap-[25px] mb-6">
-                            <div className="flex items-center justify-between pr-4">
-                              <label className="font-medium">Is Base Currency:</label>
-
-                              <Field name="IsBaseCurrency">
-                                {({ field }) => (
-                                  <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      checked={field.value}
-                                      onChange={(e) =>
-                                        field.onChange({
-                                          target: {
-                                            name: field.name,
-                                            value: e.target.checked,
-                                          },
-                                        })
-                                      }
-                                      className="sr-only peer"
-                                    />
-                                    <div className="w-11 h-6 bg-gray-200 rounded-full peer-checked:bg-primary-button-bg"></div>
-                                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all peer-checked:translate-x-5"></div>
-                                  </label>
-                                )}
-                              </Field>
-
-                            </div>
-                          </div>
                           <hr className="border-0 border-t border-gray-200 dark:border-gray-700 my-4 mt-10 md:-mx-[25px] px-[20px] md:px-[25px]" />
-
                           {/* Footer */}
                           <div className="text-right mt-[20px]">
                             <button
                               type="button"
                               className="mr-[15px] px-[26.5px] py-[12px] rounded-md bg-danger-500 text-white hover:bg-danger-400"
-                              onClick={() => setOpen(false)}
+                              onClick={() => {
+                                resetForm();
+                                closeModal();
+                              }}
                             >
                               Cancel
                             </button>
@@ -1034,17 +970,16 @@ focus:border-primary-button-bg"
                                   <span>Processing...</span>
                                 </div>
                               ) : isEdit ? (
-                                "Update Currency"
+                                "Update Marquee News"
                               ) : (
-                                "Add Currency"
+                                "Add Marquee News"
                               )}
                             </button>
                           </div>
                         </Form>
                       );
                     }}
-                  </Formik>
-                )}
+                  </Formik>)}
               </div>
             </DialogPanel>
             {/* Popup inside Formik */}
@@ -1053,6 +988,7 @@ focus:border-primary-button-bg"
       </Dialog>
     </div>
   );
+
 };
 
 export default Template;

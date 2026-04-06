@@ -45,7 +45,7 @@ import PanelSetting from "../components/Forms/PanelSetting.js";
 import ContactType from "../components/Common/ContactType.js";
 import TaxSetting from "../components/Common/TaxSetting.js";
 import { ThemeProvider } from "../context/ThemeContext.js";
-import PanelSettingHarsh from "../components/Forms/PanelSettingHarsh.js";
+import PanelSettingHarsh from "../components/ThemeManagement/PanelSettingHarsh.js";
 import AddEditEmployee from "../components/Employee/AddEditEmployee";
 
 import Ref from "../components/Forms/Ref.js";
@@ -96,6 +96,16 @@ import CreateSupportTicket from "../components/Support/CreateSupportTicket.js";
 import MySupportTicket from "../components/Support/MySupportTicket.js"
 import SearchTicketAll from "../components/Support/SearchTicketAll.js"
 import SupportDetailPage from "../components/Support/SupportDetailPage.js"
+//Withdrawal
+import WithdrawalSetting from "../components/WithdrawalSetting/WithdrawalSetting.js";
+//Social Media
+import SocialMediaSetting from "../components/SocialMediaSetting/SocialMediaSetting.js";
+
+import MarqueeNewsManagement from "../components/WebsiteManagement/MarqueeNewsManagement.js"
+import LibraryManagement from "../components/WebsiteManagement/LibraryManagement.js"
+import SocialMediaPlatform from "../components/Common/SocialMediaPlatform.js"
+import WithrawalBy from "../components/Common/WithdrawalBy.js"
+import MemberThemeManagement from "../components/ThemeManagement/MemberThemeManagement.js"
 
 const AppRoutes = () => {
   const [active, setActive] = useState(false);
@@ -299,6 +309,20 @@ const AppRoutes = () => {
             <Route path="/superadmin/reports/investment-report" element={<InvestmentReport />} />
             <Route path="/superadmin/reports/withdraw-report" element={<Withdraw />} />
             <Route path="/superadmin/reports/team-report" element={<TeamReport />} />
+
+            //Withdrawal
+            <Route path="/superadmin/mlm-setting/withdrawal-setting" element={<WithdrawalSetting />} />
+            
+            //SocialMedia Setting
+            <Route path="/superadmin/mlm-setting/socialmedia-setting" element={<SocialMediaSetting />} />
+
+            <Route path="/superadmin/website-management/marquee-news-management" element={<MarqueeNewsManagement/>} />
+            <Route path="/superadmin/website-management/library-management" element={<LibraryManagement/>} />
+            <Route path="/superadmin/common/social-media-platfrom" element={<SocialMediaPlatform/>}/>
+            <Route path="/superadmin/common/withdraw-method" element={<WithrawalBy/>}/>
+            <Route path="/superadmin/theme/member-panel-theme" element={<MemberThemeManagement/>}/>
+
+            
 
 
 
