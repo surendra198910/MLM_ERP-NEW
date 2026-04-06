@@ -90,6 +90,7 @@ export default function GlobalSetting() {
   const [notificationEvents, setNotificationEvents] = useState([]);
   const [permissionsLoading, setPermissionsLoading] = useState(true);
   const [hasPageAccess, setHasPageAccess] = useState(true);
+  const [withdrawalby, setWithdrawalBy] = useState([]);
 
   const path = location.pathname;
   const formName = path.split("/").pop();   // must match DB
@@ -103,6 +104,7 @@ export default function GlobalSetting() {
     { label: "Notification Settings", icon: <FaBell /> },
     { label: "Payout Wallet Settings", icon: <FaWallet /> },
     { label: "Income Settings", icon: <FaChartLine /> },
+    { label: "Withdrawal By", icon: <FaWallet /> },
   ];
 
   const fetchFormPermissions = async () => {
@@ -199,6 +201,24 @@ export default function GlobalSetting() {
     }
   };
 
+  const loadWithdrawalBy = async () => {
+    try {
+      const payload = {
+        procName: "ManageGlobalSetting",
+        Para: JSON.stringify({
+          ActionMode: "GetWithdrawalByMethods",
+        }),
+      };
+
+      const res = await universalService(payload);
+      const data = res?.data || res || [];
+      setWithdrawalBy(data);
+    } catch (err) {
+      console.error("Notification load error", err);
+      toast.error("Failed to load notification events");
+    }
+  };
+
   const onFemaleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -219,35 +239,6 @@ export default function GlobalSetting() {
 
 
 
-  const deleteMale = async () => {
-    const res = await Swal.fire({
-      title: "Remove Male Icon?",
-      text: "This will remove the default male icon.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Yes, remove",
-    });
-
-    if (res.isConfirmed) {
-      setMaleIcon("");
-      toast.success("Male icon removed. Click Update to save.");
-    }
-  };
-
-  const deleteFemale = async () => {
-    const res = await Swal.fire({
-      title: "Remove Female Icon?",
-      text: "This will remove the default female icon.",
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonText: "Yes, remove",
-    });
-
-    if (res.isConfirmed) {
-      setFemaleIcon("");
-      toast.success("Female icon removed. Click Update to save.");
-    }
-  };
   const loadWallets = async () => {
     try {
       const payload = {
@@ -270,6 +261,7 @@ export default function GlobalSetting() {
     loadSettings();
     loadWallets();
     loadNotificationEvents();
+    loadWithdrawalBy();
   }, []);
 
   const handleCroppedImage = async (croppedBase64: string) => {
@@ -523,13 +515,13 @@ export default function GlobalSetting() {
 
             <div className="flex gap-2">
               <PermissionAwareTooltip
-                allowed={SmartActions.canEdit(formName)}
+                allowed={SmartActions.canUpdate(formName)}
                 allowedText="Update Settings"
                 deniedText="Permission required"
               >
                 <button
                   type="submit"
-                  disabled={!SmartActions.canEdit(formName)}
+                  disabled={!SmartActions.canUpdate(formName)}
                   className="flex items-center gap-2 px-4 py-1.5 
     bg-primary-button-bg hover:bg-primary-button-bg-hover 
     text-white rounded text-sm disabled:opacity-50"
@@ -924,7 +916,6 @@ export default function GlobalSetting() {
             </div>
           )}
 
-
           {tab === 3 && (
             <div className="grid grid-cols-1 md:grid-cols-4 gap-5 animate-fadeIn">
               {/* Sponsor Income */}
@@ -1128,6 +1119,119 @@ export default function GlobalSetting() {
                 )}
               </div>
 
+            </div>
+          )}
+          {tab === 5 && (
+            <div className="overflow-x-auto animate-fadeIn -mt-5.5 -mx-6">
+              <table className="w-full border border-gray-200 dark:border-gray-700 overflow-hidden text-sm">
+
+                {/* Header */}
+                <thead className="bg-primary-table-bg text-primary-table-text dark:bg-gray-800">
+                  <tr className="border-b border-gray-200 dark:border-gray-700">
+                    <th className="px-6 py-4 text-left font-semibold tracking-wide">
+                      Withdrawal Mode
+                    </th>
+
+                    <th className="px-6 py-4 text-center font-semibold">
+                      Status
+                    </th>
+                  </tr>
+                </thead>
+
+                {/* Body */}
+                <tbody>
+                  {withdrawalby.map((event, index) => (
+                    <tr
+                      key={event.Id}
+                      className="
+              border-b border-gray-100 dark:border-gray-700
+              hover:bg-gray-50 dark:hover:bg-[#172036]
+              transition-colors duration-200
+            "
+                    >
+                      {/* Withdrawal Mode */}
+                      <td className="px-6 py-4 text-gray-700 dark:text-gray-200 font-medium">
+                        {event.WithdrawalMode}
+                      </td>
+
+                      {/* Status Toggle */}
+                      <td className="px-6 py-4 text-center align-middle">
+                        <label className="relative inline-flex items-center cursor-pointer">
+
+                          <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={event.Status === true || event.Status === 1}
+                            onChange={async (e) => {
+                              const isEnabled = e.target.checked;
+
+                              try {
+                                // 🔥 API CALL
+                                const payload = {
+                                  procName: "ManageGlobalSetting",
+                                  Para: JSON.stringify({
+                                    ActionMode: "ToggleWithdrawalByStatus",
+                                    EditId: event.Id,
+                                    Status: isEnabled ? 1 : 0,
+                                    ModifiedBy: 1,
+                                  }),
+                                };
+
+                                const response = await universalService(payload);
+                                const res = Array.isArray(response) ? response[0] : response;
+
+                                if (res?.Status === 1 || res?.Status === "1") {
+
+                                  // ✅ UPDATE LOCAL STATE (FAST UI)
+                                  setWithdrawalBy(prev =>
+                                    prev.map(item =>
+                                      item.Id === event.Id
+                                        ? { ...item, Status: isEnabled ? 1 : 0 }
+                                        : item
+                                    )
+                                  );
+
+                                  if (isEnabled) {
+                                    toast.success(`${event.WithdrawalMode} Activated`);
+                                  } else {
+                                    toast.info(`${event.WithdrawalMode} Deactivated`);
+                                  }
+
+                                } else {
+                                  toast.error(res?.Message || "Update failed");
+                                }
+
+                              } catch (err) {
+                                console.error(err);
+                                toast.error("Server error");
+                              }
+                            }}
+                          />
+
+                          {/* Track */}
+                          <div className="
+                  w-11 h-6 bg-gray-300 dark:bg-gray-700
+                  rounded-full
+                  peer-checked:bg-primary-button-bg
+                  transition-colors duration-300
+                "></div>
+
+                          {/* Thumb */}
+                          <div className="
+                  absolute left-1 top-1 w-4 h-4
+                  bg-white rounded-full shadow-sm
+                  transition-transform duration-300
+                  peer-checked:translate-x-5
+                "></div>
+
+                        </label>
+                      </td>
+
+                    </tr>
+                  ))}
+                </tbody>
+
+              </table>
             </div>
           )}
 

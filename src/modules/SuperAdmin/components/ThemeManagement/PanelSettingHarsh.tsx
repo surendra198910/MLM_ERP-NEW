@@ -25,7 +25,12 @@ import { ApiService } from "../../../../services/ApiService";
 import { PostService } from "../../../../services/PostService";
 import { useSweetAlert } from "../../context/SweetAlertContext";
 import CropperModal from "../Cropper/Croppermodel";
-import TableSkeleton from "./TableSkeleton";
+import TableSkeleton from "../Forms/TableSkeleton";
+import { SmartActions } from "../Security/SmartActionWithFormName";
+import { useLocation } from "react-router-dom";
+import Loader from "../../common/Loader";
+import AccessRestricted from "../../common/AccessRestricted";
+import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
 
 /* ======================================================
    TYPES
@@ -186,6 +191,11 @@ const PanelSettings: React.FC = () => {
     const [showCropper, setShowCropper] = useState(false);
     const [loadingLogo, setLoadingLogo] = useState(false);
     const fileRef = useRef<HTMLInputElement>(null);
+    const location = useLocation();
+    const path = location.pathname;
+    const formName = path.split("/").pop();
+    const [permissionsLoading, setPermissionsLoading] = useState(true);
+    const [hasPageAccess, setHasPageAccess] = useState(true);
 
     /* ======================================================
        HELPERS
@@ -199,6 +209,58 @@ const PanelSettings: React.FC = () => {
     /* ======================================================
        API CALLS
     ====================================================== */
+    const fetchFormPermissions = async () => {
+        try {
+            setPermissionsLoading(true);
+
+            const saved = localStorage.getItem("EmployeeDetails");
+            const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
+
+            const payload = {
+                procName: "AssignForm",
+                Para: JSON.stringify({
+                    ActionMode: "GetForms",
+                    FormName: formName, // 👈 category for this page
+                    EmployeeId: employeeId,
+                }),
+            };
+
+            const response = await universalService(payload);
+            const data = response?.data ?? response;
+
+
+            if (!Array.isArray(data)) {
+                setHasPageAccess(false);
+                return;
+            }
+
+
+            const pagePermission = data.find(
+                (p) =>
+                    String(p.FormNameWithExt).trim().toLowerCase() ===
+                    formName?.trim().toLowerCase(),
+            );
+
+
+            if (
+                !pagePermission ||
+                !pagePermission.Action ||
+                pagePermission.Action.trim() === ""
+            ) {
+                setHasPageAccess(false);
+                return;
+            }
+
+
+            SmartActions.load(data);
+            setHasPageAccess(true);
+        } catch (error) {
+            console.error("Form permission fetch failed:", error);
+            setHasPageAccess(false);
+        } finally {
+            setPermissionsLoading(false);
+        }
+    };
 
     const loadGlobalSettings = async () => {
         try {
@@ -275,6 +337,7 @@ const PanelSettings: React.FC = () => {
     useEffect(() => {
         loadGlobalSettings();
         loadThemes();
+        fetchFormPermissions();
     }, []);
 
     /* ======================================================
@@ -438,7 +501,13 @@ const PanelSettings: React.FC = () => {
     /* ======================================================
        RENDER
     ====================================================== */
+    if (permissionsLoading) {
+        return <Loader />;
+    }
 
+    if (!hasPageAccess) {
+        return <AccessRestricted />;
+    }
     return (
         <div className="bg-white dark:bg-[#0c1427]  dark:text-gray-100 rounded-lg min-h-screen mb-10">
             {/* HEADER */}
@@ -448,14 +517,20 @@ const PanelSettings: React.FC = () => {
                 </div>
 
                 <div className="flex gap-x-2">
-                    <button
-                        type="button"
-                        onClick={handleSaveGlobalSettings}
-                        className="px-4 py-1.5 bg-primary-button-bg hover:bg-primary-button-bg-hover text-white rounded text-sm font-medium flex items-center gap-2 shadow-sm transition-all"
+                    <PermissionAwareTooltip
+                        allowed={SmartActions.canSave(formName)}
+                        allowedText="Save"
                     >
-                        <FaSave />
-                        Save Global Settings
-                    </button>
+                        <button
+                            type="button"
+                            disabled={!SmartActions.canSave(formName)}
+                            onClick={handleSaveGlobalSettings}
+                            className="px-4 py-1.5 bg-primary-button-bg hover:bg-primary-button-bg-hover text-white rounded text-sm font-medium flex items-center gap-2 shadow-sm transition-all disabled:opacity-50"
+                        >
+                            <FaSave />
+                            Save Global Settings
+                        </button>
+                    </PermissionAwareTooltip>
                 </div>
             </div>
 
@@ -484,17 +559,27 @@ const PanelSettings: React.FC = () => {
 
                             {!loadingLogo && (
                                 <>
-                                    <label className="absolute -top-3 -right-3 w-9 h-9 flex items-center justify-center bg-white dark:bg-gray-800 dark:text-primary-button-bg text-primary-button-bg rounded-full shadow-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-all z-10 border border-gray-100 dark:border-gray-button-bg-hover">
-                                        <FaPencilAlt size={14} />
-                                        <input
-                                            ref={fileRef}
-                                            type="file"
-                                            hidden
-                                            accept="image/*"
-                                            onChange={onLogoChange}
-                                        />
-                                    </label>
+                                    
+                                        <label className="absolute -top-3 -right-3 w-9 h-9 flex items-center justify-center bg-white dark:bg-gray-800 dark:text-primary-button-bg text-primary-button-bg rounded-full shadow-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-all z-10 border border-gray-100 dark:border-gray-button-bg-hover">
+                                            <PermissionAwareTooltip
+                                        allowed={SmartActions.canEdit(formName)}
+
+
+                                    >
+                                            <FaPencilAlt size={14} />
+                                            <input
+                                                ref={fileRef}
+                                                type="file"
+                                                hidden
+                                                accept="image/*"
+                                                onChange={onLogoChange}
+                                                disabled={!SmartActions.canEdit(formName)}
+                                            />
+                                              </PermissionAwareTooltip>
+                                        </label>
+                                  
                                     {(globalData.Logo || rawImage) && (
+
                                         <button
                                             type="button"
                                             onClick={handleDeleteLogo}
@@ -580,17 +665,23 @@ const PanelSettings: React.FC = () => {
                 {tab === 0 && (
                     <div className="animate-fadeIn">
                         <div className="flex justify-end mb-4">
-                            <button
-                                onClick={() => {
-                                    setIsEdit(false);
-                                    setEditData(null);
-                                    setOpenModal(true);
-                                }}
-                                className="px-4 py-1.5 bg-primary-button-bg hover:bg-primary-button-bg-hover text-white rounded text-sm font-medium flex items-center gap-2 shadow-sm"
+                            <PermissionAwareTooltip
+                                allowed={SmartActions.canAdd(formName)}
+                                allowedText="Add"
                             >
-                                <FaPlus size={12} />
-                                Add Theme
-                            </button>
+                                <button
+                                    onClick={() => {
+                                        setIsEdit(false);
+                                        setEditData(null);
+                                        setOpenModal(true);
+                                    }}
+                                    disabled={!SmartActions.canAdd(formName)}
+                                    className="px-4 py-1.5 bg-primary-button-bg hover:bg-primary-button-bg-hover text-white rounded text-sm font-medium flex items-center gap-2 shadow-sm disabled:opacity-50"
+                                >
+                                    <FaPlus size={12} />
+                                    Add Theme
+                                </button>
+                            </PermissionAwareTooltip>
                         </div>
 
                         {loading ? (
@@ -687,36 +778,49 @@ const PanelSettings: React.FC = () => {
                                                     <td className="px-4 py-4 text-right">
                                                         <div className="flex justify-end gap-2">
                                                             {/* Edit */}
-                                                            <button
-                                                                onClick={() => {
-                                                                    setIsEdit(true);
-                                                                    setEditData(t);
-                                                                    setOpenModal(true);
-                                                                }}
-                                                                className="
+                                                            <PermissionAwareTooltip
+                                                                allowed={SmartActions.canEdit(formName)}
+
+
+                                                            >
+                                                                <button
+                                                                    onClick={() => {
+                                                                        setIsEdit(true);
+                                                                        setEditData(t);
+                                                                        setOpenModal(true);
+                                                                    }}
+                                                                    disabled={!SmartActions.canEdit(formName)}
+                                                                    className="
                     p-2 rounded-md
                     text-primary-button-bg
                     hover:bg-primary-50 dark:hover:bg-[#1e2a4a]
-                    transition
+                    transition disabled:opacity-50
                   "
-                                                                title="Edit"
-                                                            >
-                                                                <FaPencilAlt size={13} />
-                                                            </button>
-
+                                                                    title="Edit"
+                                                                >
+                                                                    <FaPencilAlt size={13} />
+                                                                </button>
+                                                            </PermissionAwareTooltip>
                                                             {/* Delete */}
+                                                               <PermissionAwareTooltip
+                                        allowed={SmartActions.canDelete(formName)}
+
+
+                                    >
                                                             <button
                                                                 onClick={() => handleDeleteTheme(t.ThemeId)}
+                                                                disabled={!SmartActions.canDelete(formName)}
                                                                 className="
                     p-2 rounded-md
                     text-red-button-bg
                     hover:bg-red-50 dark:hover:bg-[#2a1f2f]
-                    transition
+                    transition disabled:opacity-50
                   "
                                                                 title="Delete"
                                                             >
                                                                 <FaTimes size={13} />
                                                             </button>
+                                                            </PermissionAwareTooltip>
                                                         </div>
                                                     </td>
                                                 </tr>
@@ -837,7 +941,7 @@ const PanelSettings: React.FC = () => {
 
 
                             >
-                                {({ values, handleChange,errors, touched }) => (
+                                {({ values, handleChange, errors, touched }) => (
                                     <Form className="space-y-6">
                                         <div>
                                             <InputField

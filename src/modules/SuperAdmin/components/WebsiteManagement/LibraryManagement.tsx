@@ -15,23 +15,25 @@ import AccessRestricted from "../../common/AccessRestricted";
 import ActionCell from "../../../../components/CommonFormElements/DataTableComponents/ActionCell";
 import LandingIllustration from "../../../../components/CommonFormElements/LandingIllustration/LandingIllustration";
 import { Dialog, DialogBackdrop, DialogPanel } from "@headlessui/react";
-import { ErrorMessage, Field, Form, Formik } from "formik";
+import { ErrorMessage, Field, Form, Formik, useFormik } from "formik";
 import Swal from "sweetalert2";
 import * as Yup from "yup";
+import { PostService } from "../../../../services/PostService";
 
 const Template: React.FC = () => {
   const formSchema = Yup.object().shape({
-    CurrencyName: Yup.string().required("Currency Name is required"),
-    CurrencyCode: Yup.string().required("Currency Code is required"),
-    Rate: Yup.number().required("Rate is required"),
+    file: Yup.mixed().required("Please upload a PDF document"),
   });
+
   const [searchInput, setSearchInput] = useState("");
   const [filterColumn, setFilterColumn] = useState("");
   const [showTable, setShowTable] = useState(false); // Toggle to show 'Oops' or 'Welcome'
   const { universalService } = ApiService();
+  const { postDocument } = PostService();
   const [hasVisitedTable, setHasVisitedTable] = useState(false);
   const [searchTrigger, setSearchTrigger] = useState(0);
   const [columns, setColumns] = useState<any[]>([]);
+  const [platforms, setPlatforms] = useState<any[]>([]);
   const [data, setData] = useState([]);
   const [totalRows, setTotalRows] = useState(0);
   const [page, setPage] = useState(1);
@@ -48,15 +50,49 @@ const Template: React.FC = () => {
   const [initialSortReady, setInitialSortReady] = useState(false);
   const location = useLocation();
   const path = location.pathname;
-  const formName = path.split("/").pop();
+  const segments = path.split("/").filter(Boolean);
+  const last = segments[segments.length - 1];
+  const isId = !isNaN(Number(last));
+  const formName = isId ? segments[segments.length - 2] : last;
   const canExport = SmartActions.canExport(formName);
   const [open, setOpen] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [editData, setEditData] = useState<any>(null);
   const [saving, setSaving] = useState(false);
+  const [fileName, setFileName] = useState("");
   const closeModal = () => {
     setOpen(false);
   };
+
+  // console.log(errors);
+  const fetchSocialMediaPlatforms = async () => {
+    try {
+      const payload = {
+        procName: "ManageLibraries",
+        Para: JSON.stringify({
+          ActionMode: "GetAllSocialMediaPlatform",
+        }),
+      };
+
+      const response = await universalService(payload);
+      console.log("Platforms: ", response);
+      const res = response?.data || response;
+
+      if (!Array.isArray(res)) {
+        console.error("Invalid Social Media Platforms response:", res);
+        return;
+      }
+
+      setPlatforms(
+        res.map((c: any) => ({
+          value: c.Value,
+          label: c.Label,
+        })),
+      );
+    } catch (error) {
+      console.error("Error while Fetching:", error);
+    }
+  }; //    fetch Social Media Links
 
   const fetchFormPermissions = async () => {
     try {
@@ -75,21 +111,19 @@ const Template: React.FC = () => {
       };
 
       const response = await universalService(payload);
+      console.log("Permissions", response);
       const data = response?.data ?? response;
-
 
       if (!Array.isArray(data)) {
         setHasPageAccess(false);
         return;
       }
 
-
       const pagePermission = data.find(
         (p) =>
           String(p.FormNameWithExt).trim().toLowerCase() ===
           formName?.trim().toLowerCase(),
       );
-
 
       if (
         !pagePermission ||
@@ -100,7 +134,6 @@ const Template: React.FC = () => {
         return;
       }
 
-
       SmartActions.load(data);
       setHasPageAccess(true);
     } catch (error) {
@@ -110,11 +143,13 @@ const Template: React.FC = () => {
       setPermissionsLoading(false);
     }
   };
+
   const handleSort = (column: any, direction: string) => {
-    setSortColumnKey(column.columnKey);   // ⭐ send column name
+    setSortColumnKey(column.columnKey); // ⭐ send column name
     setSortDirection(direction.toUpperCase());
     setInitialSortReady(true);
   };
+
   const handlePageChange = (p) => {
     setPage(p);
 
@@ -122,10 +157,12 @@ const Template: React.FC = () => {
       pageOverride: p,
     });
   };
+
   const handlePerRowsChange = (newPerPage, page) => {
     setPerPage(newPerPage);
     setPage(page);
   };
+
   const fetchGridColumns = async () => {
     const saved = localStorage.getItem("EmployeeDetails");
     const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
@@ -134,14 +171,13 @@ const Template: React.FC = () => {
         procName: "GetUserGridColumns",
         Para: JSON.stringify({
           UserId: employeeId,
-          GridName: "USP_CurrencyMaster",
+          GridName: "USP_ManageLibraries",
         }),
       };
 
       const res = await universalService(payload);
       const data = res?.data || res;
       if (Array.isArray(data)) {
-
         const visibleSorted = data
           .filter((c: any) => c.IsVisible)
           .sort((a: any, b: any) => a.ColumnOrder - b.ColumnOrder);
@@ -153,7 +189,7 @@ const Template: React.FC = () => {
           setSortDirection(
             (defaultSortCol.SortDir || "ASC").toUpperCase() === "DESC"
               ? "DESC"
-              : "ASC"
+              : "ASC",
           );
         }
 
@@ -178,10 +214,8 @@ const Template: React.FC = () => {
             selector: (row: any) => row[c.ColumnKey],
 
             cell: (row: any) => {
-
               // ⭐ TOTAL ROW
               if (row.__isTotal) {
-
                 // 👉 show TOTAL label in first visible column
                 if (colIndex === 0) return "Total";
 
@@ -204,12 +238,12 @@ const Template: React.FC = () => {
               }
 
               return value ?? "-";
-            }
-          }))
+            },
+          }));
         const actionColumn = {
           name: "Action",
           cell: (row: any) => {
-            if (row.__isTotal) return null;  
+            if (row.__isTotal) return null; // ⭐ hide buttons on total row
 
             return (
               <ActionCell
@@ -231,23 +265,30 @@ const Template: React.FC = () => {
       setColumns([]);
     }
   };
+
   const handleEdit = async (row) => {
     setEditLoading(true);
     setOpen(true);
     setIsEdit(true);
+
+    // if you later fetch select API → do it here
     setEditData(row);
+
+    console.log("Row Data", row);
 
     setTimeout(() => setEditLoading(false), 200);
   };
+
   const exportColumns = columns
-    .filter(c => c.columnKey)
-    .map(c => ({
+    .filter((c) => c.columnKey)
+    .map((c) => ({
       key: c.columnKey,
-      label: c.name
+      label: c.name,
     }));
+
   const fetchExportData = async () => {
     const payload = {
-      procName: "CurrencyMaster",
+      procName: "ManageLibraries",
       Para: JSON.stringify({
         SearchBy: filterColumn,
         Criteria: searchInput,
@@ -263,44 +304,33 @@ const Template: React.FC = () => {
   };
 
   const handleDelete = async (row: any) => {
+    
     const result = await Swal.fire({
       title: "Are you sure?",
-      text: `Delete "${row.CurrencyName}" ?`,
+      text: `Delete "${row.Title}" ?`,
       icon: "warning",
       showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#6b7280",
-      confirmButtonText: "Yes, delete it",
-      cancelButtonText: "Cancel",
     });
 
     if (!result.isConfirmed) return;
 
     try {
       const payload = {
-        procName: "CurrencyMaster",
+        procName: "ManageLibraries",
         Para: JSON.stringify({
           ActionMode: "Delete",
-          EditId: row.CurrencyId,
-          CompanyId: 1,
-          ModifiedBy: 1,
+          EditId: row.Id, // 🔥 verify this key
         }),
       };
 
       const response = await universalService(payload);
-      const res = Array.isArray(response) ? response[0] : response;
+      const res = response?.data?.[0] || response?.[0] || response;
 
-      if (res?.Status == 1 || res?.Status === "1") {
-        await Swal.fire({
-          icon: "success",
-          title: "Deleted!",
-          text: res?.Msg || "Deleted successfully",
-          timer: 1500,
-          showConfirmButton: false,
-        });
+      if (res?.Status == 1) {
+        Swal.fire("Deleted!", res?.Msg, "success");
 
-        setSearchTrigger((p) => p + 1);
         setRefreshGrid((p) => p + 1);
+        fetchGridData();
       } else {
         Swal.fire("Error", res?.Msg || "Delete failed", "error");
       }
@@ -309,9 +339,50 @@ const Template: React.FC = () => {
       Swal.fire("Error", "Server error", "error");
     }
   };
+  const handleImageUpload = async (e: any, setFieldValue: any) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const fd = new FormData();
+    fd.append("UploadedImage", file);
+    fd.append("pagename", "EmpDoc");
+
+    try {
+      const uploadRes = await postDocument(fd);
+
+      const uploadedFileName =
+        uploadRes?.fileName ||
+        uploadRes?.Message;
+
+      if (!uploadedFileName) {
+        Swal.fire("Error", "Upload failed", "error");
+        return;
+      }
+
+      // ✅ Extract title & type from file
+      const originalName = file.name;
+
+      const extension = originalName.split(".").pop(); // pdf
+      const nameWithoutExt = originalName.replace(/\.[^/.]+$/, ""); // title
+
+      // ✅ store everything
+      setFileName(uploadedFileName);
+
+      setFieldValue("file", file);
+      setFieldValue("fileName", uploadedFileName);
+      setFieldValue("fileType", extension?.toUpperCase()); // PDF
+      setFieldValue("title", nameWithoutExt); // MyDocument
+
+      console.log("File:", uploadedFileName);
+      console.log("Type:", extension);
+      console.log("Title:", nameWithoutExt);
+    } catch (err) {
+      console.error(err);
+      Swal.fire("Error", "Upload failed", "error");
+    }
+  };
 
   const fetchGridData = async (options?: any) => {
-
     const pageToUse = options?.pageOverride ?? page;
     const perPageToUse = options?.perPageOverride ?? perPage;
 
@@ -319,7 +390,7 @@ const Template: React.FC = () => {
       setTableLoading(true);
 
       const payload = {
-        procName: "CurrencyMaster",
+        procName: "ManageLibraries",
         Para: JSON.stringify({
           ActionMode: "GetReport",
           SearchBy: options?.searchBy ?? filterColumn ?? "",
@@ -332,6 +403,7 @@ const Template: React.FC = () => {
       };
 
       const res = await universalService(payload);
+      console.log(res);
       const result = res?.data || res;
 
       if (result?.rows && Array.isArray(result.rows)) {
@@ -357,7 +429,7 @@ const Template: React.FC = () => {
       procName: "UniversalColumnSelector",
       Para: JSON.stringify({
         EmployeeId: employeeId,
-        USPName: "USP_EnquiryTypeMaster",
+        USPName: "USP_ManageLibraries",
         ActionMode: "List",
         Mode: "Get",
       }),
@@ -382,7 +454,6 @@ const Template: React.FC = () => {
   };
   useEffect(() => {
     fetchGridColumns();
-
   }, [refreshGrid]);
   useEffect(() => {
     if (!showTable || !hasVisitedTable) return;
@@ -396,14 +467,13 @@ const Template: React.FC = () => {
     if (sortColumnKey) {
       fetchGridData();
     }
-
   }, [
     page,
     perPage,
     sortColumnKey,
     sortDirection,
     searchTrigger,
-    initialSortReady
+    initialSortReady,
   ]);
   const applySearch = () => {
     if (!SmartActions.canSearch(formName)) return;
@@ -446,9 +516,7 @@ const Template: React.FC = () => {
       }, {})
       : null;
   const tableData =
-    hasData && totalRow
-      ? [...data, { ...totalRow, __isTotal: true }]
-      : data;
+    hasData && totalRow ? [...data, { ...totalRow, __isTotal: true }] : data;
   useEffect(() => {
     if (!open) {
       const t = setTimeout(() => {
@@ -459,6 +527,9 @@ const Template: React.FC = () => {
       return () => clearTimeout(t);
     }
   }, [open]);
+  useEffect(() => {
+    fetchSocialMediaPlatforms();
+  }, []);
   if (permissionsLoading) {
     return <Loader />;
   }
@@ -472,13 +543,12 @@ const Template: React.FC = () => {
       <div className="trezo-card-header mb-[10px] md:mb-[10px] sm:flex items-center justify-between pb-5 border-b border-gray-200 -mx-[20px] md:-mx-[25px] px-[20px] md:px-[25px]">
         <div className="trezo-card-title">
           <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
-            Manage Currency
+            Manage Document Library
           </h5>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:w-auto w-full">
           <div className="flex flex-col sm:flex-row items-center gap-3 flex-wrap justify-end">
-
             {/* 1. Filter Dropdown (Exactly from your design) */}
             <div className="relative w-full sm:w-[180px]">
               <PermissionAwareTooltip
@@ -500,8 +570,7 @@ const Template: React.FC = () => {
                     }`}
                 >
                   <option value="">Select Filter Option</option>
-                  <option value="CurrencyName">Currency Name</option>
-                  <option value="CurrencyCode">Currency Code</option>
+                  <option value="PlatformId">By Document Name</option>
                 </select>
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
                   <i className="material-symbols-outlined !text-[18px]">
@@ -518,7 +587,9 @@ const Template: React.FC = () => {
                 allowedText="Enter Criteria"
               >
                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-500">
-                  <i className="material-symbols-outlined !text-[18px]">search</i>
+                  <i className="material-symbols-outlined !text-[18px]">
+                    search
+                  </i>
                 </span>
                 <input
                   type="text"
@@ -549,7 +620,9 @@ const Template: React.FC = () => {
                   disabled={!SmartActions.canSearch(formName)}
                   className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-primary-button-bg text-primary-button-bg hover:bg-primary-button-bg hover:text-white transition-all shadow-sm disabled:opacity-50"
                 >
-                  <i className="material-symbols-outlined text-[20px]">search</i>
+                  <i className="material-symbols-outlined text-[20px]">
+                    search
+                  </i>
                 </button>
               </PermissionAwareTooltip>
               {/* COLUMN SELECTOR BUTTON */}
@@ -564,7 +637,7 @@ const Template: React.FC = () => {
                     }`}
                 >
                   <ColumnSelector
-                    procName="USP_CurrencyMaster"
+                    procName="USP_ManageLibraries"
                     onApply={fetchVisibleColumns}
                   />
                 </div>
@@ -586,7 +659,6 @@ const Template: React.FC = () => {
                 </button>
               </PermissionAwareTooltip>
               {/* REFRESH BUTTON (Visible when showTable is true) */}
-
             </div>
             {(filterColumn || searchInput) && (
               <PermissionAwareTooltip
@@ -619,22 +691,24 @@ const Template: React.FC = () => {
       </div>
       {!showTable && (
         <LandingIllustration
-          title="Currency Master"
-          addLabel="Add Currency"
+          title="Manage Document Library"
+          addLabel="Add New Document"
           formName={formName}
           description={
             <>
-              Search Currency using filters above.<br />
-              Manage records, export reports and analyse performance.<br />
-              <span className="font-medium">OR</span><br />
-              Click on Add button to create a new Currency entry.
+              Search documents using filters above.
+              <br />
+              Manage documents and export reports.
+              <br />
+              <span className="font-medium">OR</span>
+              <br />
+              Click on Add button to upload new document.
             </>
           }
         />
       )}
       {showTable && (
         <div>
-
           {tableLoading ? (
             <div className="flex justify-between items-center py-2 animate-pulse">
               <div className="h-8 w-[120px] bg-gray-200 dark:bg-gray-700 rounded-md" />
@@ -647,7 +721,6 @@ const Template: React.FC = () => {
             </div>
           ) : hasData ? (
             <div className="flex justify-between items-center py-2 mb-[10px]">
-
               {/* PAGE SIZE */}
               <div className="relative">
                 <select
@@ -684,9 +757,11 @@ const Template: React.FC = () => {
 
               {/* EXPORT */}
               <PermissionAwareTooltip allowed={canExport}>
-                <div className={!canExport ? "pointer-events-none opacity-50" : ""}>
+                <div
+                  className={!canExport ? "pointer-events-none opacity-50" : ""}
+                >
                   <ExportButtons
-                    title="Currency Report"
+                    title="Document Report"
                     columns={exportColumns}
                     fetchData={fetchExportData}
                     disabled={!canExport}
@@ -696,11 +771,13 @@ const Template: React.FC = () => {
             </div>
           ) : null}
           {/* --- CONTENT CONTAINER --- */}
-          <div className="trezo-card-content 
+          <div
+            className="trezo-card-content 
   bg-white dark:bg-[#0f172a]
   text-gray-800 dark:text-gray-200
   border border-gray-200 dark:border-gray-700
-  rounded-lg overflow-hidden">
+  rounded-lg overflow-hidden"
+          >
             <DataTable
               columns={columns}
               data={tableData}
@@ -720,24 +797,21 @@ const Template: React.FC = () => {
               onSort={handleSort}
               sortServer
               defaultSortFieldId={
-                columns.find(col => col.columnKey === sortColumnKey)?.id
+                columns.find((col) => col.columnKey === sortColumnKey)?.id
               }
               defaultSortAsc={sortDirection === "ASC"}
               progressPending={tableLoading}
               progressComponent={
-                <TableSkeleton
-                  rows={perPage}
-                  columns={columns.length || 8}
-                />
+                <TableSkeleton rows={perPage} columns={columns.length || 8} />
               }
               conditionalRowStyles={[
                 {
-                  when: row => row.__isTotal,
+                  when: (row) => row.__isTotal,
                   style: {
                     fontWeight: 700,
                     backgroundColor: "var(--color-primary-table-bg)",
-                  }
-                }
+                  },
+                },
               ]}
               noDataComponent={!tableLoading && <OopsNoData />}
             />
@@ -745,11 +819,8 @@ const Template: React.FC = () => {
         </div>
       )}
 
-      <Dialog
-        open={open}
-        onClose={() => setOpen(false)}
-        className="relative z-60"
-      >
+      {/* Add New Form Category Modal */}
+      <Dialog open={open} onClose={closeModal} className="relative z-60">
         <DialogBackdrop
           transition
           className="fixed inset-0 bg-gray-500/75 transition-opacity data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200 data-[enter]:ease-out data-[leave]:ease-in"
@@ -773,13 +844,13 @@ p-[20px] md:p-[25px] rounded-t-md"
                 >
                   <div className="trezo-card-title">
                     <h5 className="!mb-0">
-                      {isEdit ? "Edit Currency" : "Add New Currency"}
+                      {isEdit ? "Edit Document Library" : "Add New Document Library"}
                     </h5>
                   </div>
                   <button
                     type="button"
                     className="text-[23px] transition-all leading-none text-black dark:text-white hover:text-primary-button-bg"
-                    onClick={() => setOpen(false)}
+                    onClick={closeModal}
                   >
                     <i className="ri-close-fill"></i>
                   </button>
@@ -798,251 +869,135 @@ p-[20px] md:p-[25px] rounded-t-md"
                   </div>
                 ) : (
                   <Formik
-                    initialValues={{
-                      CurrencyName: editData?.CurrencyName || "",
-                      CurrencyCode: editData?.CurrencyCode || "",
-                      Rate: editData?.Rate || "",
-                      IsBaseCurrency: editData?.IsBaseCurrency === "Yes",
-                      IsPublished: editData?.IsPublished === "Yes",
-                    }}
-
                     enableReinitialize
+                    initialValues={{
+                      file: null,
+                      fileName: editData?.FileUrl || "",
+                      fileType: editData?.FileType || "",
+                      title: editData?.Title || "",
+                    }}
                     validationSchema={formSchema}
-                    onSubmit={async (values, { resetForm }) => {
-                      const actionText = isEdit ? "update" : "add";
+                    onSubmit={async (values) => {
+                      const payload = {
+                        procName: "ManageLibraries",
+                        Para: JSON.stringify({
+                          ActionMode: isEdit ? "Update" : "Insert",
+                          Id: editData?.Id || 0,
+                          FileType: values.fileType,
+                          Title: values.title,
+                          FileUrl: values.fileName,
+                        }),
+                      };
 
-                      const confirm = await Swal.fire({
-                        title: `Confirm ${actionText}?`,
-                        text: `Do you want to ${actionText} "${values.CurrencyName}" ?`,
-                        icon: "question",
-                        showCancelButton: true,
-                        confirmButtonColor: "#2563eb",
-                        cancelButtonColor: "#6b7280",
-                        confirmButtonText: "Yes, continue",
-                        cancelButtonText: "Cancel",
-                      });
+                      const res = await universalService(payload);
 
-                      if (!confirm.isConfirmed) return;
+                      console.log("SAVE RESPONSE:", res);
 
-                      try {
-                        setSaving(true);
-
-                        Swal.fire({
-                          title: "Processing...",
-                          allowOutsideClick: false,
-                          didOpen: () => Swal.showLoading(),
-                        });
-
-                        const payload = {
-                          procName: "CurrencyMaster",
-                          Para: JSON.stringify({
-                            ActionMode: isEdit ? "Update" : "Insert",
-                            CurrencyName: values.CurrencyName,
-                            CurrencyCode: values.CurrencyCode,
-                            Rate: Number(values.Rate),
-                            IsBaseCurrency: values.IsBaseCurrency,
-                            IsPublished: values.IsPublished,
-                            EditId: isEdit ? editData?.CurrencyId : 0,
-                            CompanyId: Number(localStorage.getItem("CompanyId")),
-                            EntryBy: 1,
-                            ModifiedBy: 1,
-                          }),
-                        };
-
-                        const response = await universalService(payload);
-                        const res = Array.isArray(response) ? response[0] : response;
-
-                        Swal.close();
-
-                        if (res?.Status == 1 || res?.Status === "1") {
-                          await Swal.fire({
-                            icon: "success",
-                            title: isEdit ? "Updated!" : "Added!",
-                            text: res?.Msg || "Saved successfully",
-                            timer: 1500,
-                            showConfirmButton: false,
-                          });
-
-                          resetForm();
-                          closeModal();
-
-                          setPage(1);
-                          setSearchTrigger((p) => p + 1);
-                          setRefreshGrid((p) => p + 1);
-                        } else {
-                          Swal.fire("Error", res?.Msg || "Server error", "error");
-                        }
-                      } catch (err) {
-                        console.error(err);
-                        Swal.fire("Error", "Server error", "error");
-                      } finally {
-                        setSaving(false);
-                      }
+                      closeModal();
+                      setRefreshGrid((p) => p + 1); // 🔥 refresh table
                     }}
-
                   >
-                    {({ setFieldValue }) => {
+                    {({ setFieldValue, values, errors, touched }) => (
+                      <Form className="space-y-6">
+                        {/* 2. Enhanced File Upload Input */}
+                        <div className="space-y-2">
+                          <label className="mb-[10px] text-black dark:text-white font-medium block">
+                            Upload Document
+                            <span className="text-red-500">*</span>
+                          </label>
 
+                          <div
+                            className={`group w-full flex items-center rounded-lg border transition-all duration-200 overflow-hidden
+                            ${errors.file && touched.file
+                                ? "border-red-500 ring-2 ring-red-50/50"
+                                : "border-gray-200 dark:border-[#172036] focus-within:ring-2 focus-within:ring-blue-100 dark:focus-within:ring-blue-900/20 focus-within:border-primary-button-bg"
+                              }`}
+                          >
+                            {/* LEFT SIDE: Name Display */}
+                            <div className="flex-grow h-[48px] flex items-center px-4 bg-white dark:bg-[#0c1427] border-r border-gray-100 dark:border-[#172036]">
+                              <div className="flex items-center gap-2 w-full">
+                                <i
+                                  className={`material-symbols-outlined !text-[20px] ${values.file ? "text-primary-button-bg" : "text-gray-400"}`}
+                                >
+                                  {values.file ? "description" : "upload_file"}
+                                </i>
+                                <span
+                                  className={`text-sm truncate max-w-[200px] ${values.file ? "text-black dark:text-white font-medium" : "text-gray-400 italic"}`}
+                                >
+                                  {values.file
+                                    ? values.file.name
+                                    : "Choose a PDF file..."}
+                                </span>
 
-                      return (
-                        <Form className="space-y-5">
-                     
-                          {/* Currency Name */}
-                          <div>
-                            <label className="mb-[10px] text-black dark:text-white font-medium block">
-                              Currency Name:
-                              <span className="text-red-500">*</span>
-                            </label>
-                            <Field
-                              type="text"
-                              name="CurrencyName"
-                              placeholder="Enter Currency Name"
-                              className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
-dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
-transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
-focus:border-primary-button-bg"
-                            />
-                            <ErrorMessage
-                              name="CurrencyName"
-                              component="p"
-                              className="text-red-500 text-sm"
-                            />
-                          </div>
-                          {/* Currency Code */}
-                          <div>
-                            <label className="mb-[10px] text-black dark:text-white font-medium block">
-                              Currency Code:
-                              <span className="text-red-500">*</span>
-                            </label>
-                            <Field
-                              type="text"
-                              name="CurrencyCode"
-                              placeholder="Enter Currency Code (₹, $, €)"
-                              className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
-dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
-transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
-focus:border-primary-button-bg"
-                            />
-                            <ErrorMessage
-                              name="CurrencyCode"
-                              component="p"
-                              className="text-red-500 text-sm"
-                            />
-                          </div>
-                          {/* Rate */}
-                          <div>
-                            <label className="mb-[10px] text-black dark:text-white font-medium block">
-                              Rate:
-                              <span className="text-red-500">*</span>
-                            </label>
-                            <Field
-                              type="number"
-                              step="0.0001"
-                              name="Rate"
-                              placeholder="Enter Rate"
-                              className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
-dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
-transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
-focus:border-primary-button-bg"
-                            />
-                            <ErrorMessage
-                              name="Rate"
-                              component="p"
-                              className="text-red-500 text-sm"
-                            />
-                          </div>
+                                {/* Action: Clear File */}
+                                {values.file && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setFieldValue("file", null)}
+                                    className="ml-auto text-gray-400 hover:text-red-500 transition-colors"
+                                    title="Remove file"
+                                  >
+                                    <i className="material-symbols-outlined !text-[18px]">
+                                      close
+                                    </i>
+                                  </button>
+                                )}
+                              </div>
+                            </div>
 
-                          {/* TOGGLES */}
-                          <div className="grid grid-cols-2 gap-[25px] mb-6">
-                            <div className="flex items-center justify-between pr-4">
-                              <label className="font-medium">
-                                Is Published:
+                            {/* RIGHT SIDE: Styled Browse Button */}
+                            <div className="relative h-[48px] w-[110px] bg-primary-button-bg hover:bg-opacity-90 active:scale-95 transition-all flex items-center justify-center shrink-0">
+                              <input
+                                type="file"
+                                id="file-upload"
+                                accept="application/pdf"
+                                className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                                onChange={(event) => {
+                                  handleImageUpload(event, setFieldValue);
+                                }}
+                              />
+                              <label
+                                htmlFor="file-upload"
+                                className="px-[26.5px] py-[12px] rounded-md bg-primary-button-bg text-white hover:bg-primary-button-bg-hover"
+                              >
+                                Upload
                               </label>
-
-                              <Field name="IsPublished">
-                                {({ field }) => (
-                                  <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      checked={field.value}
-                                      onChange={(e) =>
-                                        field.onChange({
-                                          target: {
-                                            name: field.name,
-                                            value: e.target.checked,
-                                          },
-                                        })
-                                      }
-                                      className="sr-only peer"
-                                    />
-                                    <div className="w-11 h-6 bg-gray-200 rounded-full peer-checked:bg-primary-button-bg"></div>
-                                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all peer-checked:translate-x-5"></div>
-                                  </label>
-                                )}
-                              </Field>
                             </div>
                           </div>
-                          {/* TOGGLES */}
-                          <div className="grid grid-cols-2 gap-[25px] mb-6">
-                            <div className="flex items-center justify-between pr-4">
-                              <label className="font-medium">Is Base Currency:</label>
 
-                              <Field name="IsBaseCurrency">
-                                {({ field }) => (
-                                  <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                      type="checkbox"
-                                      checked={field.value}
-                                      onChange={(e) =>
-                                        field.onChange({
-                                          target: {
-                                            name: field.name,
-                                            value: e.target.checked,
-                                          },
-                                        })
-                                      }
-                                      className="sr-only peer"
-                                    />
-                                    <div className="w-11 h-6 bg-gray-200 rounded-full peer-checked:bg-primary-button-bg"></div>
-                                    <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-all peer-checked:translate-x-5"></div>
-                                  </label>
-                                )}
-                              </Field>
-
+                          {/* Error Message for File */}
+                          {errors.file && touched.file && (
+                            <div className="flex items-center gap-1 text-red-500 text-xs font-medium mt-1">
+                              <i className="material-symbols-outlined !text-[14px]">
+                                error
+                              </i>
+                              "Error"
                             </div>
-                          </div>
-                          <hr className="border-0 border-t border-gray-200 dark:border-gray-700 my-4 mt-10 md:-mx-[25px] px-[20px] md:px-[25px]" />
+                          )}
+                        </div>
 
-                          {/* Footer */}
-                          <div className="text-right mt-[20px]">
-                            <button
-                              type="button"
-                              className="mr-[15px] px-[26.5px] py-[12px] rounded-md bg-danger-500 text-white hover:bg-danger-400"
-                              onClick={() => setOpen(false)}
-                            >
-                              Cancel
-                            </button>
+                        <hr className="border-0 border-t border-gray-100 dark:border-gray-800 my-6 md:-mx-[25px]" />
 
-                            <button
-                              type="submit"
-                              disabled={saving}
-                              className="px-[26.5px] py-[12px] rounded-md bg-primary-button-bg text-white hover:bg-primary-button-bg-hover"
-                            >
-                              {saving ? (
-                                <div className="flex items-center gap-2">
-                                  <div className="theme-loader"></div>
-                                  <span>Processing...</span>
-                                </div>
-                              ) : isEdit ? (
-                                "Update Currency"
-                              ) : (
-                                "Add Currency"
-                              )}
-                            </button>
-                          </div>
-                        </Form>
-                      );
-                    }}
+                        {/* Footer Actions */}
+                        <div className="flex items-center justify-end gap-3">
+                          <button
+                            type="button"
+                            className="mr-[15px] px-[26.5px] py-[12px] rounded-md bg-danger-500 text-white hover:bg-danger-400"
+                            onClick={closeModal}
+                          >
+                            Cancel
+                          </button>
+
+                          <button
+                            type="submit"
+                            disabled={saving}
+                            className="px-[26.5px] py-[12px] rounded-md bg-primary-button-bg text-white hover:bg-primary-button-bg-hover"
+                          >
+                            Add
+                          </button>
+                        </div>
+                      </Form>
+                    )}
                   </Formik>
                 )}
               </div>

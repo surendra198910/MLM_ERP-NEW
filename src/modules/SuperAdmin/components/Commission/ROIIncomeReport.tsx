@@ -229,7 +229,7 @@ const Template: React.FC = () => {
           button: true,
         };
 
-        setColumns([...reactCols, actionColumn]);
+        setColumns([...reactCols]);
       } else {
         setColumns([]);
       }
