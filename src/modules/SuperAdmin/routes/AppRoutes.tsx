@@ -106,6 +106,7 @@ import LibraryManagement from "../components/WebsiteManagement/LibraryManagement
 import SocialMediaPlatform from "../components/Common/SocialMediaPlatform.js"
 import WithrawalBy from "../components/Common/WithdrawalBy.js"
 import MemberThemeManagement from "../components/ThemeManagement/MemberThemeManagement.js"
+import NewsAndAnnoucement from "../components/WebsiteManagement/NewsAndAnnouncement.js"
 
 const AppRoutes = () => {
   const [active, setActive] = useState(false);
@@ -290,6 +291,7 @@ const AppRoutes = () => {
             <Route path="/superadmin/website-management/member-banner" element={<ManageMemberBanner />} />
             <Route path="/superadmin/website-management/website-banner" element={<ManageWebsiteBanner />} />
             <Route path="/superadmin/website-management/website-popup" element={<ManageWebsitePopup />} />
+            <Route path="/superadmin/website-management/news-and-announcement" element={<NewsAndAnnoucement />} />
 
             //Support
             <Route path="/superadmin/support-center/my-support-ticket" element={<MySupportTicket />} />
