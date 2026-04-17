@@ -277,9 +277,8 @@ const Template: React.FC = () => {
         procName: "SystemReport",
         Para: JSON.stringify({
           ActionMode: "Delete",
-          EditId: Number(row.ReportId),   // ✅ FIX
-          CompanyId: 1,
-          ModifiedBy: 1,
+          ReportId: Number(row.ReportId),
+          
         }),
       };
 
