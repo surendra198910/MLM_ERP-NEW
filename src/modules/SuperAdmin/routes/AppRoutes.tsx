@@ -101,12 +101,20 @@ import WithdrawalSetting from "../components/WithdrawalSetting/WithdrawalSetting
 //Social Media
 import SocialMediaSetting from "../components/SocialMediaSetting/SocialMediaSetting.js";
 
+
+
 import MarqueeNewsManagement from "../components/WebsiteManagement/MarqueeNewsManagement.js"
 import LibraryManagement from "../components/WebsiteManagement/LibraryManagement.js"
 import SocialMediaPlatform from "../components/Common/SocialMediaPlatform.js"
 import WithrawalBy from "../components/Common/WithdrawalBy.js"
 import MemberThemeManagement from "../components/ThemeManagement/MemberThemeManagement.js"
 import NewsAndAnnoucement from "../components/WebsiteManagement/NewsAndAnnouncement.js"
+
+
+// Crypto wallet setting
+import ManageCryptowallet from "../components/settings/ManageCryptoWallet.js";
+import ManageWalletType from "../components/settings/ManageWalletType.js";
+
 
 const AppRoutes = () => {
   const [active, setActive] = useState(false);
@@ -325,6 +333,9 @@ const AppRoutes = () => {
             <Route path="/superadmin/theme/member-panel-theme" element={<MemberThemeManagement/>}/>
 
             
+               //Manage Crypto wallet
+            <Route path="/superadmin/mlm-setting/CryptoWallet-setting" element={<ManageCryptowallet />} />
+              <Route path="/superadmin/mlm-setting/WalletType-setting" element={<ManageWalletType />} />
 
 
 
