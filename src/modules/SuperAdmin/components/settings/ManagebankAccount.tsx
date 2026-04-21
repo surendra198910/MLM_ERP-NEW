@@ -22,9 +22,45 @@ import { PostService } from "../../../../services/PostService";
 
 const Template: React.FC = () => {
   const formSchema = Yup.object().shape({
-    // file: Yup.mixed().required("Please upload a PDF document"),
-    title: Yup.string().required("Title is Required"),
-    libraryType: Yup.string().required("Upload Type is Required"),
+    bankName: Yup.string()
+      .required("Bank Name is required")
+      .max(100, "Max 100 characters allowed"),
+
+    accountName: Yup.string()
+      .required("Account Name is required")
+      .max(150, "Max 150 characters allowed"),
+
+    accountType: Yup.string()
+      .required("Account Type is required")
+      .oneOf(["Saving", "Current"], "Invalid Account Type"),
+
+    accountNo: Yup.string()
+      .required("Account Number is required")
+      .matches(/^[0-9]+$/, "Only numbers allowed")
+      .min(6, "Too short")
+      .max(20, "Too long"),
+
+    ifscCode: Yup.string()
+      .required("IFSC Code is required")
+      .matches(/^[A-Z]{4}0[A-Z0-9]{6}$/, "Invalid IFSC Code"),
+
+    branch: Yup.string()
+      .required("Branch is required")
+      .max(150, "Max 150 characters allowed"),
+
+    pinCode: Yup.string()
+      .required("Pin Code is required")
+      .matches(/^[1-9][0-9]{5}$/, "Invalid Pin Code"),
+
+    upiId: Yup.string()
+      .nullable()
+      .notRequired()
+      .matches(/^[\w.-]+@[\w.-]+$/, {
+        message: "Invalid UPI ID (example: name@bank)",
+        excludeEmptyString: true,
+      }),
+
+    // qrCodeImage: Yup.string().required("QR Code Image is required"),
   });
 
   const [searchInput, setSearchInput] = useState("");
@@ -66,13 +102,19 @@ const Template: React.FC = () => {
     setOpen(false);
   };
 
+  const empDetails = JSON.parse(
+    localStorage.getItem("EmployeeDetails") || "[]",
+  );
+
+  console.log(empDetails);
+
   const uploadOptions = ["document", "banner", "video"];
 
   // console.log(errors);
   const fetchSocialMediaPlatforms = async () => {
     try {
       const payload = {
-        procName: "ManageLibraries",
+        procName: "CompanyBankAccountMaster",
         Para: JSON.stringify({
           ActionMode: "GetAllSocialMediaPlatform",
         }),
@@ -175,7 +217,7 @@ const Template: React.FC = () => {
         procName: "GetUserGridColumns",
         Para: JSON.stringify({
           UserId: employeeId,
-          GridName: "USP_ManageLibraries",
+          GridName: "USP_CompanyBankAccountMaster",
         }),
       };
 
@@ -303,7 +345,7 @@ const Template: React.FC = () => {
 
   const fetchExportData = async () => {
     const payload = {
-      procName: "ManageLibraries",
+      procName: "CompanyBankAccountMaster",
       Para: JSON.stringify({
         SearchBy: filterColumn,
         Criteria: searchInput,
@@ -319,9 +361,10 @@ const Template: React.FC = () => {
   };
 
   const handleDelete = async (row: any) => {
+    console.log(row);
     const result = await Swal.fire({
       title: "Are you sure?",
-      text: `Delete "${row.Title}" ?`,
+      text: `Delete ?`,
       icon: "warning",
       showCancelButton: true,
     });
@@ -330,10 +373,12 @@ const Template: React.FC = () => {
 
     try {
       const payload = {
-        procName: "ManageLibraries",
+        procName: "CompanyBankAccountMaster",
         Para: JSON.stringify({
           ActionMode: "Delete",
-          EditId: row.Id, // 🔥 verify this key
+          EditId: empDetails.CompanyId,
+          AccountName: row?.AccountName,
+          // 🔥 verify this key
         }),
       };
 
@@ -357,9 +402,27 @@ const Template: React.FC = () => {
     const file = e.target.files[0];
     if (!file) return;
 
+    // ✅ 1. Validate file type (ONLY IMAGES)
+    const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+
+    if (!allowedTypes.includes(file.type)) {
+      Swal.fire(
+        "Invalid File",
+        "Only image files are allowed (PNG, JPG, WEBP)",
+        "error",
+      );
+      return;
+    }
+
+    // ✅ 2. Optional: file size limit (2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      Swal.fire("File Too Large", "Max size is 2MB", "error");
+      return;
+    }
+
     const fd = new FormData();
     fd.append("UploadedImage", file);
-    fd.append("pagename", "EmpDoc");
+    fd.append("pagename", "CompanyDocs"); // 🔥 better name than EmpDoc
 
     try {
       const uploadRes = await postDocument(fd);
@@ -371,23 +434,19 @@ const Template: React.FC = () => {
         return;
       }
 
-      // ✅ Extract title & type from file
-      const originalName = file.name;
+      // ✅ Extract extension (image type)
+      const extension = file.name.split(".").pop();
 
-      const extension = originalName.split(".").pop(); // pdf
-      const nameWithoutExt = originalName.replace(/\.[^/.]+$/, ""); // title
-
-      // ✅ store everything
+      // ✅ store values
       setFileName(uploadedFileName);
 
       setFieldValue("file", file);
       setFieldValue("fileName", uploadedFileName);
-      setFieldValue("fileType", extension?.toUpperCase()); // PDF
-      // setFieldValue("title", nameWithoutExt); // MyDocument
+      setFieldValue("fileType", extension?.toUpperCase()); // JPG/PNG
+      setFieldValue("qrCodeImage", uploadedFileName); // 🔥 important for DB
 
-      console.log("File:", uploadedFileName);
+      console.log("Uploaded:", uploadedFileName);
       console.log("Type:", extension);
-      // console.log("Title:", nameWithoutExt);
     } catch (err) {
       console.error(err);
       Swal.fire("Error", "Upload failed", "error");
@@ -402,7 +461,7 @@ const Template: React.FC = () => {
       setTableLoading(true);
 
       const payload = {
-        procName: "ManageLibraries",
+        procName: "CompanyBankAccountMaster",
         Para: JSON.stringify({
           ActionMode: "GetReport",
           SearchBy: options?.searchBy ?? filterColumn ?? "",
@@ -441,7 +500,7 @@ const Template: React.FC = () => {
       procName: "UniversalColumnSelector",
       Para: JSON.stringify({
         EmployeeId: employeeId,
-        USPName: "USP_ManageLibraries",
+        USPName: "USP_CompanyBankAccountMaster",
         ActionMode: "List",
         Mode: "Get",
       }),
@@ -555,7 +614,7 @@ const Template: React.FC = () => {
       <div className="trezo-card-header mb-[10px] md:mb-[10px] sm:flex items-center justify-between pb-5 border-b border-gray-200 -mx-[20px] md:-mx-[25px] px-[20px] md:px-[25px]">
         <div className="trezo-card-title">
           <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
-            Manage Document Library
+            Company Bank Account
           </h5>
         </div>
 
@@ -583,7 +642,7 @@ const Template: React.FC = () => {
                            }`}
                 >
                   <option value="">Select Filter Option</option>
-                  <option value="PlatformId">By Document Name</option>
+                  <option value="AccountNo">By Account Number</option>
                 </select>
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
                   <i className="material-symbols-outlined !text-[18px]">
@@ -652,7 +711,7 @@ const Template: React.FC = () => {
                   }`}
                 >
                   <ColumnSelector
-                    procName="USP_ManageLibraries"
+                    procName="USP_CompanyBankAccountMaster"
                     onApply={fetchVisibleColumns}
                   />
                 </div>
@@ -707,18 +766,18 @@ const Template: React.FC = () => {
       </div>
       {!showTable && (
         <LandingIllustration
-          title="Manage Document Library"
-          addLabel="Add New Document"
+          title="Manage Bank Account"
+          addLabel="Add New Bank Account"
           formName={formName}
           description={
             <>
-              Search documents using filters above.
+              Search Bank Accounts using filters above.
               <br />
-              Manage documents and export reports.
+              Manage Bank Accounts and export reports.
               <br />
               <span className="font-medium">OR</span>
               <br />
-              Click on Add button to upload new document.
+              Click on Add button to add new bank account.
             </>
           }
         />
@@ -777,7 +836,7 @@ const Template: React.FC = () => {
                   className={!canExport ? "pointer-events-none opacity-50" : ""}
                 >
                   <ExportButtons
-                    title="Document Report"
+                    title="Bank Account Report"
                     columns={exportColumns}
                     fetchData={fetchExportData}
                     disabled={!canExport}
@@ -848,7 +907,7 @@ const Template: React.FC = () => {
               transition
               className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all
 data-[closed]:translate-y-4 data-[closed]:opacity-0 data-[enter]:duration-300 data-[leave]:duration-200
-data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-[550px]
+data-[enter]:ease-out data-[leave]:ease-in sm:my-8 sm:w-full sm:max-w-[900px]
 data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
             >
               <div className="trezo-card w-full bg-white dark:bg-[#0c1427] p-[20px] md:p-[25px] rounded-md">
@@ -860,9 +919,7 @@ p-[20px] md:p-[25px] rounded-t-md"
                 >
                   <div className="trezo-card-title">
                     <h5 className="!mb-0">
-                      {isEdit
-                        ? "Edit Document Library"
-                        : "Add New Document Library"}
+                      {isEdit ? "Edit Bank Account" : "Add New Bank Account"}
                     </h5>
                   </div>
                   <button
@@ -890,23 +947,39 @@ p-[20px] md:p-[25px] rounded-t-md"
                     enableReinitialize
                     initialValues={{
                       file: null,
-                      fileName: editData?.FileUrl || "",
-                      libraryType: editData?.LibraryType || "",
                       fileType: editData?.FileType || "",
-                      title: editData?.Title || "",
+                      fileName: editData?.FileUrl || "",
+                      companyId: editData?.CompanyId || "",
+                      bankName: editData?.BankName || "",
+                      accountName: editData?.AccountName || "",
+                      accountType: editData?.AccountType || "",
+                      accountNo: editData?.AccountNo || "",
+                      branch: editData?.Branch || "",
+                      pinCode: editData?.PinCode || "",
+                      ifscCode: editData?.IFSCCode || "",
+                      upiId: editData?.UPIID || "",
+                      qrCodeImage: editData?.QrCodeImage || "",
+                      printInBill: editData?.PrintInBill || false,
                     }}
                     validationSchema={formSchema}
                     onSubmit={async (values, { resetForm }) => {
-                      console.log(values, " my valve");
                       const payload = {
-                        procName: "ManageLibraries",
+                        procName: "CompanyBankAccountMaster",
                         Para: JSON.stringify({
                           ActionMode: isEdit ? "Update" : "Insert",
+                          CompanyId: empDetails?.CompanyId,
                           EditId: editData?.Id || 0,
-                          FileType: values.fileType,
-                          Title: values.title,
-                          FileUrl: values.fileName,
-                          LibraryType: values.libraryType,
+                          BankName: values.bankName,
+                          AccountName: values.accountName,
+                          AccountType: values.accountType,
+                          AccountNo: values.accountNo,
+                          Branch: values.branch,
+                          PinCode: values.pinCode,
+                          IFSCCode: values.ifscCode,
+                          UPIID: values.upiId,
+                          QrCodeImage: values.qrCodeImage,
+                          EntryBy: empDetails?.EmployeeId,
+                          ModifiedBy: isEdit ? empDetails?.EmployeeId : "",
                         }),
                       };
 
@@ -918,8 +991,7 @@ p-[20px] md:p-[25px] rounded-t-md"
                           await Swal.fire({
                             icon: "success",
                             title: isEdit ? "Updated!" : "Added!",
-                            text:
-                              res?.Msg || "Document Library saved successfully",
+                            text: res?.Msg || "Bank Account saved successfully",
                             timer: 1500,
                             showConfirmButton: false,
                           });
@@ -951,156 +1023,287 @@ p-[20px] md:p-[25px] rounded-t-md"
                     }}
                   >
                     {({ setFieldValue, values, errors, touched }) => (
-                      <Form className="space-y-6">
-                        {/* Title */}
-                        <div>
-                          <label className="mb-[10px] text-black dark:text-white font-medium block">
-                            Title
-                            <span className="text-red-500">*</span>
-                          </label>
-                          <Field
-                            type="text"
-                            name="title"
-                            placeholder="Enter Title"
-                            className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
+                      <div className="trezo-card w-full p-[20px] md:p-[25px]">
+                        <Form className="space-y-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Bank Name */}
+                            <div>
+                              <label className="mb-[10px] text-black dark:text-white font-medium block">
+                                Bank Name
+                                <span className="text-red-500">*</span>
+                              </label>
+                              <Field
+                                name="bankName"
+                                className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
                         dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
                         transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
                         focus:border-primary-button-bg"
-                          />
-                          <ErrorMessage
-                            name="title"
-                            component="p"
-                            className="text-red-500 text-sm"
-                          />
-                        </div>
+                              />
+                              <ErrorMessage
+                                name="bankName"
+                                component="p"
+                                className="text-red-500 text-sm"
+                              />
+                            </div>
 
-                        {/* Upload Type */}
-                        <div>
-                          <label className="mb-[10px] text-black dark:text-white font-medium block">
-                            Library Type
-                            <span className="text-red-500">*</span>
-                          </label>
-                          <Field
-                            as="select"
-                            name="libraryType"
-                            className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
+                            {/* Account Name */}
+                            <div>
+                              <label className="mb-[10px] text-black dark:text-white font-medium block">
+                                Account Name
+                                <span className="text-red-500">*</span>
+                              </label>
+                              <Field
+                                name="accountName"
+                                className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
                         dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
                         transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
                         focus:border-primary-button-bg"
-                          >
-                            <option value="">Select File Type</option>
-                            {uploadOptions.map((option, index) => (
-                              <option key={index} value={option}>
-                                {option}
-                              </option>
-                            ))}
-                          </Field>
-                          <ErrorMessage
-                            name="libraryType"
-                            component="p"
-                            className="text-red-500 text-sm"
-                          />
-                        </div>
+                              />
+                              <ErrorMessage
+                                name="accountName"
+                                component="p"
+                                className="text-red-500 text-sm"
+                              />
+                            </div>
+                          </div>
 
-                        {/* 2. Enhanced File Upload Input */}
-                        <div className="space-y-2">
-                          <label className="mb-[10px] text-black dark:text-white font-medium block">
-                            Upload Document
-                            <span className="text-red-500">*</span>
-                          </label>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Account Type */}
+                            <div className="mb-6">
+                              <label className="mb-[10px] text-black dark:text-white font-medium block">
+                                Account Type
+                                <span className="text-red-500">*</span>
+                              </label>
+                              <Field
+                                as="select"
+                                name="accountType"
+                                className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
+                        dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
+                        transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
+                        focus:border-primary-button-bg"
+                              >
+                                <option value="">Select</option>
+                                <option value="Saving">Saving</option>
+                                <option value="Current">Current</option>
+                              </Field>
+                              <ErrorMessage
+                                name="accountType"
+                                component="p"
+                                className="text-red-500 text-sm"
+                              />
+                            </div>
 
-                          <div
-                            className={`group w-full flex items-center rounded-lg border transition-all duration-200 overflow-hidden
+                            {/* Account Number */}
+                            <div className="mb-6">
+                              <label className="mb-[10px] text-black dark:text-white font-medium block">
+                                Account Number
+                                <span className="text-red-500">*</span>
+                              </label>
+                              <Field
+                                name="accountNo"
+                                className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
+                        dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
+                        transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
+                        focus:border-primary-button-bg"
+                              />
+                              <ErrorMessage
+                                name="accountNo"
+                                component="p"
+                                className="text-red-500 text-sm"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* Branch */}
+                            <div className="mb-6">
+                              <label className="mb-[10px] text-black dark:text-white font-medium block">
+                                Branch
+                                <span className="text-red-500">*</span>
+                              </label>
+                              <Field
+                                name="branch"
+                                className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
+                        dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
+                        transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
+                        focus:border-primary-button-bg"
+                              />
+                              <ErrorMessage
+                                name="branch"
+                                component="p"
+                                className="text-red-500 text-sm"
+                              />
+                            </div>
+
+                            {/* Pin Code */}
+                            <div className="mb-6">
+                              <label className="mb-[10px] text-black dark:text-white font-medium block">
+                                Pin Code
+                                <span className="text-red-500">*</span>
+                              </label>
+                              <Field
+                                name="pinCode"
+                                type="number"
+                                className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
+                        dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
+                        transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
+                        focus:border-primary-button-bg"
+                              />
+                              <ErrorMessage
+                                name="pinCode"
+                                component="p"
+                                className="text-red-500 text-sm"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            {/* IFSC Code */}
+                            <div className="mb-6">
+                              <label className="mb-[10px] text-black dark:text-white font-medium block">
+                                IFSC Code
+                                <span className="text-red-500">*</span>
+                              </label>
+                              <Field
+                                name="ifscCode"
+                                className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
+                        dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
+                        transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
+                        focus:border-primary-button-bg"
+                              />
+                              <ErrorMessage
+                                name="ifscCode"
+                                component="p"
+                                className="text-red-500 text-sm"
+                              />
+                            </div>
+
+                            {/* UPI ID */}
+                            <div className="mb-6">
+                              <label className="mb-[10px] text-black dark:text-white font-medium block">
+                                UPI ID
+                                <span className="text-red-500">*</span>
+                              </label>
+                              <Field
+                                name="upiId"
+                                className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
+                        dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
+                        transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
+                        focus:border-primary-button-bg"
+                              />
+                              <ErrorMessage
+                                name="upiId"
+                                component="p"
+                                className="text-red-500 text-sm"
+                              />
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div className="space-y-2 mb-6">
+                              <label className="mb-[10px] text-black dark:text-white font-medium block">
+                                QR Code Image
+                                <span className="text-red-500">*</span>
+                              </label>
+
+                              <div
+                                className={`group w-full flex items-center rounded-lg border transition-all duration-200 overflow-hidden
                             ${
                               errors.file && touched.file
                                 ? "border-red-500 ring-2 ring-red-50/50"
                                 : "border-gray-200 dark:border-[#172036] focus-within:ring-2 focus-within:ring-blue-100 dark:focus-within:ring-blue-900/20 focus-within:border-primary-button-bg"
                             }`}
-                          >
-                            {/* LEFT SIDE: Name Display */}
-                            <div className="flex-grow h-[48px] flex items-center px-4 bg-white dark:bg-[#0c1427] border-r border-gray-100 dark:border-[#172036]">
-                              <div className="flex items-center gap-2 w-full">
-                                <i
-                                  className={`material-symbols-outlined !text-[20px] ${values.file ? "text-primary-button-bg" : "text-gray-400"}`}
-                                >
-                                  {values.file ? "description" : "upload_file"}
-                                </i>
-                                <span
-                                  className={`text-sm truncate max-w-[200px] ${values.file ? "text-black dark:text-white font-medium" : "text-gray-400 italic"}`}
-                                >
-                                  {values.file
-                                    ? values.file.name
-                                    : "Choose a PDF file..."}
-                                </span>
-
-                                {/* Action: Clear File */}
-                                {values.file && (
-                                  <button
-                                    type="button"
-                                    onClick={() => setFieldValue("file", null)}
-                                    className="ml-auto text-gray-400 hover:text-red-500 transition-colors"
-                                    title="Remove file"
-                                  >
-                                    <i className="material-symbols-outlined !text-[18px]">
-                                      close
-                                    </i>
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* RIGHT SIDE: Styled Browse Button */}
-                            <div className="relative h-[48px] w-[110px] bg-primary-button-bg hover:bg-opacity-90 active:scale-95 transition-all flex items-center justify-center shrink-0">
-                              <input
-                                type="file"
-                                id="file-upload"
-                                accept="application/pdf"
-                                className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                                onChange={(event) => {
-                                  handleImageUpload(event, setFieldValue);
-                                }}
-                              />
-                              <label
-                                htmlFor="file-upload"
-                                className="px-[26.5px] py-[12px] rounded-md bg-primary-button-bg text-white hover:bg-primary-button-bg-hover"
                               >
-                                Upload
-                              </label>
+                                {/* LEFT SIDE: Name Display */}
+                                <div className="flex-grow h-[48px] flex items-center px-4 bg-white dark:bg-[#0c1427] border-r border-gray-100 dark:border-[#172036]">
+                                  <div className="flex items-center gap-2 w-full">
+                                    <i
+                                      className={`material-symbols-outlined !text-[20px] ${values.file ? "text-primary-button-bg" : "text-gray-400"}`}
+                                    >
+                                      {values.file
+                                        ? "description"
+                                        : "upload_file"}
+                                    </i>
+                                    <span
+                                      className={`text-sm truncate max-w-[200px] ${values.file ? "text-black dark:text-white font-medium" : "text-gray-400 italic"}`}
+                                    >
+                                      {values.file
+                                        ? values.file.name
+                                        : "Choose a Image..."}
+                                    </span>
+
+                                    {/* Action: Clear File */}
+                                    {values.file && (
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setFieldValue("file", null)
+                                        }
+                                        className="ml-auto text-gray-400 hover:text-red-500 transition-colors"
+                                        title="Remove file"
+                                      >
+                                        <i className="material-symbols-outlined !text-[18px]">
+                                          close
+                                        </i>
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {/* RIGHT SIDE: Styled Browse Button */}
+                                <div className="relative h-[48px] w-[110px] bg-primary-button-bg hover:bg-opacity-90 active:scale-95 transition-all flex items-center justify-center shrink-0">
+                                  <input
+                                    type="file"
+                                    id="file-upload"
+                                    accept="image/*"
+                                    className="absolute inset-0 opacity-0 cursor-pointer z-10"
+                                    onChange={(event) => {
+                                      handleImageUpload(event, setFieldValue);
+                                    }}
+                                  />
+                                  <label
+                                    htmlFor="file-upload"
+                                    className="px-[26.5px] py-[12px] rounded-md bg-primary-button-bg text-white hover:bg-primary-button-bg-hover"
+                                  >
+                                    Upload
+                                  </label>
+                                </div>
+                              </div>
+
+                              {/* Error Message for File */}
+                              {errors.file && touched.file && (
+                                <div className="flex items-center gap-1 text-red-500 text-xs font-medium mt-1">
+                                  <i className="material-symbols-outlined !text-[14px]">
+                                    error
+                                  </i>
+                                  "Error"
+                                </div>
+                              )}
                             </div>
                           </div>
 
-                          {/* Error Message for File */}
-                          {errors.file && touched.file && (
-                            <div className="flex items-center gap-1 text-red-500 text-xs font-medium mt-1">
-                              <i className="material-symbols-outlined !text-[14px]">
-                                error
-                              </i>
-                              "Error"
-                            </div>
-                          )}
-                        </div>
+                          <hr className="border-0 border-t border-gray-100 dark:border-gray-800 my-6 md:-mx-[25px]" />
 
-                        <hr className="border-0 border-t border-gray-100 dark:border-gray-800 my-6 md:-mx-[25px]" />
+                          {/* Footer Actions */}
+                          <div className="flex items-center justify-end gap-3">
+                            <button
+                              type="button"
+                              className="mr-[15px] px-[26.5px] py-[12px] rounded-md bg-danger-500 text-white hover:bg-danger-400"
+                              onClick={closeModal}
+                            >
+                              Cancel
+                            </button>
 
-                        {/* Footer Actions */}
-                        <div className="flex items-center justify-end gap-3">
-                          <button
-                            type="button"
-                            className="mr-[15px] px-[26.5px] py-[12px] rounded-md bg-danger-500 text-white hover:bg-danger-400"
-                            onClick={closeModal}
-                          >
-                            Cancel
-                          </button>
-
-                          <button
-                            type="submit"
-                            disabled={saving}
-                            className="px-[26.5px] py-[12px] rounded-md bg-primary-button-bg text-white hover:bg-primary-button-bg-hover"
-                          >
-                            {isEdit ? "Update" : "Add"}
-                          </button>
-                        </div>
-                      </Form>
+                            <button
+                              type="submit"
+                              disabled={saving}
+                              className="px-[26.5px] py-[12px] rounded-md bg-primary-button-bg text-white hover:bg-primary-button-bg-hover"
+                            >
+                              {isEdit ? "Update" : "Add"}
+                            </button>
+                          </div>
+                        </Form>
+                      </div>
                     )}
                   </Formik>
                 )}
