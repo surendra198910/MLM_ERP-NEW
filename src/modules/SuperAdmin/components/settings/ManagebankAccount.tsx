@@ -47,11 +47,6 @@ const Template: React.FC = () => {
     branch: Yup.string()
       .required("Branch is required")
       .max(150, "Max 150 characters allowed"),
-
-    pinCode: Yup.string()
-      .required("Pin Code is required")
-      .matches(/^[1-9][0-9]{5}$/, "Invalid Pin Code"),
-
     upiId: Yup.string()
       .nullable()
       .notRequired()
@@ -955,7 +950,6 @@ p-[20px] md:p-[25px] rounded-t-md"
                       accountType: editData?.AccountType || "",
                       accountNo: editData?.AccountNo || "",
                       branch: editData?.Branch || "",
-                      pinCode: editData?.PinCode || "",
                       ifscCode: editData?.IFSCCode || "",
                       upiId: editData?.UPIID || "",
                       qrCodeImage: editData?.QrCodeImage || "",
@@ -974,7 +968,6 @@ p-[20px] md:p-[25px] rounded-t-md"
                           AccountType: values.accountType,
                           AccountNo: values.accountNo,
                           Branch: values.branch,
-                          PinCode: values.pinCode,
                           IFSCCode: values.ifscCode,
                           UPIID: values.upiId,
                           QrCodeImage: values.qrCodeImage,
@@ -1034,7 +1027,7 @@ p-[20px] md:p-[25px] rounded-t-md"
                               </label>
                               <Field
                                 name="bankName"
-                                className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
+                                className="h-[48px] rounded-md text-black dark:text-white border border-gray-200
                         dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
                         transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
                         focus:border-primary-button-bg"
@@ -1054,7 +1047,7 @@ p-[20px] md:p-[25px] rounded-t-md"
                               </label>
                               <Field
                                 name="accountName"
-                                className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
+                                className="h-[48px] rounded-md text-black dark:text-white border border-gray-200
                         dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
                         transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
                         focus:border-primary-button-bg"
@@ -1077,7 +1070,7 @@ p-[20px] md:p-[25px] rounded-t-md"
                               <Field
                                 as="select"
                                 name="accountType"
-                                className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
+                                className="h-[48px] rounded-md text-black dark:text-white border border-gray-200
                         dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
                         transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
                         focus:border-primary-button-bg"
@@ -1101,7 +1094,7 @@ p-[20px] md:p-[25px] rounded-t-md"
                               </label>
                               <Field
                                 name="accountNo"
-                                className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
+                                className="h-[48px] rounded-md text-black dark:text-white border border-gray-200
                         dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
                         transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
                         focus:border-primary-button-bg"
@@ -1123,7 +1116,7 @@ p-[20px] md:p-[25px] rounded-t-md"
                               </label>
                               <Field
                                 name="branch"
-                                className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
+                                className="h-[48px] rounded-md text-black dark:text-white border border-gray-200
                         dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
                         transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
                         focus:border-primary-button-bg"
@@ -1135,29 +1128,6 @@ p-[20px] md:p-[25px] rounded-t-md"
                               />
                             </div>
 
-                            {/* Pin Code */}
-                            <div className="mb-6">
-                              <label className="mb-[10px] text-black dark:text-white font-medium block">
-                                Pin Code
-                                <span className="text-red-500">*</span>
-                              </label>
-                              <Field
-                                name="pinCode"
-                                type="number"
-                                className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
-                        dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
-                        transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
-                        focus:border-primary-button-bg"
-                              />
-                              <ErrorMessage
-                                name="pinCode"
-                                component="p"
-                                className="text-red-500 text-sm"
-                              />
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* IFSC Code */}
                             <div className="mb-6">
                               <label className="mb-[10px] text-black dark:text-white font-medium block">
@@ -1166,7 +1136,7 @@ p-[20px] md:p-[25px] rounded-t-md"
                               </label>
                               <Field
                                 name="ifscCode"
-                                className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
+                                className="h-[48px] rounded-md text-black dark:text-white border border-gray-200
                         dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
                         transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
                         focus:border-primary-button-bg"
@@ -1177,7 +1147,9 @@ p-[20px] md:p-[25px] rounded-t-md"
                                 className="text-red-500 text-sm"
                               />
                             </div>
+                          </div>
 
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {/* UPI ID */}
                             <div className="mb-6">
                               <label className="mb-[10px] text-black dark:text-white font-medium block">
@@ -1186,7 +1158,7 @@ p-[20px] md:p-[25px] rounded-t-md"
                               </label>
                               <Field
                                 name="upiId"
-                                className="h-[55px] rounded-md text-black dark:text-white border border-gray-200
+                                className="h-[48px] rounded-md text-black dark:text-white border border-gray-200
                         dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
                         transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
                         focus:border-primary-button-bg"
@@ -1197,9 +1169,7 @@ p-[20px] md:p-[25px] rounded-t-md"
                                 className="text-red-500 text-sm"
                               />
                             </div>
-                          </div>
 
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="space-y-2 mb-6">
                               <label className="mb-[10px] text-black dark:text-white font-medium block">
                                 QR Code Image
