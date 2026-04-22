@@ -7,23 +7,22 @@ import {
   Draggable,
 } from "@hello-pangea/dnd";
 import type { DropResult } from "@hello-pangea/dnd";
-
 import { GripVertical } from "lucide-react";
-/* ================= TYPES ================= */
 
+/* ═══════════════════════════════════════
+   TYPE  (exported so AddReport can import)
+═══════════════════════════════════════ */
 export type ReportColumn = {
   id: number;
-  columnName: string;
-  displayName: string;
-  displayOrder: number;
-
-  columnIndex: number;   // ⭐ NEW (IMPORTANT)
-
-  isDefault: boolean;
+  columnName: string;         // read-only, from DB
+  displayName: string;        // editable label shown in grid header
+  columnexpression: string;   // maps to ColumnExpr in API payload
+  displayOrder: number;       // drag-reordered position
+  columnIndex: number;        // original DB order (unchanged)
+  isDefault: boolean;         // DefaultVisible
   isCurrency: boolean;
   isTotal: boolean;
-
-  isSort: boolean;
+  isSort: boolean;            // only one row can be true at a time
   isHidden: boolean;
   sortDirection: "ASC" | "DSC";
 };
@@ -33,12 +32,12 @@ interface Props {
   setColumns: React.Dispatch<React.SetStateAction<ReportColumn[]>>;
 }
 
-/* ================= COMPONENT ================= */
+/* ═══════════════════════════════════════
+   COMPONENT
+═══════════════════════════════════════ */
+const ReportColumnsConfig: React.FC<Props> = ({ columns, setColumns }) => {
 
-const ReportColumnsConfig: React.FC<Props> = ({
-  columns,
-  setColumns,
-}) => {
+  /* Generic field updater ─ enforces single-sort rule */
   const updateColumn = <K extends keyof ReportColumn>(
     index: number,
     key: K,
@@ -47,71 +46,72 @@ const ReportColumnsConfig: React.FC<Props> = ({
     setColumns((prev) => {
       const copy = [...prev];
 
-      /* ⭐ only one sort allowed */
       if (key === "isSort" && value === true) {
-        return copy.map((c, i) => ({
-          ...c,
-          isSort: i === index,
-        }));
+        // only one sort column allowed
+        return copy.map((c, i) => ({ ...c, isSort: i === index }));
       }
 
       copy[index] = { ...copy[index], [key]: value };
       return copy;
     });
   };
+
+  /* Drag-end: reorder + re-number displayOrder */
   const onDragEnd = (result: DropResult) => {
     if (!result.destination) return;
-
     const items = Array.from(columns);
     const [moved] = items.splice(result.source.index, 1);
     items.splice(result.destination.index, 0, moved);
-
-    const updated = items.map((it, idx) => ({
-      ...it,
-      displayOrder: idx + 1,
-    
-    }));
-
-    setColumns(updated);
+    setColumns(items.map((it, idx) => ({ ...it, displayOrder: idx + 1 })));
   };
+
   if (!columns.length) return null;
 
   return (
-    <div className="mt-8 trezo-card bg-white dark:bg-[#0c1427] rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+    <div className="trezo-card bg-white dark:bg-[#0c1427] rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm mb-[25px]">
 
-      {/* HEADER */}
-      <div className="px-5 py-1 mt-2 border-b border-gray-200 dark:border-gray-700">
+      {/* ── HEADER ── */}
+      <div className="px-5 py-3 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
         <h5 className="font-semibold text-lg text-black dark:text-white">
           Report Columns
+          <span className="ml-2 text-sm font-normal text-gray-400">
+            ({columns.filter(c => !c.isHidden).length} visible / {columns.length} total)
+          </span>
         </h5>
+        <p className="text-xs text-gray-400 hidden sm:block">
+          Drag <GripVertical size={12} className="inline" /> to reorder • Only one Sort column allowed
+        </p>
       </div>
 
-      {/* TABLE */}
-      <div className="overflow-x-auto max-h-[460px]">
-        <table className="w-full text-sm">
+      {/* ── TABLE ── */}
+      <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+        <table className="w-full text-sm min-w-[900px]">
 
           {/* HEAD */}
-          <thead className="sticky top-0 z-10 bg-primary-table-bg dark:bg-[#0c1427] border-b border-gray-200 dark:border-gray-700 text-gray-500">
-            <tr>
-              <th className="px-4 py-3 w-12">S.No.</th>
-              <th className="px-4 py-3">Column Name</th>
-              <th className="px-4 py-3">Display Name</th>
-              {/* <th className="px-4 py-3 w-32">Order</th> */}
-              <th className="px-4 py-3 text-center">Default</th>
-              <th className="px-4 py-3 text-center">Currency</th>
-              <th className="px-4 py-3 text-center">Total</th>
-
-              {/* ✅ NEW HEADERS */}
-
-              <th className="px-4 py-3 text-center">Hidden</th>
-              <th className="px-4 py-3 text-center">Sort</th>
-              <th className="px-4 py-3 text-center">Sort Direction</th>
-              <th className="px-4 py-3 w-16 text-right">Move</th>
+          <thead className="sticky top-0 z-10 bg-primary-table-bg dark:bg-[#0c1427] border-b border-gray-200 dark:border-gray-700">
+            <tr className="text-left text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              <th className="px-4 py-3 w-10">#</th>
+              <th className="px-4 py-3 min-w-[140px]">Column Name</th>
+              <th className="px-4 py-3 min-w-[150px]">Display Name</th>
+              <th className="px-4 py-3 min-w-[180px]">
+                Column Expression
+                <span
+                  className="ml-1 text-gray-400 cursor-help"
+                  title="SQL expression or alias used in the SELECT clause"
+                >ⓘ</span>
+              </th>
+              <th className="px-4 py-3 text-center w-20">Default</th>
+              <th className="px-4 py-3 text-center w-20">Currency</th>
+              <th className="px-4 py-3 text-center w-16">Total</th>
+              <th className="px-4 py-3 text-center w-16">Hidden</th>
+              <th className="px-4 py-3 text-center w-16">Sort</th>
+              <th className="px-4 py-3 w-28">Sort Dir</th>
+              <th className="px-4 py-3 w-12 text-center">Move</th>
             </tr>
           </thead>
 
           <DragDropContext onDragEnd={onDragEnd}>
-            <Droppable droppableId="columns">
+            <Droppable droppableId="report-columns">
               {(provided) => (
                 <tbody ref={provided.innerRef} {...provided.droppableProps}>
                   {columns.map((col, i) => (
@@ -121,117 +121,140 @@ const ReportColumnsConfig: React.FC<Props> = ({
                       index={i}
                       isDragDisabled={col.isHidden}
                     >
-                      {(dragProvided, snapshot) => (
+                      {(drag, snapshot) => (
                         <tr
-                          ref={dragProvided.innerRef}
-                          {...dragProvided.draggableProps}
-                          className={`border-b last:border-0 border-gray-200 dark:border-gray-700 transition
-    ${col.isHidden ? "opacity-50 bg-gray-100 dark:bg-gray-800" : "hover:bg-gray-50 dark:hover:bg-white/5"}
-    ${snapshot.isDragging ? "bg-blue-50 dark:bg-blue-900/20" : ""}
-  `}
+                          ref={drag.innerRef}
+                          {...drag.draggableProps}
+                          className={[
+                            "border-b last:border-0 border-gray-100 dark:border-gray-700/60 transition-colors",
+                            col.isHidden
+                              ? "opacity-40 bg-gray-50 dark:bg-gray-800/40"
+                              : "hover:bg-gray-50 dark:hover:bg-white/[0.03]",
+                            snapshot.isDragging
+                              ? "bg-blue-50 dark:bg-blue-900/20 shadow-lg"
+                              : "",
+                          ].join(" ")}
                         >
-                          {/* INDEX */}
-                          <td className="px-4 py-3 text-gray-400">{i + 1}</td>
+                          {/* S.No */}
+                          <td className="px-4 py-2.5 text-gray-400 text-xs">{i + 1}</td>
 
-                          {/* COLUMN NAME */}
+                          {/* Column Name — read-only */}
                           <td className="px-4 py-2">
                             <input
                               value={col.columnName}
                               readOnly
-                              className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-900 cursor-not-allowed"
+                              className="w-full px-2.5 py-1.5 text-xs rounded-md
+                                         border border-gray-200 dark:border-gray-700
+                                         bg-gray-100 dark:bg-gray-900
+                                         text-gray-500 cursor-not-allowed"
                             />
                           </td>
 
-                          {/* DISPLAY NAME */}
+                          {/* Display Name */}
                           <td className="px-4 py-2">
                             <input
                               value={col.displayName}
                               disabled={col.isHidden}
-                              onChange={(e) =>
-                                updateColumn(i, "displayName", e.target.value)
-                              }
-                              className="w-full px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 outline-none"
+                              onChange={(e) => updateColumn(i, "displayName", e.target.value)}
+                              placeholder="Display label…"
+                              className="w-full px-2.5 py-1.5 text-xs rounded-md
+                                         border border-gray-300 dark:border-gray-700
+                                         bg-white dark:bg-gray-800
+                                         text-gray-800 dark:text-gray-200
+                                         outline-none focus:border-primary-button-bg transition
+                                         disabled:bg-gray-100 dark:disabled:bg-gray-900 disabled:cursor-not-allowed"
                             />
                           </td>
-                          {/* ORDER */}
-                          {/* <td className="px-4 py-2">
-                            <input
-                              type="number"
-                              value={col.displayOrder}
-                              disabled={col.isHidden}
-                              onChange={(e) =>
-                                updateColumn(i, "displayOrder", Number(e.target.value))
-                              }
-                              className="w-24 px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 outline-none"
-                            />
-                          </td> */}
 
+                          {/* ★ Column Expression (ColumnExpr) */}
+                          <td className="px-4 py-2">
+                            <input
+                              value={col.columnexpression}
+                              disabled={col.isHidden}
+                              onChange={(e) => updateColumn(i, "columnexpression", e.target.value)}
+                              placeholder="e.g. CAST(Col AS VARCHAR)"
+                              className="w-full px-2.5 py-1.5 text-xs font-mono rounded-md
+                                         border border-gray-300 dark:border-gray-700
+                                         bg-white dark:bg-gray-800
+                                         text-gray-800 dark:text-gray-200
+                                         outline-none focus:border-primary-button-bg transition
+                                         disabled:bg-gray-100 dark:disabled:bg-gray-900 disabled:cursor-not-allowed"
+                            />
+                          </td>
+
+                          {/* Checkboxes: isDefault, isCurrency, isTotal */}
                           {(["isDefault", "isCurrency", "isTotal"] as const).map((key) => (
                             <td key={key} className="px-4 py-2 text-center">
                               <input
                                 type="checkbox"
                                 checked={col[key]}
                                 disabled={col.isHidden}
-                                onChange={(e) =>
-                                  updateColumn(i, key, e.target.checked)
-                                }
-                                className="w-4 h-4 accent-primary-button-bg"
+                                onChange={(e) => updateColumn(i, key, e.target.checked)}
+                                className="w-4 h-4 accent-primary-button-bg cursor-pointer
+                                           disabled:cursor-not-allowed"
                               />
                             </td>
                           ))}
 
-                          {/* HIDDEN */}
+                          {/* isHidden — always enabled */}
                           <td className="px-4 py-2 text-center">
                             <input
                               type="checkbox"
                               checked={col.isHidden}
-
-                              onChange={(e) =>
-                                updateColumn(i, "isHidden", e.target.checked)
-                              }
-                              className="w-4 h-4 accent-primary-button-bg"
+                              onChange={(e) => updateColumn(i, "isHidden", e.target.checked)}
+                              className="w-4 h-4 accent-primary-button-bg cursor-pointer"
                             />
                           </td>
-                          {/* SORT */}
+
+                          {/* isSort */}
                           <td className="px-4 py-2 text-center">
                             <input
                               type="checkbox"
                               checked={col.isSort}
                               disabled={col.isHidden}
-                              onChange={(e) =>
-                                updateColumn(i, "isSort", e.target.checked)
-                              }
-                              className="w-4 h-4 accent-primary-button-bg"
+                              onChange={(e) => updateColumn(i, "isSort", e.target.checked)}
+                              className="w-4 h-4 accent-primary-button-bg cursor-pointer
+                                         disabled:cursor-not-allowed"
+                              title="Only one sort column is allowed"
                             />
                           </td>
 
-                          {/* SORT DIRECTION */}
+                          {/* Sort Direction */}
                           <td className="px-4 py-2">
                             <select
                               value={col.sortDirection}
-                              disabled={col.isHidden}
+                              disabled={col.isHidden || !col.isSort}
                               onChange={(e) =>
-                                updateColumn(
-                                  i,
-                                  "sortDirection",
-                                  e.target.value as "ASC" | "DSC"
-                                )
+                                updateColumn(i, "sortDirection", e.target.value as "ASC" | "DSC")
                               }
-                              className="px-3 py-2 rounded-md border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 outline-none"
+                              className="w-full px-2 py-1.5 text-xs rounded-md
+                                         border border-gray-300 dark:border-gray-700
+                                         bg-white dark:bg-gray-800
+                                         text-gray-800 dark:text-gray-200
+                                         outline-none transition
+                                         disabled:bg-gray-100 dark:disabled:bg-gray-900 disabled:cursor-not-allowed"
                             >
                               <option value="ASC">ASC</option>
-                              <option value="DSC">DSC</option>
+                              <option value="DSC">DESC</option>
                             </select>
                           </td>
 
-                          {/* ⭐ DRAG BUTTON RIGHT */}
-                          <td className="px-4 py-2 text-right">
-                            <button
-                              {...dragProvided.dragHandleProps}
-                              className="cursor-grab active:cursor-grabbing p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700"
-                            >
-                              <GripVertical size={18} />
-                            </button>
+                          {/* Drag handle */}
+                          <td className="px-4 py-2 text-center">
+                            {!col.isHidden ? (
+                              <button
+                                type="button"
+                                {...drag.dragHandleProps}
+                                className="cursor-grab active:cursor-grabbing p-1.5 rounded
+                                           text-gray-400 hover:text-gray-700 hover:bg-gray-100
+                                           dark:hover:bg-gray-700 dark:hover:text-gray-200 transition"
+                                title="Drag to reorder"
+                              >
+                                <GripVertical size={16} />
+                              </button>
+                            ) : (
+                              <span className="text-gray-300 px-1.5">—</span>
+                            )}
                           </td>
                         </tr>
                       )}
