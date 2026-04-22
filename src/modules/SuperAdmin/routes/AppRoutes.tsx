@@ -84,6 +84,7 @@ import ManageWebsiteBanner from "../components/WebsiteManagement/ManageWebsiteBa
 import ManageWebsitePopup from "../components/WebsiteManagement/ManageWebsitePopup.js";
 import ProductWalletTransfer from "../components/PaymentMaster/ProductWalletTransfer.js";
 import WalletTransferReport from "../components/PaymentMaster/WalletTransferReport.js";
+import MailTemplateMaster from "../components/WebsiteManagement/MailTemplateMaster.js";
 
 //Report
 import InvestmentReport from "../components/Reports/InvestmentReport.js";
@@ -399,6 +400,9 @@ const AppRoutes = () => {
               path="/superadmin/website-management/news-and-announcement"
               element={<NewsAndAnnoucement />}
             />
+
+            <Route path="/superadmin/website-management/email-template"element={<MailTemplateMaster/>} />
+
             //Support
             <Route
               path="/superadmin/support-center/my-support-ticket"
