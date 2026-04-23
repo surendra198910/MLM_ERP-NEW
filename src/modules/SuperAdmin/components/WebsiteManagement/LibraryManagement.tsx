@@ -246,7 +246,7 @@ const Template: React.FC = () => {
                   <a
                     className="hover:text-blue-500"
                     target="_blank"
-                    href={`${import.meta.env.VITE_IMAGE_PREVIEW_URL}${value}`}
+                    href={`${import.meta.env.VITE_IMAGE_PREVIEW_URL_2}CompanyDocs/${value}`}
                   >
                     View
                   </a>
@@ -353,13 +353,31 @@ const Template: React.FC = () => {
       Swal.fire("Error", "Server error", "error");
     }
   };
-  const handleImageUpload = async (e: any, setFieldValue: any) => {
+  const handleImageUpload = async (e: any, setFieldValue: any, values: any) => {
     const file = e.target.files[0];
     if (!file) return;
 
+    const type = values.libraryType;
+
+    // ✅ Validation
+    if (type === "document" && file.type !== "application/pdf") {
+      Swal.fire("Error", "Only PDF allowed", "error");
+      return;
+    }
+
+    if (type === "banner" && !file.type.startsWith("image/")) {
+      Swal.fire("Error", "Only image files allowed", "error");
+      return;
+    }
+
+    if (type === "video" && !file.type.startsWith("video/")) {
+      Swal.fire("Error", "Only video files allowed", "error");
+      return;
+    }
+
     const fd = new FormData();
     fd.append("UploadedImage", file);
-    fd.append("pagename", "EmpDoc");
+    fd.append("pagename", "CompanyDocs");
 
     try {
       const uploadRes = await postDocument(fd);
@@ -371,23 +389,14 @@ const Template: React.FC = () => {
         return;
       }
 
-      // ✅ Extract title & type from file
       const originalName = file.name;
+      const extension = originalName.split(".").pop();
 
-      const extension = originalName.split(".").pop(); // pdf
-      const nameWithoutExt = originalName.replace(/\.[^/.]+$/, ""); // title
-
-      // ✅ store everything
       setFileName(uploadedFileName);
 
       setFieldValue("file", file);
       setFieldValue("fileName", uploadedFileName);
-      setFieldValue("fileType", extension?.toUpperCase()); // PDF
-      // setFieldValue("title", nameWithoutExt); // MyDocument
-
-      console.log("File:", uploadedFileName);
-      console.log("Type:", extension);
-      // console.log("Title:", nameWithoutExt);
+      setFieldValue("fileType", extension?.toUpperCase());
     } catch (err) {
       console.error(err);
       Swal.fire("Error", "Upload failed", "error");
@@ -1030,7 +1039,13 @@ p-[20px] md:p-[25px] rounded-t-md"
                                 >
                                   {values.file
                                     ? values.file.name
-                                    : "Choose a PDF file..."}
+                                    : values.libraryType === "document"
+                                      ? "Choose a PDF file..."
+                                      : values.libraryType === "banner"
+                                        ? "Choose an image..."
+                                        : values.libraryType === "video"
+                                          ? "Choose a video..."
+                                          : "Select file type first"}
                                 </span>
 
                                 {/* Action: Clear File */}
@@ -1054,10 +1069,22 @@ p-[20px] md:p-[25px] rounded-t-md"
                               <input
                                 type="file"
                                 id="file-upload"
-                                accept="application/pdf"
+                                accept={
+                                  values.libraryType === "document"
+                                    ? "application/pdf"
+                                    : values.libraryType === "banner"
+                                      ? "image/*"
+                                      : values.libraryType === "video"
+                                        ? "video/mp4,video/webm,video/ogg"
+                                        : "*"
+                                }
                                 className="absolute inset-0 opacity-0 cursor-pointer z-10"
                                 onChange={(event) => {
-                                  handleImageUpload(event, setFieldValue);
+                                  handleImageUpload(
+                                    event,
+                                    setFieldValue,
+                                    values,
+                                  );
                                 }}
                               />
                               <label
