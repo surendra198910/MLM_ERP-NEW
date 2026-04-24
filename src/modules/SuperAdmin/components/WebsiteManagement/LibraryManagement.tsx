@@ -353,9 +353,21 @@ const Template: React.FC = () => {
       Swal.fire("Error", "Server error", "error");
     }
   };
-  const handleImageUpload = async (e: any, setFieldValue: any, values: any) => {
+  const handleImageUpload = async (
+    e: any,
+    setFieldValue: any,
+    values: any,
+    setErrors: any,
+  ) => {
+    if (!values.libraryType) {
+      setErrors({ libraryType: "Please select the Library type first" });
+      Swal.fire("Error", "Please select the Library type first", "error");
+      return;
+    }
     const file = e.target.files[0];
     if (!file) return;
+
+    // ✅ NEW CONDITION: libraryType must be selected first
 
     const type = values.libraryType;
 
@@ -959,7 +971,13 @@ p-[20px] md:p-[25px] rounded-t-md"
                       setRefreshGrid((p) => p + 1); // 🔥 refresh table
                     }}
                   >
-                    {({ setFieldValue, values, errors, touched }) => (
+                    {({
+                      setFieldValue,
+                      setErrors,
+                      values,
+                      errors,
+                      touched,
+                    }) => (
                       <Form className="space-y-6">
                         {/* Title */}
                         <div>
@@ -1039,13 +1057,19 @@ p-[20px] md:p-[25px] rounded-t-md"
                                 >
                                   {values.file
                                     ? values.file.name
-                                    : values.libraryType === "document"
-                                      ? "Choose a PDF file..."
-                                      : values.libraryType === "banner"
-                                        ? "Choose an image..."
-                                        : values.libraryType === "video"
-                                          ? "Choose a video..."
-                                          : "Select file type first"}
+                                    : editData?.FileUrl
+                                      ? "PDF"
+                                      : values.libraryType === "document"
+                                        ? "Choose a PDF file..."
+                                        : editData?.FileUrl
+                                          ? "Banner"
+                                          : values.libraryType === "banner"
+                                            ? "Choose an image..."
+                                            : editData?.FileUrl
+                                              ? "Video"
+                                              : values.libraryType === "video"
+                                                ? "Choose a video..."
+                                                : "Select file type first"}
                                 </span>
 
                                 {/* Action: Clear File */}
@@ -1069,6 +1093,7 @@ p-[20px] md:p-[25px] rounded-t-md"
                               <input
                                 type="file"
                                 id="file-upload"
+                                // disabled={!values.libraryType}
                                 accept={
                                   values.libraryType === "document"
                                     ? "application/pdf"
@@ -1084,6 +1109,7 @@ p-[20px] md:p-[25px] rounded-t-md"
                                     event,
                                     setFieldValue,
                                     values,
+                                    setErrors, // ✅ pass this
                                   );
                                 }}
                               />
@@ -1105,6 +1131,14 @@ p-[20px] md:p-[25px] rounded-t-md"
                               "Error"
                             </div>
                           )}
+                          <a
+                            href={`${import.meta.env.VITE_IMAGE_PREVIEW_URL_2}CompanyDocs/${
+                              editData ? editData?.FileUrl : values?.fileName
+                            }`}
+                            target="_blank"
+                          >
+                            View
+                          </a>
                         </div>
 
                         <hr className="border-0 border-t border-gray-100 dark:border-gray-800 my-6 md:-mx-[25px]" />
