@@ -371,8 +371,8 @@ const Template: React.FC = () => {
         procName: "CompanyBankAccountMaster",
         Para: JSON.stringify({
           ActionMode: "Delete",
-          EditId: empDetails.CompanyId,
-          AccountName: row?.AccountName,
+          CompanyId: empDetails.CompanyId,
+          AccountNo: row?.AccountNo,
           // 🔥 verify this key
         }),
       };
@@ -953,10 +953,9 @@ p-[20px] md:p-[25px] rounded-t-md"
                       ifscCode: editData?.IFSCCode || "",
                       upiId: editData?.UPIID || "",
                       qrCodeImage: editData?.QrCodeImage || "",
-                      printInBill: editData?.PrintInBill || false,
                     }}
                     validationSchema={formSchema}
-                    onSubmit={async (values, { resetForm }) => {
+                    onSubmit={async (values, { resetForm, setErrors }) => {
                       const payload = {
                         procName: "CompanyBankAccountMaster",
                         Para: JSON.stringify({
@@ -978,8 +977,6 @@ p-[20px] md:p-[25px] rounded-t-md"
 
                       try {
                         const res = await universalService(payload);
-
-                        console.log("after before");
                         if (res[0]?.Status == 1) {
                           await Swal.fire({
                             icon: "success",
@@ -1000,6 +997,14 @@ p-[20px] md:p-[25px] rounded-t-md"
                           setSearchTrigger((p) => p + 1);
                           setRefreshGrid((p) => p + 1);
                         } else {
+                          if (
+                            res[0]?.Msg ==
+                            "Account Number already exists. Cannot create duplicate."
+                          ) {
+                            setErrors({
+                              accountNo: "Account Number Already Exist",
+                            });
+                          }
                           Swal.fire(
                             "Error",
                             res[0]?.Msg || "Operation failed",
@@ -1026,6 +1031,7 @@ p-[20px] md:p-[25px] rounded-t-md"
                                 <span className="text-red-500">*</span>
                               </label>
                               <Field
+                                placeholder="Enter Bank Name"
                                 name="bankName"
                                 className="h-[48px] rounded-md text-black dark:text-white border border-gray-200
                         dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
@@ -1046,6 +1052,7 @@ p-[20px] md:p-[25px] rounded-t-md"
                                 <span className="text-red-500">*</span>
                               </label>
                               <Field
+                                placeholder="Enter Account Name"
                                 name="accountName"
                                 className="h-[48px] rounded-md text-black dark:text-white border border-gray-200
                         dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
@@ -1075,7 +1082,7 @@ p-[20px] md:p-[25px] rounded-t-md"
                         transition-all placeholder:text-gray-500 dark:placeholder:text-gray-400
                         focus:border-primary-button-bg"
                               >
-                                <option value="">Select</option>
+                                <option value="">Select Account Type</option>
                                 <option value="Saving">Saving</option>
                                 <option value="Current">Current</option>
                               </Field>
@@ -1093,6 +1100,7 @@ p-[20px] md:p-[25px] rounded-t-md"
                                 <span className="text-red-500">*</span>
                               </label>
                               <Field
+                                placeholder="Enter Account Number"
                                 name="accountNo"
                                 className="h-[48px] rounded-md text-black dark:text-white border border-gray-200
                         dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
@@ -1115,6 +1123,7 @@ p-[20px] md:p-[25px] rounded-t-md"
                                 <span className="text-red-500">*</span>
                               </label>
                               <Field
+                                placeholder="Enter Branch Name"
                                 name="branch"
                                 className="h-[48px] rounded-md text-black dark:text-white border border-gray-200
                         dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
@@ -1135,6 +1144,7 @@ p-[20px] md:p-[25px] rounded-t-md"
                                 <span className="text-red-500">*</span>
                               </label>
                               <Field
+                                placeholder="Enter IFSC Code"
                                 name="ifscCode"
                                 className="h-[48px] rounded-md text-black dark:text-white border border-gray-200
                         dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
@@ -1157,6 +1167,7 @@ p-[20px] md:p-[25px] rounded-t-md"
                                 <span className="text-red-500">*</span>
                               </label>
                               <Field
+                                placeholder="Enter UPI Id"
                                 name="upiId"
                                 className="h-[48px] rounded-md text-black dark:text-white border border-gray-200
                         dark:border-[#172036] bg-white dark:bg-[#0c1427] px-[17px] block w-full outline-0
@@ -1199,7 +1210,9 @@ p-[20px] md:p-[25px] rounded-t-md"
                                     >
                                       {values.file
                                         ? values.file.name
-                                        : "Choose a Image..."}
+                                        : editData
+                                          ? "Image"
+                                          : "Choose a Image..."}
                                     </span>
 
                                     {/* Action: Clear File */}
@@ -1249,6 +1262,16 @@ p-[20px] md:p-[25px] rounded-t-md"
                                   "Error"
                                 </div>
                               )}
+                              <a
+                                href={`${import.meta.env.VITE_IMAGE_PREVIEW_URL_2}CompanyDocs/${
+                                  editData
+                                    ? editData?.QrCodeImage
+                                    : values.qrCodeImage
+                                }`}
+                                target="_blank"
+                              >
+                                View Image
+                              </a>
                             </div>
                           </div>
 
