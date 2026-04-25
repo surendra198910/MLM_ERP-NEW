@@ -231,12 +231,12 @@ const Template: React.FC = () => {
         const reactCols = data
           .filter((c: any) => c.IsVisible === true)
           .sort((a: any, b: any) => a.ColumnOrder - b.ColumnOrder)
-          .map((c: any, colIndex: number) => ({
-            id: c.ColumnOrder,
+          .map((c: any, index: number) => ({
+            id: index + 1,
             name: c.DisplayName,
             sortable: true,
             columnKey: c.ColumnKey,
-            columnIndex: c.ColumnOrder,
+            columnIndex: c.ColumnKey,
             isCurrency: c.IsCurrency,
             isTotal: c.IsTotal,
 
@@ -245,8 +245,8 @@ const Template: React.FC = () => {
             cell: (row: any) => {
               // ⭐ TOTAL ROW
               if (row.__isTotal) {
-                // 👉 show TOTAL label in first visible column
-                if (colIndex === 0) return "Total";
+                // 👉 show TOTAL text in first column
+                if (index === 0) return "Total";
 
                 if (c.IsTotal) {
                   const value = row[c.ColumnKey] || 0;
@@ -261,6 +261,11 @@ const Template: React.FC = () => {
 
               // ⭐ NORMAL ROW
               const value = row[c.ColumnKey];
+
+              // ✅ render HTML if string contains tags
+              if (typeof value === "string" && value.includes("<")) {
+                return <span dangerouslySetInnerHTML={{ __html: value }} />;
+              }
 
               if (c.IsCurrency && value != null) {
                 return `$${Number(value).toLocaleString()}`;
@@ -298,7 +303,6 @@ const Template: React.FC = () => {
     setEditLoading(true);
     setOpen(true);
     setIsEdit(true);
-    console.log("Anuj Rathore is Live", row);
 
     // if you later fetch select API → do it here
     setEditData(row);
@@ -883,6 +887,7 @@ p-[20px] md:p-[25px] rounded-t-md"
                     validationSchema={formSchema}
                     onSubmit={async (values, { resetForm }) => {
                       console.log(values);
+
                       const confirm = await Swal.fire({
                         title: isEdit
                           ? "Update News/Announcement?"
@@ -903,11 +908,51 @@ p-[20px] md:p-[25px] rounded-t-md"
                           didOpen: () => Swal.showLoading(),
                         });
 
+                        const cleanHTML = (html) => {
+                          const parser = new DOMParser();
+                          const doc = parser.parseFromString(html, "text/html");
+
+                          // 1. Remove all <br> tags
+                          doc
+                            .querySelectorAll("br")
+                            .forEach((el) => el.remove());
+
+                          // 2. Clean text nodes
+                          const walker = document.createTreeWalker(
+                            doc.body,
+                            NodeFilter.SHOW_TEXT,
+                          );
+
+                          let node;
+                          while ((node = walker.nextNode())) {
+                            node.nodeValue = node.nodeValue
+                              .replace(/\u00A0/g, " ") // replace &nbsp;
+                              .replace(/\s+/g, " ") // collapse spaces
+                              .trim();
+                          }
+
+                          // 3. Remove empty elements
+                          doc.querySelectorAll("*").forEach((el) => {
+                            if (
+                              !el.textContent.trim() &&
+                              el.children.length === 0
+                            ) {
+                              el.remove();
+                            }
+                          });
+
+                          return doc.body.innerHTML
+                            .replace(/>\s+</g, "><") // remove gaps between tags
+                            .trim();
+                        };
+
+                        let text = cleanHTML(values.Description);
+
                         const payload = {
                           procName: "MangaeNewsAndAnnouncements",
                           Para: JSON.stringify({
-                            Title: values.Title,
-                            Description: values.Description,
+                            Title: values.Title.trim().replace(/\s+/g, " "),
+                            Description: text,
                             Type: values.Type,
                             EventDate: values.EventDate,
                             ActionMode: isEdit ? "Update" : "Insert",
@@ -1010,9 +1055,12 @@ focus:border-primary-button-bg"
                                 <Editor
                                   name="Description"
                                   value={values.Description}
-                                  onChange={(e: ContentEditableEvent) =>
-                                    setFieldValue("Description", e.target.value)
-                                  }
+                                  onChange={(e: ContentEditableEvent) => {
+                                    setFieldValue(
+                                      "Description",
+                                      e.target.value,
+                                    );
+                                  }}
                                   style={{ minHeight: "150px" }}
                                   className="rsw-editor dark:text-gray-100"
                                 >
