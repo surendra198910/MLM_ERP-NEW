@@ -12,7 +12,7 @@ import {
   FaMapMarkedAlt,
 } from "react-icons/fa";
 import Swal from "sweetalert2";
-import { useLocation } from "react-router-dom";
+import { useLocation, useParams } from "react-router-dom";
 // --- Custom Component Imports ---
 import { InputField } from "../../../../components/CommonFormElements/InputTypes/InputField";
 import { SelectField } from "../../../../components/CommonFormElements/InputTypes/SelectField";
@@ -62,9 +62,10 @@ const genders = [
 // ----------------------------------------------------------------------
 
 export default function MLMRegisterPage() {
-  const location = useLocation();
-  const queryParams = new URLSearchParams(location.search);
-  const clientId = queryParams.get("clientId");
+  const [isEdit, setIsEdit] = useState(false);
+  const { ClientId } = useParams();
+  const clientId = ClientId;
+  const formikRef = useRef<any>(null);
   const isEditMode = !!clientId;
   const [tab, setTab] = useState(0);
   const [loading, setLoading] = useState(false);
@@ -85,7 +86,6 @@ export default function MLMRegisterPage() {
     PlanType: "Binary",
     GenderEnabled: true,
   });
-
 
   // --- KYC Document State ---
   const [docValues, setDocValues] = useState<Record<number, any>>({});
@@ -449,7 +449,7 @@ export default function MLMRegisterPage() {
           Username: values.username,
           Gender: values.gender,
           EmailId: values.email,
-          MobileNo: values.mobileNumber,
+          MobileNo: values.mobileNumber.toString(),
           AccountNo: values.accountNumber,
           IFSC: values.ifscCode,
           BankName: values.bankName,
@@ -465,7 +465,8 @@ export default function MLMRegisterPage() {
           StateId: values.state,
           CityId: values.city,
           Address: values.address,
-          ActionMode: "Insert",
+          ClientId: clientId,
+          ActionMode: isEdit ? "Update" : "Insert",
         }),
       };
       //console.log(payload);
@@ -592,6 +593,75 @@ export default function MLMRegisterPage() {
     return null; // 👈 important (no UI)
   };
 
+  const loadClientDetails = async () => {
+    try {
+      const payload = {
+        procName: "ManageClient",
+        Para: JSON.stringify({
+          ActionMode: "GetClientById",
+          ClientId: clientId || 12,
+        }),
+      };
+
+      const res = await universalService(payload);
+      const result = res?.data ?? res;
+
+      if (!Array.isArray(result) || !result.length) return;
+
+      const client = result[0];
+
+      if (formikRef.current) {
+        formikRef.current.setValues({
+          sponsorId: client.SponsorUserName || "",
+          placeUnderId: client.PlaceUnderUsername || "",
+          position: client.Position == 1 ? "Left" : "Right",
+
+          firstName: client.FirstName || "",
+          lastName: client.LastName || "",
+          username: client.UserName || "",
+          gender: client.Gender || "Male",
+
+          email: client.EmailId || "",
+          mobileNumber: client.MobileNo || "",
+
+          accountNumber: client.AccountNo || "",
+          ifscCode: client.IFSC || "",
+          bankName: client.BankName || "",
+          branchName: client.BranchName || "",
+          accountHolderName: client.AccountHolderName || "",
+
+          nomineeName: client.NomineeName || "",
+          nomineeRelation: client.NomineeRelation || "",
+          nomineeDob: client.NomineeDOB || "",
+
+          address: client.Address || "",
+          country: client.CountryId || "",
+          state: client.StateId || "",
+          city: client.CityId || "",
+
+          walletAddress: client.WalletAddress || "",
+
+          newPassword: "",
+          confirmPassword: "",
+        });
+      }
+
+      // ✅ Profile Image
+      if (client.ClientLogo) {
+        setProfilePic(client.ClientLogo);
+      }
+    } catch (e) {
+      console.error("Load client failed", e);
+    }
+  };
+
+  useEffect(() => {
+    if (clientId) {
+      setIsEdit(true);
+      loadClientDetails();
+    }
+  }, [clientId]);
+
   useEffect(() => {
     const loadBasics = async () => {
       const countryData = await fetchDDL({
@@ -616,6 +686,7 @@ export default function MLMRegisterPage() {
 
   return (
     <Formik
+      innerRef={formikRef}
       initialValues={initialValues}
       validationSchema={getRegisterValidationSchema(settings)}
       onSubmit={handleSubmit}
@@ -628,6 +699,7 @@ export default function MLMRegisterPage() {
         handleBlur,
         handleSubmit,
         setFieldValue,
+        setValues,
       }) => (
         <>
           <AddressDDLWatcher
@@ -643,8 +715,13 @@ export default function MLMRegisterPage() {
           >
             {/* 1. Header */}
             <Header
-              title="Add New Client"
-              actionButton={<SubmitButton label="Register" loading={loading} />}
+              title={isEdit ? "Update Client" : "Add New Client"}
+              actionButton={
+                <SubmitButton
+                  label={isEdit ? "Update" : "Register"}
+                  loading={loading}
+                />
+              }
             />
 
             {/* 2. Top Section (Image + Basic Info) */}
@@ -754,8 +831,6 @@ export default function MLMRegisterPage() {
                     />
                   )}
 
-
-
                   {settings?.UserNameType === "Manual" && (
                     <InputField
                       label="Username*"
@@ -767,7 +842,6 @@ export default function MLMRegisterPage() {
                       touched={touched.username}
                     />
                   )}
-
 
                   <InputField
                     label="Email*"
@@ -799,10 +873,11 @@ export default function MLMRegisterPage() {
                     key={i}
                     type="button"
                     onClick={() => setTab(i)}
-                    className={`pb-2 text-sm font-medium transition-colors flex items-center gap-2 flex-shrink-0 ${tab === i
-                      ? "border-b-2 border-primary-button-bg text-primary-button-bg"
-                      : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border-b-2 border-transparent"
-                      }`}
+                    className={`pb-2 text-sm font-medium transition-colors flex items-center gap-2 flex-shrink-0 ${
+                      tab === i
+                        ? "border-b-2 border-primary-button-bg text-primary-button-bg"
+                        : "text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 border-b-2 border-transparent"
+                    }`}
                   >
                     {t.icon}
                     {t.label}
@@ -941,8 +1016,8 @@ export default function MLMRegisterPage() {
                   </div>
 
                   <p className="text-sm text-gray-500 mt-2">
-                    Please ensure the wallet address is correct. Wrong
-                    address may result in permanent loss of funds.
+                    Please ensure the wallet address is correct. Wrong address
+                    may result in permanent loss of funds.
                   </p>
                 </div>
               )}
