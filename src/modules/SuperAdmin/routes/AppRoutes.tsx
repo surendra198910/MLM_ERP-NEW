@@ -284,7 +284,7 @@ const AppRoutes = () => {
             <Route path="/superadmin/ref" element={<Ref />} />
             <Route path="/superadmin/template" element={<Template />} />
             <Route
-              path="/superadmin/client/add-client"
+              path="/superadmin/client/add-client/:ClientId?"
               element={<MLMRegisterPage />}
             />
             <Route
@@ -400,9 +400,10 @@ const AppRoutes = () => {
               path="/superadmin/website-management/news-and-announcement"
               element={<NewsAndAnnoucement />}
             />
-
-            <Route path="/superadmin/website-management/email-template"element={<MailTemplateMaster/>} />
-
+            <Route
+              path="/superadmin/website-management/email-template"
+              element={<MailTemplateMaster />}
+            />
             //Support
             <Route
               path="/superadmin/support-center/my-support-ticket"
