@@ -349,7 +349,7 @@ export default function AddCompany() {
   };
 
   const [form, setForm] = useState<FormValues>(initialValues);
-  const IMAGE_PREVIEW_URL = import.meta.env.VITE_IMAGE_PREVIEW_URL;
+  const IMAGE_PREVIEW_URL = import.meta.env.VITE_IMAGE_PREVIEW_URL_2;
   const DOCUMENT_PREVIEW_URL = import.meta.env.VITE_IMAGE_PREVIEW_URL;
 
   const openDocument = (fileName?: string) => {
@@ -361,7 +361,7 @@ export default function AddCompany() {
   const openLogoInNewTab = () => {
     if (!companyLogo) return;
     const url = IMAGE_PREVIEW_URL
-      ? `${IMAGE_PREVIEW_URL}${companyLogo}`
+      ? `${IMAGE_PREVIEW_URL}CompanyDocs/${companyLogo}`
       : companyLogo;
 
     window.open(url, "_blank", "noopener,noreferrer");
@@ -1212,7 +1212,7 @@ ${
                       <img
                         src={
                           IMAGE_PREVIEW_URL
-                            ? `${IMAGE_PREVIEW_URL}${companyLogo}`
+                            ? `${IMAGE_PREVIEW_URL}CompanyDocs/${companyLogo}`
                             : companyLogo
                         }
                         alt="Logo"
