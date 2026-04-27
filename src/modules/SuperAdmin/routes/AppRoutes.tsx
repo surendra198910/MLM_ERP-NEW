@@ -112,6 +112,7 @@ import NewsAndAnnoucement from "../components/WebsiteManagement/NewsAndAnnouncem
 import ManageCryptowallet from "../components/settings/ManageCryptoWallet.js";
 import ManageWalletType from "../components/settings/ManageWalletType.js";
 import CompanyBankAccount from "../../SuperAdmin/components/settings/ManagebankAccount.js";
+import ProtectedRoute from "../../../utils/ProtectedRoutes.js";
 
 const AppRoutes = () => {
   const [active, setActive] = useState(false);
@@ -135,365 +136,367 @@ const AppRoutes = () => {
 
           {/* Routes */}
           <Routes>
-            <Route path="/superadmin" element={<DashboardIndex />} />
-            <Route path="/superadmin/contacts" element={<CRMContacts />} />
-            <Route path="/superadmin/customers" element={<CRMCustomers />} />
-            <Route path="/superadmin/leads" element={<Leads />} />
-            <Route
-              path="/superadmin/forms/form-categories"
-              element={<FormCategory />}
-            />
-            <Route path="/superadmin/forms/forms" element={<Forms />} />
-            <Route
-              path="/superadmin/employee/add-employee"
-              element={<AddEditEmployee />}
-            />
-            <Route
-              path="superadmin/employee/add-employee/:id?"
-              element={<AddEditEmployee key={location.pathname} />}
-            />
-            <Route
-              path="/superadmin/employee/manage-employee"
-              element={<ManageEmployee />}
-            />
-            <Route path="/superadmin/common/country" element={<Country />} />
-            <Route path="/superadmin/common/state" element={<State />} />
-            <Route path="/superadmin/common/city" element={<City />} />
-            <Route
-              path="/superadmin/kyc-documents-master/company-documents"
-              element={<CompanyDocument />}
-            />
-            <Route
-              path="/superadmin/kyc-documents-master/employee-documents"
-              element={<EmployeeDocument />}
-            />
-            <Route
-              path="/superadmin/kyc-documents-master/vendor-documents"
-              element={<VendorDocument />}
-            />
-            <Route
-              path="/superadmin/kyc-documents-master/client-documents"
-              element={<CustomerDocument />}
-            />
-            <Route
-              path="/superadmin/human-resource/designation"
-              element={<Designation />}
-            />
-            <Route
-              path="/superadmin/human-resource/department"
-              element={<Department />}
-            />
-            <Route
-              path="/superadmin/bills/payments/payment-mode"
-              element={<PaymentMode />}
-            />
-            <Route
-              path="/superadmin/company/add-company"
-              element={<AddCompany />}
-            />
-            <Route
-              path="/superadmin/company/manage-company/branch"
-              element={<ManageCompany />}
-            />
-            <Route
-              path="/superadmin/project-setting/task-type"
-              element={<TaskType />}
-            />
-            <Route
-              path="/superadmin/employee-setting/employee-type"
-              element={<EmployeeType />}
-            />
-            <Route
-              path="/superadmin/employee-setting/login-type"
-              element={<LoginType />}
-            />
-            <Route
-              path="/superadmin/enquiry-setting/enquiry-for"
-              element={<EnquiryFor />}
-            />
-            <Route
-              path="/superadmin/enquiry-setting/enquiry-type"
-              element={<EnquiryType />}
-            />
-            <Route
-              path="/superadmin/enquiry-setting/how-did-you-find-us-type"
-              element={<FindUsType />}
-            />
-            <Route
-              path="/superadmin/expenses/expense-item"
-              element={<ExpenseItem />}
-            />
-            <Route
-              path="/superadmin/expenses/expense-head"
-              element={<ExpenseHead />}
-            />
-            <Route
-              path="/superadmin/expenses/expenditure-group"
-              element={<ExpenditureGroup />}
-            />
-            <Route
-              path="/superadmin/company/add-company"
-              element={<AddCompany />}
-            />
-            <Route
-              path="/superadmin/company/add-company/:id"
-              element={<AddCompany />}
-            />
-            <Route
-              path="/superadmin/company/branch"
-              element={<ManageCompany />}
-            />
-            <Route
-              path="/superadmin/company/manage-company/branch/edit/:id"
-              element={<ManageCompany />}
-            />
-            <Route
-              path="/superadmin/company-setting/currency-master"
-              element={<CurrencyMaster />}
-            />
-            <Route
-              path="/superadmin/company-setting/financial-year-setting"
-              element={<FinancialYearSetting />}
-            />
-            <Route
-              path="/superadmin/common/contact-type"
-              element={<ContactType />}
-            />
-            <Route
-              path="/superadmin/common/tax-setting"
-              element={<TaxSetting />}
-            />
-            <Route
-              path="/superadmin/theme/theme-setting"
-              element={<PanelSetting />}
-            />
-            <Route
-              path="/superadmin/theme/theme-management"
-              element={<PanelSettingHarsh />}
-            />
-            <Route
-              path="/superadmin/fetchActions"
-              element={<SmartyInspector />}
-            />
-            <Route
-              path="/superadmin/employee/:employeeId/permissions"
-              element={<ManageUserPermission />}
-            />
-            {/* <Route path="/superadmin/employee/addedit-employee" element={<AddEditEmployee />} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="/superadmin" element={<DashboardIndex />} />
+              <Route path="/superadmin/contacts" element={<CRMContacts />} />
+              <Route path="/superadmin/customers" element={<CRMCustomers />} />
+              <Route path="/superadmin/leads" element={<Leads />} />
+              <Route
+                path="/superadmin/forms/form-categories"
+                element={<FormCategory />}
+              />
+              <Route path="/superadmin/forms/forms" element={<Forms />} />
+              <Route
+                path="/superadmin/employee/add-employee"
+                element={<AddEditEmployee />}
+              />
+              <Route
+                path="superadmin/employee/add-employee/:id?"
+                element={<AddEditEmployee key={location.pathname} />}
+              />
+              <Route
+                path="/superadmin/employee/manage-employee"
+                element={<ManageEmployee />}
+              />
+              <Route path="/superadmin/common/country" element={<Country />} />
+              <Route path="/superadmin/common/state" element={<State />} />
+              <Route path="/superadmin/common/city" element={<City />} />
+              <Route
+                path="/superadmin/kyc-documents-master/company-documents"
+                element={<CompanyDocument />}
+              />
+              <Route
+                path="/superadmin/kyc-documents-master/employee-documents"
+                element={<EmployeeDocument />}
+              />
+              <Route
+                path="/superadmin/kyc-documents-master/vendor-documents"
+                element={<VendorDocument />}
+              />
+              <Route
+                path="/superadmin/kyc-documents-master/client-documents"
+                element={<CustomerDocument />}
+              />
+              <Route
+                path="/superadmin/human-resource/designation"
+                element={<Designation />}
+              />
+              <Route
+                path="/superadmin/human-resource/department"
+                element={<Department />}
+              />
+              <Route
+                path="/superadmin/bills/payments/payment-mode"
+                element={<PaymentMode />}
+              />
+              <Route
+                path="/superadmin/company/add-company"
+                element={<AddCompany />}
+              />
+              <Route
+                path="/superadmin/company/manage-company/branch"
+                element={<ManageCompany />}
+              />
+              <Route
+                path="/superadmin/project-setting/task-type"
+                element={<TaskType />}
+              />
+              <Route
+                path="/superadmin/employee-setting/employee-type"
+                element={<EmployeeType />}
+              />
+              <Route
+                path="/superadmin/employee-setting/login-type"
+                element={<LoginType />}
+              />
+              <Route
+                path="/superadmin/enquiry-setting/enquiry-for"
+                element={<EnquiryFor />}
+              />
+              <Route
+                path="/superadmin/enquiry-setting/enquiry-type"
+                element={<EnquiryType />}
+              />
+              <Route
+                path="/superadmin/enquiry-setting/how-did-you-find-us-type"
+                element={<FindUsType />}
+              />
+              <Route
+                path="/superadmin/expenses/expense-item"
+                element={<ExpenseItem />}
+              />
+              <Route
+                path="/superadmin/expenses/expense-head"
+                element={<ExpenseHead />}
+              />
+              <Route
+                path="/superadmin/expenses/expenditure-group"
+                element={<ExpenditureGroup />}
+              />
+              <Route
+                path="/superadmin/company/add-company"
+                element={<AddCompany />}
+              />
+              <Route
+                path="/superadmin/company/add-company/:id"
+                element={<AddCompany />}
+              />
+              <Route
+                path="/superadmin/company/branch"
+                element={<ManageCompany />}
+              />
+              <Route
+                path="/superadmin/company/manage-company/branch/edit/:id"
+                element={<ManageCompany />}
+              />
+              <Route
+                path="/superadmin/company-setting/currency-master"
+                element={<CurrencyMaster />}
+              />
+              <Route
+                path="/superadmin/company-setting/financial-year-setting"
+                element={<FinancialYearSetting />}
+              />
+              <Route
+                path="/superadmin/common/contact-type"
+                element={<ContactType />}
+              />
+              <Route
+                path="/superadmin/common/tax-setting"
+                element={<TaxSetting />}
+              />
+              <Route
+                path="/superadmin/theme/theme-setting"
+                element={<PanelSetting />}
+              />
+              <Route
+                path="/superadmin/theme/theme-management"
+                element={<PanelSettingHarsh />}
+              />
+              <Route
+                path="/superadmin/fetchActions"
+                element={<SmartyInspector />}
+              />
+              <Route
+                path="/superadmin/employee/:employeeId/permissions"
+                element={<ManageUserPermission />}
+              />
+              {/* <Route path="/superadmin/employee/addedit-employee" element={<AddEditEmployee />} />
                         <Route path="/superadmin/employee/addedit-employee/:id" element={<AddEditEmployee  key={location.pathname}  />} /> */}
-            <Route path="/superadmin/ref" element={<Ref />} />
-            <Route path="/superadmin/template" element={<Template />} />
-            <Route
-              path="/superadmin/client/add-client/:ClientId?"
-              element={<MLMRegisterPage />}
-            />
-            <Route
-              path="/superadmin/client/generation-tree"
-              element={<GenerationTree />}
-            />
-            <Route
-              path="/superadmin/client/binary-tree"
-              element={<Geneaology />}
-            />
-            <Route
-              path="/superadmin/client/member-wallet"
-              element={<MemberWallet />}
-            />
-            //Admin Tools
-            <Route
-              path="/superadmin/admin-tools/global-setting"
-              element={<GlobalSetting />}
-            />
-            <Route
-              path="/superadmin/admin-tools/income-setting"
-              element={<IncomeSetting />}
-            />
-            <Route
-              path="/superadmin/admin-tools/api-manager"
-              element={<APIManager />}
-            />
-            //Client
-            <Route
-              path="/superadmin/client/manage-client"
-              element={<ManageClient />}
-            />
-            <Route
-              path="/superadmin/client/member-investment"
-              element={<MemberInvestment />}
-            />
-            //Package
-            <Route
-              path="/superadmin/package/add-package"
-              element={<PackageMaster />}
-            />
-            <Route
-              path="/superadmin/package/add-package/:id"
-              element={<PackageMaster />}
-            />
-            <Route
-              path="/superadmin/package/manage-package"
-              element={<ManagePackage />}
-            />
-            <Route
-              path="/superadmin/mlm-setting/roi-setting"
-              element={<ROISetting />}
-            />
-            <Route
-              path="/superadmin/mlm-setting/sponsor-setting"
-              element={<SponsorSetting />}
-            />
-            <Route
-              path="/superadmin/mlm-setting/level-setting"
-              element={<LevelSetting />}
-            />
-            <Route
-              path="/superadmin/mlm-setting/binary-income-setting"
-              element={<BinaryIncomeSetting />}
-            />
-            <Route
-              path="/superadmin/commission/process-roi-income"
-              element={<ProcessROIIncome />}
-            />
-            <Route
-              path="/superadmin/commission/roi-income-report"
-              element={<ROIIncomeReport />}
-            />
-            <Route
-              path="/superadmin/mlm-setting/add-report/:id?"
-              element={<AddReport />}
-            />
-            <Route
-              path="/superadmin/mlm-setting/manage-report"
-              element={<ManageReports />}
-            />
-            <Route
-              path="/superadmin/mlm-setting/testing"
-              element={<ContactTypeV2 />}
-            />
-            //Forms
-            <Route
-              path="/superadmin/forms/member-forms"
-              element={<MemberFroms />}
-            />
-            <Route
-              path="/superadmin/forms/member-form-categories"
-              element={<MemberFromCategory />}
-            />
-            //Website Management
-            <Route
-              path="/superadmin/website-management/member-popup"
-              element={<ManageMemberPopup />}
-            />
-            <Route
-              path="/superadmin/website-management/member-banner"
-              element={<ManageMemberBanner />}
-            />
-            <Route
-              path="/superadmin/website-management/website-banner"
-              element={<ManageWebsiteBanner />}
-            />
-            <Route
-              path="/superadmin/website-management/website-popup"
-              element={<ManageWebsitePopup />}
-            />
-            <Route
-              path="/superadmin/website-management/news-and-announcement"
-              element={<NewsAndAnnoucement />}
-            />
-            <Route
-              path="/superadmin/website-management/email-template"
-              element={<MailTemplateMaster />}
-            />
-            //Support
-            <Route
-              path="/superadmin/support-center/my-support-ticket"
-              element={<MySupportTicket />}
-            />
-            <Route
-              path="/superadmin/support-center/search-ticket-all"
-              element={<SearchTicketAll />}
-            />
-            <Route
-              path="/superadmin/support-center/createticket"
-              element={<CreateSupportTicket />}
-            />
-            <Route
-              path="/superadmin/support-center/createticket/:taskId?"
-              element={<CreateSupportTicket />}
-            />
-            <Route
-              path="/superadmin/support-center/support-detail"
-              element={<SupportDetailPage />}
-            />
-            <Route
-              path="/superadmin/support-center/support-detail/:taskId?"
-              element={<SupportDetailPage />}
-            />
-            //PaymentMaster
-            <Route
-              path="/superadmin/payment-master/wallet-transfer"
-              element={<ProductWalletTransfer />}
-            />
-            <Route
-              path="/superadmin/payment-master/wallet-transfer-report"
-              element={<WalletTransferReport />}
-            />
-            //Report
-            <Route
-              path="/superadmin/reports/investment-report"
-              element={<InvestmentReport />}
-            />
-            <Route
-              path="/superadmin/reports/withdraw-report"
-              element={<Withdraw />}
-            />
-            <Route
-              path="/superadmin/reports/team-report"
-              element={<TeamReport />}
-            />
-            //Withdrawal
-            <Route
-              path="/superadmin/mlm-setting/withdrawal-setting"
-              element={<WithdrawalSetting />}
-            />
-            //SocialMedia Setting
-            <Route
-              path="/superadmin/mlm-setting/socialmedia-setting"
-              element={<SocialMediaSetting />}
-            />
-            <Route
-              path="/superadmin/website-management/marquee-news-management"
-              element={<MarqueeNewsManagement />}
-            />
-            <Route
-              path="/superadmin/website-management/library-management"
-              element={<LibraryManagement />}
-            />
-            <Route
-              path="/superadmin/common/social-media-platfrom"
-              element={<SocialMediaPlatform />}
-            />
-            <Route
-              path="/superadmin/common/withdraw-method"
-              element={<WithrawalBy />}
-            />
-            <Route
-              path="/superadmin/theme/member-panel-theme"
-              element={<MemberThemeManagement />}
-            />
-            //Manage Crypto wallet
-            <Route
-              path="/superadmin/mlm-setting/CryptoWallet-setting"
-              element={<ManageCryptowallet />}
-            />
-            <Route
-              path="/superadmin/mlm-setting/WalletType-setting"
-              element={<ManageWalletType />}
-            />
-            <Route
-              path="/superadmin/mlm-setting/company-bank-account"
-              element={<CompanyBankAccount />}
-            />
+              <Route path="/superadmin/ref" element={<Ref />} />
+              <Route path="/superadmin/template" element={<Template />} />
+              <Route
+                path="/superadmin/client/add-client/:ClientId?"
+                element={<MLMRegisterPage />}
+              />
+              <Route
+                path="/superadmin/client/generation-tree"
+                element={<GenerationTree />}
+              />
+              <Route
+                path="/superadmin/client/binary-tree"
+                element={<Geneaology />}
+              />
+              <Route
+                path="/superadmin/client/member-wallet"
+                element={<MemberWallet />}
+              />
+              //Admin Tools
+              <Route
+                path="/superadmin/admin-tools/global-setting"
+                element={<GlobalSetting />}
+              />
+              <Route
+                path="/superadmin/admin-tools/income-setting"
+                element={<IncomeSetting />}
+              />
+              <Route
+                path="/superadmin/admin-tools/api-manager"
+                element={<APIManager />}
+              />
+              //Client
+              <Route
+                path="/superadmin/client/manage-client"
+                element={<ManageClient />}
+              />
+              <Route
+                path="/superadmin/client/member-investment"
+                element={<MemberInvestment />}
+              />
+              //Package
+              <Route
+                path="/superadmin/package/add-package"
+                element={<PackageMaster />}
+              />
+              <Route
+                path="/superadmin/package/add-package/:id"
+                element={<PackageMaster />}
+              />
+              <Route
+                path="/superadmin/package/manage-package"
+                element={<ManagePackage />}
+              />
+              <Route
+                path="/superadmin/mlm-setting/roi-setting"
+                element={<ROISetting />}
+              />
+              <Route
+                path="/superadmin/mlm-setting/sponsor-setting"
+                element={<SponsorSetting />}
+              />
+              <Route
+                path="/superadmin/mlm-setting/level-setting"
+                element={<LevelSetting />}
+              />
+              <Route
+                path="/superadmin/mlm-setting/binary-income-setting"
+                element={<BinaryIncomeSetting />}
+              />
+              <Route
+                path="/superadmin/commission/process-roi-income"
+                element={<ProcessROIIncome />}
+              />
+              <Route
+                path="/superadmin/commission/roi-income-report"
+                element={<ROIIncomeReport />}
+              />
+              <Route
+                path="/superadmin/mlm-setting/add-report/:id?"
+                element={<AddReport />}
+              />
+              <Route
+                path="/superadmin/mlm-setting/manage-report"
+                element={<ManageReports />}
+              />
+              <Route
+                path="/superadmin/mlm-setting/testing"
+                element={<ContactTypeV2 />}
+              />
+              //Forms
+              <Route
+                path="/superadmin/forms/member-forms"
+                element={<MemberFroms />}
+              />
+              <Route
+                path="/superadmin/forms/member-form-categories"
+                element={<MemberFromCategory />}
+              />
+              //Website Management
+              <Route
+                path="/superadmin/website-management/member-popup"
+                element={<ManageMemberPopup />}
+              />
+              <Route
+                path="/superadmin/website-management/member-banner"
+                element={<ManageMemberBanner />}
+              />
+              <Route
+                path="/superadmin/website-management/website-banner"
+                element={<ManageWebsiteBanner />}
+              />
+              <Route
+                path="/superadmin/website-management/website-popup"
+                element={<ManageWebsitePopup />}
+              />
+              <Route
+                path="/superadmin/website-management/news-and-announcement"
+                element={<NewsAndAnnoucement />}
+              />
+              <Route
+                path="/superadmin/website-management/email-template"
+                element={<MailTemplateMaster />}
+              />
+              //Support
+              <Route
+                path="/superadmin/support-center/my-support-ticket"
+                element={<MySupportTicket />}
+              />
+              <Route
+                path="/superadmin/support-center/search-ticket-all"
+                element={<SearchTicketAll />}
+              />
+              <Route
+                path="/superadmin/support-center/createticket"
+                element={<CreateSupportTicket />}
+              />
+              <Route
+                path="/superadmin/support-center/createticket/:taskId?"
+                element={<CreateSupportTicket />}
+              />
+              <Route
+                path="/superadmin/support-center/support-detail"
+                element={<SupportDetailPage />}
+              />
+              <Route
+                path="/superadmin/support-center/support-detail/:taskId?"
+                element={<SupportDetailPage />}
+              />
+              //PaymentMaster
+              <Route
+                path="/superadmin/payment-master/wallet-transfer"
+                element={<ProductWalletTransfer />}
+              />
+              <Route
+                path="/superadmin/payment-master/wallet-transfer-report"
+                element={<WalletTransferReport />}
+              />
+              //Report
+              <Route
+                path="/superadmin/reports/investment-report"
+                element={<InvestmentReport />}
+              />
+              <Route
+                path="/superadmin/reports/withdraw-report"
+                element={<Withdraw />}
+              />
+              <Route
+                path="/superadmin/reports/team-report"
+                element={<TeamReport />}
+              />
+              //Withdrawal
+              <Route
+                path="/superadmin/mlm-setting/withdrawal-setting"
+                element={<WithdrawalSetting />}
+              />
+              //SocialMedia Setting
+              <Route
+                path="/superadmin/mlm-setting/socialmedia-setting"
+                element={<SocialMediaSetting />}
+              />
+              <Route
+                path="/superadmin/website-management/marquee-news-management"
+                element={<MarqueeNewsManagement />}
+              />
+              <Route
+                path="/superadmin/website-management/library-management"
+                element={<LibraryManagement />}
+              />
+              <Route
+                path="/superadmin/common/social-media-platfrom"
+                element={<SocialMediaPlatform />}
+              />
+              <Route
+                path="/superadmin/common/withdraw-method"
+                element={<WithrawalBy />}
+              />
+              <Route
+                path="/superadmin/theme/member-panel-theme"
+                element={<MemberThemeManagement />}
+              />
+              //Manage Crypto wallet
+              <Route
+                path="/superadmin/mlm-setting/CryptoWallet-setting"
+                element={<ManageCryptowallet />}
+              />
+              <Route
+                path="/superadmin/mlm-setting/WalletType-setting"
+                element={<ManageWalletType />}
+              />
+              <Route
+                path="/superadmin/mlm-setting/company-bank-account"
+                element={<CompanyBankAccount />}
+              />
+            </Route>
           </Routes>
 
           {/* Footer */}
