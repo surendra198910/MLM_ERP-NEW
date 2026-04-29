@@ -30,6 +30,7 @@ import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
 import Loader from "../../common/Loader";
 import AccessRestricted from "../../common/AccessRestricted";
 import CropperModal from "../Cropper/Croppermodel.jsx";
+import { ImageIcon, Trash2 } from "lucide-react";
 
 // ----------------------------------------------------------------------
 // TYPES
@@ -269,9 +270,14 @@ export default function AddCompany() {
   const { id } = useParams();
   const isEditMode = Boolean(id);
 
+  // Banner image states (for Tab 5)
+  const [bannerImage, setBannerImage] = useState<any>(null);
+  const [bannerImagePath, setBannerImagePath] = useState("");
+  const [allImages, setAllImages] = useState<any[]>([]);
+
   const { universalService } = ApiService();
   const { postDocument } = PostService();
-
+  const formikRef = React.useRef<any>(null);
   const [tab, setTab] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(false);
   const [loadingDocs, setLoadingDocs] = useState<boolean>(false);
@@ -289,10 +295,25 @@ export default function AddCompany() {
   const [cities, setCities] = useState<DropdownOption[]>([]);
   const [parentCompanies, setParentCompanies] = useState<DropdownOption[]>([]);
 
-  // Images & Docs
-  const [showCropper, setShowCropper] = useState<boolean>(false);
-  const [rawImage, setRawImage] = useState<string>("");
+  // Company Logo states (for main logo at top)
+  const [showLogoCropper, setShowLogoCropper] = useState<boolean>(false);
+  const [rawLogoImage, setRawLogoImage] = useState<string>("");
   const [companyLogo, setCompanyLogo] = useState<string>("");
+  const [logoPreview, setLogoPreview] = useState<string>("");
+
+  // Banner Cropper states
+
+  const [selectedLogoType, setSelectedLogoType] = useState<string>(""); // Track which logo is being uploaded
+
+  // Separate states for dark and light logos
+  const [darkLogo, setDarkLogo] = useState<any>(null);
+  const [darkLogoPath, setDarkLogoPath] = useState<string>("");
+  const [lightLogo, setLightLogo] = useState<any>(null);
+  const [lightLogoPath, setLightLogoPath] = useState<string>("");
+
+  const [showBannerCropper, setShowBannerCropper] = useState<boolean>(false);
+  const [rawBannerImage, setRawBannerImage] = useState<string>("");
+
   const [masterDocuments, setMasterDocuments] = useState<MasterDocument[]>([]);
   const [docValues, setDocValues] = useState<Record<number, DocumentValue>>({});
 
@@ -303,6 +324,7 @@ export default function AddCompany() {
 
   const [currencies, setCurrencies] = useState<DropdownOption[]>([]);
   const [loadingCurrency, setLoadingCurrency] = useState(false);
+  const [companyData, setCompanyData] = useState([]);
 
   const [billToManuallyEdited, setBillToManuallyEdited] = useState(false);
   const [shipToManuallyEdited, setShipToManuallyEdited] = useState(false);
@@ -363,12 +385,10 @@ export default function AddCompany() {
     const url = IMAGE_PREVIEW_URL
       ? `${IMAGE_PREVIEW_URL}CompanyDocs/${companyLogo}`
       : companyLogo;
-
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
   // --- STYLES ---
-  // UPDATED: Added dark mode classes for bg, border, text, placeholder
   const bigInputClasses =
     "w-full border border-gray-200 rounded-md px-3 py-2 text-sm h-10 " +
     "placeholder-gray-400 focus:outline-none focus:border-primary-button-bg focus:ring-1 focus:ring-primary-button-bg transition-all " +
@@ -380,7 +400,7 @@ export default function AddCompany() {
     [],
   );
 
-  // ✅ NEW SMART ACTION SYSTEM
+  // SMART ACTION SYSTEM
   const location = window.location.pathname;
   const segments = location.split("/").filter(Boolean);
   const last = segments[segments.length - 1];
@@ -393,10 +413,8 @@ export default function AddCompany() {
   const fetchFormPermissions = async () => {
     try {
       setPermissionsLoading(true);
-
       const saved = localStorage.getItem("EmployeeDetails");
       const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
-
       const payload = {
         procName: "AssignForm",
         Para: JSON.stringify({
@@ -405,32 +423,240 @@ export default function AddCompany() {
           EmployeeId: employeeId,
         }),
       };
-
       const response = await universalService(payload);
       const data = response?.data ?? response;
-
       if (!Array.isArray(data)) {
         setHasPageAccess(false);
         return;
       }
-
       const pagePermission = data.find(
         (p) =>
           String(p.FormNameWithExt).trim().toLowerCase() ===
           formName?.trim().toLowerCase(),
       );
-
       if (!pagePermission || !pagePermission.Action) {
         setHasPageAccess(false);
         return;
       }
-
       SmartActions.load(data);
       setHasPageAccess(true);
     } catch {
       setHasPageAccess(false);
     } finally {
       setPermissionsLoading(false);
+    }
+  };
+
+  const loadAllBannerImages = async () => {
+    try {
+      const payload = {
+        procName: "ManageWebsiteBannerImages",
+        Para: JSON.stringify({
+          ActionMode: "GetAll",
+        }),
+      };
+      const res = await universalService(payload);
+      let data = res?.data || res || [];
+      if (!Array.isArray(data)) {
+        data = data?.data || [];
+      }
+      setAllImages(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error("GetAll banner error:", err);
+      setAllImages([]);
+    }
+  };
+
+  const autoSaveBanner = async (uploadedFileName: string, logoType: string) => {
+    try {
+      // const saved = localStorage.getItem("EmployeeDetails");
+      // const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
+      // const payload = {
+      //   procName: "ManageMemberBannerImages",
+      //   Para: JSON.stringify({
+      //     ActionMode: "Insert",
+      //     MemberBannerImageId: 0,
+      //     ImagePath: uploadedFileName,
+      //     LogoType: logoType, // Add this field to your backend
+      //     EntryBy: employeeId,
+      //     ModifiedBy: employeeId,
+      //   }),
+      // };
+      // const response = await universalService(payload);
+      // const res = response?.data?.[0] || response?.[0];
+      // if (res?.StatusCode === 1) {
+      //   toast.success(res.Msg || `${logoType} logo uploaded successfully`);
+      //   loadAllBannerImages();
+      // } else {
+      //   toast.error(res?.Msg || "Failed to save logo");
+      // }
+    } catch (err) {
+      console.error(err);
+      toast.error("Server error");
+    }
+  };
+
+  const handleImageUpload = (e: any, logoType: string) => {
+    const files = Array.from(e.target.files);
+    if (!files.length) return;
+    if (files.length > 1) {
+      toast.error("Please select only one image at a time.");
+      return;
+    }
+    const file: any = files[0];
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error(`${file.name} is larger than 2MB`);
+      return;
+    }
+
+    setSelectedLogoType(logoType); // Store which logo is being uploaded
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      setRawBannerImage(reader.result as string);
+      setShowBannerCropper(true);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleCroppedImage = async (croppedBase64: string) => {
+    try {
+      console.log("Starting crop handler for banner...");
+      const res = await fetch(croppedBase64);
+      const blob = await res.blob();
+      const file = new File([blob], `${selectedLogoType}_${Date.now()}.png`, {
+        type: blob.type,
+      });
+
+      // Set immediate preview based on logo type
+      if (selectedLogoType === "dark") {
+        setDarkLogo({
+          preview: croppedBase64,
+          fileName: "",
+          uploading: true,
+        });
+      } else if (selectedLogoType === "light") {
+        setLightLogo({
+          preview: croppedBase64,
+          fileName: "",
+          uploading: true,
+        });
+      }
+
+      // Upload
+      const fd = new FormData();
+      fd.append("UploadedImage", file);
+      fd.append("pagename", "CompanyDocs");
+
+      const uploadRes = await postDocument(fd);
+      const uploadedFileName = uploadRes?.fileName || uploadRes?.Message;
+
+      if (!uploadedFileName) {
+        toast.error("Image upload failed");
+        if (selectedLogoType === "dark") {
+          setDarkLogo(null);
+        } else if (selectedLogoType === "light") {
+          setLightLogo(null);
+        }
+        return;
+      }
+
+      // Update state after successful upload
+      if (selectedLogoType === "dark") {
+        setDarkLogo({
+          preview: croppedBase64,
+          fileName: uploadedFileName,
+          uploading: false,
+        });
+        setDarkLogoPath(uploadedFileName);
+        formikRef.current?.setFieldValue("darkLogoPath", uploadedFileName);
+      } else if (selectedLogoType === "light") {
+        setLightLogo({
+          preview: croppedBase64,
+          fileName: uploadedFileName,
+          uploading: false,
+        });
+        setLightLogoPath(uploadedFileName);
+        formikRef.current?.setFieldValue("lightLogoPath", uploadedFileName);
+      }
+
+      // await autoSaveBanner(uploadedFileName, selectedLogoType);
+    } catch (err) {
+      console.error("Upload error:", err);
+      toast.error("Image upload failed");
+    } finally {
+      setShowBannerCropper(false);
+      setSelectedLogoType("");
+    }
+  };
+
+  const deleteLogoImage = async (logoType: string, imagePath: string) => {
+    const confirm = await Swal.fire({
+      title: `Delete ${logoType} Logo?`,
+      text: "This logo will be removed.",
+      icon: "warning",
+      showCancelButton: true,
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    try {
+      const saved = localStorage.getItem("EmployeeDetails");
+      const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
+      const payload = {
+        procName: "ManageMemberBannerImages",
+        Para: JSON.stringify({
+          ActionMode: "Delete",
+          ImagePath: imagePath,
+          LogoType: logoType,
+          ModifiedBy: employeeId,
+        }),
+      };
+      const res = await universalService(payload);
+      const result = res?.data?.[0] || res?.[0];
+      if (result?.StatusCode === 1) {
+        toast.success(result.Msg);
+        if (logoType === "dark") {
+          setDarkLogo(null);
+          setDarkLogoPath("");
+        } else if (logoType === "light") {
+          setLightLogo(null);
+          setLightLogoPath("");
+        }
+        loadAllBannerImages();
+      } else {
+        toast.error(result?.Msg || "Delete failed");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Server error");
+    }
+  };
+
+  const handleToggleStatus = async (img) => {
+    try {
+      const saved = localStorage.getItem("EmployeeDetails");
+      const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
+      const payload = {
+        procName: "ManageMemberBannerImages",
+        Para: JSON.stringify({
+          ActionMode: "ChangeStatus",
+          MemberBannerImageId: img.MemberBannerImageId,
+          Status: img.Status === "Active" ? "Inactive" : "Active",
+          ModifiedBy: employeeId,
+        }),
+      };
+      const res = await universalService(payload);
+      const result = res?.data?.[0] || res?.[0];
+      if (result?.StatusCode === 1) {
+        toast.success(result.Msg || "Status Updated");
+        loadAllBannerImages();
+      } else {
+        toast.error(result?.Msg || "Failed to update status");
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error("Server error");
     }
   };
 
@@ -456,6 +682,20 @@ export default function AddCompany() {
     },
     [universalService],
   );
+
+  const fetchCompanyByLOgo = useCallback(async () => {
+    try {
+      const payload = {
+        procName: "Company",
+        Para: JSON.stringify({ ActionMode: "Select", EditId: id }),
+      };
+      const res = await universalService(payload);
+      const data = res?.data || res;
+      if (Array.isArray(data)) setCompanyData(data);
+    } catch (err) {
+      console.error("Error fetching CompanyData:", err);
+    }
+  }, [universalService]);
 
   const fetchMasterDocuments = useCallback(async () => {
     try {
@@ -492,17 +732,14 @@ export default function AddCompany() {
   const fetchCurrencies = useCallback(async () => {
     try {
       setLoadingCurrency(true);
-
       const payload = {
         procName: "Company",
         Para: JSON.stringify({
           ActionMode: "GetCurrency",
         }),
       };
-
       const res = await universalService(payload);
       const data = res?.data || res;
-
       if (Array.isArray(data)) {
         setCurrencies(
           data.map((x: any) => ({
@@ -533,17 +770,15 @@ export default function AddCompany() {
   }, [normalizeDDL]);
 
   useEffect(() => {
-    // 🔥 SWITCHED TO ADD MODE (Edit → Add)
     if (!id) {
-      setForm(initialValues); // Reset Formik values
-      setCompanyLogo(""); // Clear logo
-      setRawImage("");
-      setDocValues({}); // Clear documents
-      setTab(0); // Reset tab
+      setForm(initialValues);
+      setCompanyLogo("");
+      setLogoPreview("");
+      setRawLogoImage("");
+      setDocValues({});
+      setTab(0);
       setBillToManuallyEdited(false);
       setShipToManuallyEdited(false);
-
-      // Clear dependent dropdowns
       setStates([]);
       setCities([]);
     }
@@ -551,13 +786,11 @@ export default function AddCompany() {
 
   useEffect(() => {
     if (!id) return;
-
+    fetchCompanyByLOgo();
     let isMounted = true;
-
     const loadCompanyData = async () => {
       try {
         setInitialLoading(true);
-
         const payload = {
           procName: "Company",
           Para: JSON.stringify({
@@ -565,58 +798,44 @@ export default function AddCompany() {
             EditId: Number(id),
           }),
         };
-
         const res = await universalService(payload);
         const data = res?.data?.[0] || res?.[0];
-
         if (!data || !isMounted) return;
 
-        // ---------- LOGO ----------
         setCompanyLogo(data.CompanyLogo || "");
 
-        // ---------- FORM VALUES ----------
         const newForm: FormValues = {
           companyName: data.CompanyName || "",
           email: data.EmailId || "",
           phone: data.ContactNo || "",
           websiteUrl: data.WebUrl || "",
-
           companyType: data.CompanyType || "Company",
           parentCompanyId: data.ParentCompanyId || "",
-
           address: data.Address || "",
           billTo: data.BillTo || "",
           shipTo: data.ShipTo || "",
-
           zip: data.PinCode || "",
           country: data.CountryId?.split("|")?.[0] || "",
           state: data.StateId?.split("|")?.[0] || "",
           city: data.CityId?.split("|")?.[0] || "",
-
           contactName: data.ContactPersonName || "",
           contactEmail: data.ContactPersonEmail || "",
           contactMobile: data.ContactPersonMobile || "",
-
           companyCodePrefix: data.CompanyCodePrefix || "",
           employeeCodePrefix: data.EmployeeCodePrefix || "",
-
           companyStartSeries: Number(data.CompanyStartSeries ?? 1),
           defaultCurrency: Number(data.DefaultCurrency ?? 1),
           billPrefix: data.BillPrefix || "",
           invoiceTerms: data.InvoiceTerms || "",
           isTaxApplicable: Boolean(data.IsTaxApplicable),
-
           employeeStartSeries: Number(data.EmployeeStartSeries ?? 1),
         };
-
         setForm(newForm);
 
-        // ---------- DOCUMENTS ----------
         if (data.CompanyDocuments) {
           try {
             const docs = JSON.parse(data.CompanyDocuments);
             const newDocValues: Record<number, DocumentValue> = {};
-
             docs.forEach((d: any) => {
               newDocValues[d.DocumentId] = {
                 number: d.DocumentNumber || "",
@@ -624,7 +843,6 @@ export default function AddCompany() {
                 isExisting: true,
               };
             });
-
             setDocValues(newDocValues);
           } catch (err) {
             console.error("CompanyDocuments JSON parse error:", err);
@@ -638,9 +856,7 @@ export default function AddCompany() {
         }
       }
     };
-
     loadCompanyData();
-
     return () => {
       isMounted = false;
     };
@@ -659,8 +875,10 @@ export default function AddCompany() {
     }
     const reader = new FileReader();
     reader.onload = () => {
-      setRawImage(reader.result as string);
-      setShowCropper(true);
+      const previewUrl = reader.result as string;
+      setLogoPreview(previewUrl);
+      setRawLogoImage(previewUrl);
+      setShowLogoCropper(true);
     };
     reader.readAsDataURL(file);
   };
@@ -675,11 +893,13 @@ export default function AddCompany() {
       const file = new File([blob], `company_logo${ext}`, { type: mime });
       const fd = new FormData();
       fd.append("UploadedImage", file);
-      fd.append("pagename", "EmpDoc");
-
+      fd.append("pagename", "CompanyDocs");
       const response = await postDocument(fd);
       const fileName = response?.fileName || response?.Message;
-      if (fileName) setCompanyLogo(fileName);
+      if (fileName) {
+        setCompanyLogo(fileName);
+        setLogoPreview("");
+      }
     } catch (err) {
       console.error(err);
       toast.error("Logo upload failed");
@@ -696,14 +916,14 @@ export default function AddCompany() {
       showCancelButton: true,
       confirmButtonText: "Yes, remove it",
       cancelButtonText: "Cancel",
-      confirmButtonColor: "#ef4444", // red
-      cancelButtonColor: "#9ca3af", // gray
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#9ca3af",
       reverseButtons: true,
     }).then((result) => {
       if (result.isConfirmed) {
         setCompanyLogo("");
-        setRawImage("");
-
+        setLogoPreview("");
+        setRawLogoImage("");
         Swal.fire({
           title: "Removed!",
           text: "Company logo has been removed.",
@@ -715,45 +935,31 @@ export default function AddCompany() {
     });
   };
 
-  // --- HANDLE FILE UPLOAD USING POSTSERVICE (WITH PROGRESS) ---
   const handleFileUpload = async (docId: number, file?: File) => {
     if (!file) return;
-
-    // Reset progress
     setUploadProgress((prev) => ({ ...prev, [docId]: 0 }));
-
-    // Set temporary file for UI while uploading
     setDocValues((prev) => ({
       ...prev,
       [docId]: {
         ...prev[docId],
         file,
         isExisting: false,
-      }, // Store file object to show name
+      },
     }));
-
     try {
       const fd = new FormData();
       fd.append("UploadedImage", file);
       fd.append("pagename", "EmpDoc");
-
-      // Use PostService, passing the onProgress callback as second arg
       const response = await postDocument(fd, (percent) => {
         setUploadProgress((prev) => ({ ...prev, [docId]: percent }));
       });
-
       const fileName = response?.fileName || response?.Message;
-
       if (fileName) {
         setDocValues((prev) => ({
           ...prev,
-          [docId]: { ...prev[docId], fileName }, // Save real filename
+          [docId]: { ...prev[docId], fileName },
         }));
-
-        // Ensure progress is 100%
         setUploadProgress((prev) => ({ ...prev, [docId]: 100 }));
-
-        // Clear progress after delay
         setTimeout(() => {
           setUploadProgress((prev) => {
             const newState = { ...prev };
@@ -763,7 +969,6 @@ export default function AddCompany() {
         }, 1000);
       } else {
         toast.error("Upload failed: No filename received");
-        // Revert UI if failed
         setDocValues((prev) => ({
           ...prev,
           [docId]: { ...prev[docId], file: undefined },
@@ -772,7 +977,6 @@ export default function AddCompany() {
     } catch (error) {
       console.error("Document upload failed:", error);
       toast.error("Document upload failed");
-      // Revert UI if failed
       setDocValues((prev) => ({
         ...prev,
         [docId]: { ...prev[docId], file: undefined },
@@ -780,11 +984,7 @@ export default function AddCompany() {
     }
   };
 
-  const removeFileOnly = (
-    docId: number,
-    docName?: string,
-    fileName?: string,
-  ) => {
+  const removeFileOnly = (docId: number, docName?: string) => {
     Swal.fire({
       title: "Remove document?",
       text: docName
@@ -799,17 +999,15 @@ export default function AddCompany() {
       reverseButtons: true,
     }).then((result) => {
       if (!result.isConfirmed) return;
-
       setDocValues((prev) => ({
         ...prev,
         [docId]: {
           ...prev[docId],
           file: undefined,
           fileName: "",
-          isDeleted: true, // 🔥 backend delete flag
+          isDeleted: true,
         },
       }));
-
       Swal.fire({
         title: "Removed!",
         text: "Document will be removed after saving.",
@@ -830,19 +1028,15 @@ export default function AddCompany() {
     const documentsArray = masterDocuments
       .map((doc) => {
         const userEntry = docValues[doc.DocumentId];
-
-        // Edit mode: send all docs
         if (isEditMode) {
           return {
             DocumentId: Number(doc.DocumentId),
             DocumentName: doc.DocumentName,
             DocumentNumber: userEntry?.number || "",
             File: userEntry?.isDeleted ? "" : userEntry?.fileName || "",
-            IsDeleted: userEntry?.isDeleted ? "Y" : "N", // ✅ IMPORTANT
+            IsDeleted: userEntry?.isDeleted ? "Y" : "N",
           };
         }
-
-        // Insert mode: only send filled ones
         if (userEntry?.fileName || userEntry?.number) {
           return {
             DocumentId: Number(doc.DocumentId),
@@ -852,11 +1046,9 @@ export default function AddCompany() {
             IsDeleted: "N",
           };
         }
-
         return null;
       })
       .filter(Boolean);
-
     try {
       const payload = {
         procName: "Company",
@@ -896,11 +1088,12 @@ export default function AddCompany() {
           BillPrefix: values.billPrefix,
           InvoiceTerms: values.invoiceTerms,
           IsTaxApplicable: values.isTaxApplicable ? 1 : 0,
+          DarkThemeLogo: darkLogoPath,
+          LightThemeLogo: lightLogoPath,
         }),
       };
       const response = await universalService(payload);
       const res = Array.isArray(response) ? response[0] : response?.data?.[0];
-
       if (res?.statuscode === "1" || res?.statuscode === "2") {
         Swal.fire({
           title: isEditMode ? "Updated!" : "Success!",
@@ -913,6 +1106,7 @@ export default function AddCompany() {
             if (!isEditMode) {
               resetForm();
               setCompanyLogo("");
+              setLogoPreview("");
               setDocValues({});
               setTab(0);
             }
@@ -940,7 +1134,6 @@ export default function AddCompany() {
     }
   };
 
-  // UPDATED: Added dark mode text color for labels
   const InputField = ({
     label,
     name,
@@ -987,7 +1180,6 @@ export default function AddCompany() {
     </div>
   );
 
-  // UPDATED: Added dark mode text color for labels
   const SelectField = ({
     label,
     name,
@@ -1003,7 +1195,6 @@ export default function AddCompany() {
   }: any) => {
     const cleanLabel = label ? label.replace("*", "").trim() : "Option";
     const placeholder = `Select ${cleanLabel}`;
-
     return (
       <div className={`flex flex-col ${className} dark:text-gray-100`}>
         <label className="text-sm text-gray-700 dark:text-gray-300 mb-1">
@@ -1092,6 +1283,7 @@ export default function AddCompany() {
     { label: "Contact Person Details", icon: <FaUser size={16} /> },
     { label: "Company Settings", icon: <FaBuilding size={16} /> },
     { label: "Employee Settings", icon: <FaBriefcase size={16} /> },
+    { label: "Logo Settings", icon: <FaBriefcase size={16} /> },
   ];
 
   if (isEditMode && initialLoading) {
@@ -1117,6 +1309,7 @@ export default function AddCompany() {
 
   return (
     <Formik
+      innerRef={formikRef}
       initialValues={form}
       validationSchema={companyValidationSchema}
       enableReinitialize
@@ -1160,7 +1353,6 @@ export default function AddCompany() {
             <div className="text-lg font-bold text-gray-800 dark:text-white">
               {isEditMode ? "Edit Company" : "Add Company"}
             </div>
-
             <div className="flex gap-x-2">
               <button
                 type="button"
@@ -1185,18 +1377,17 @@ export default function AddCompany() {
                       ? !SmartActions.canEdit(formName)
                       : !SmartActions.canAdd(formName)
                   }
-                  className={`px-4 py-1.5 rounded text-sm font-medium flex items-center gap-2
-${
-  (
-    isEditMode
-      ? !SmartActions.canEdit(formName)
-      : !SmartActions.canAdd(formName)
-  )
-    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-    : "bg-primary-button-bg hover:bg-primary-button-bg-hover text-white"
-}`}
+                  className={`px-4 py-1.5 rounded text-sm font-medium flex items-center gap-2 ${
+                    (
+                      isEditMode
+                        ? !SmartActions.canEdit(formName)
+                        : !SmartActions.canAdd(formName)
+                    )
+                      ? "bg-gray-300 text-gray-500 cursor-not-allowed"
+                      : "bg-primary-button-bg hover:bg-primary-button-bg-hover text-white"
+                  }`}
                 >
-                  {isEditMode?"Update":"Submit"}
+                  {isEditMode ? "Update" : "Submit"}
                 </button>
               </PermissionAwareTooltip>
             </div>
@@ -1208,7 +1399,14 @@ ${
               <div className="w-full md:w-auto flex-shrink-0 flex justify-center md:justify-start">
                 <div className="relative w-36 h-36 group">
                   <div className="w-full h-full rounded-xl border-[4px] border-white dark:border-gray-700 shadow-md overflow-hidden bg-gray-200 dark:bg-gray-800 flex items-center justify-center relative">
-                    {companyLogo ? (
+                    {/* Show preview first, then saved logo, then default */}
+                    {logoPreview ? (
+                      <img
+                        src={logoPreview}
+                        alt="Logo Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : companyLogo ? (
                       <img
                         src={
                           IMAGE_PREVIEW_URL
@@ -1219,12 +1417,6 @@ ${
                         onClick={openLogoInNewTab}
                         title="Click to view logo"
                         className="w-full h-full object-cover cursor-pointer hover:opacity-90 transition"
-                      />
-                    ) : rawImage ? (
-                      <img
-                        src={rawImage}
-                        alt="Preview"
-                        className="w-full h-full object-cover"
                       />
                     ) : (
                       <FaUserCircle className="text-7xl text-gray-400 dark:text-gray-600" />
@@ -1246,7 +1438,7 @@ ${
                           onChange={onLogoChange}
                         />
                       </label>
-                      {(companyLogo || rawImage) && (
+                      {(companyLogo || logoPreview) && (
                         <button
                           type="button"
                           onClick={deleteLogo}
@@ -1363,7 +1555,7 @@ ${
               </div>
             </div>
 
-            {/* ---------------- TABS NAVIGATION ---------------- */}
+            {/* TABS NAVIGATION */}
             <div className="mt-10 mb-6">
               <div className="flex border-b border-gray-200 dark:border-gray-700 gap-4 md:gap-6 overflow-x-auto whitespace-nowrap">
                 {tabs.map((t, i) => (
@@ -1371,7 +1563,6 @@ ${
                     key={i}
                     type="button"
                     onClick={() => setTab(i)}
-                    // FIX APPLIED: flex-shrink-0 prevents the buttons from getting squashed
                     className={`pb-2 text-sm font-medium transition-colors flex items-center gap-2 flex-shrink-0 ${
                       tab === i
                         ? "border-b-2 border-primary-button-bg text-primary-button-bg"
@@ -1485,29 +1676,22 @@ ${
             {/* TAB 1: Documents */}
             {tab === 1 && (
               <div className="animate-fadeIn">
-                {/* Header - Desktop only */}
                 <div className="hidden md:grid bg-gray-50 dark:bg-gray-800 rounded-t-lg border-b border-gray-200 dark:border-gray-700 px-4 py-3 grid-cols-12 gap-4 text-xs font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider">
                   <div className="col-span-3">Document Name</div>
                   <div className="col-span-4">Document Number</div>
                   <div className="col-span-5">File</div>
                 </div>
-
-                {/* Rows */}
                 <div className="border border-t-0 border-gray-200 dark:border-gray-700 rounded-b-lg">
                   {masterDocuments.map((doc) => {
                     const docState = docValues[doc.DocumentId];
-
                     return (
                       <div
                         key={doc.DocumentId}
                         className="grid grid-cols-12 px-4 py-4 gap-4 items-start md:items-center border-b border-gray-100 dark:border-gray-700 last:border-0"
                       >
-                        {/* Document Name */}
                         <div className="col-span-12 md:col-span-3 text-sm text-gray-800 dark:text-gray-200 font-bold md:font-medium">
                           {doc.DocumentName}
                         </div>
-
-                        {/* Document Number */}
                         <div className="col-span-12 md:col-span-4">
                           <label className="block md:hidden text-xs text-gray-500 mb-1">
                             Document Number
@@ -1528,15 +1712,11 @@ ${
                             }
                           />
                         </div>
-
-                        {/* Upload Section */}
                         <div className="col-span-12 md:col-span-5">
                           <label className="block md:hidden text-xs text-gray-500 mb-1">
                             Upload File
                           </label>
-
                           <div className="flex flex-col md:flex-row md:items-center gap-3 w-full">
-                            {/* Choose File */}
                             <label className="shrink-0 px-4 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover text-white text-xs font-medium rounded-md cursor-pointer whitespace-nowrap text-center transition shadow-sm">
                               Choose file
                               <input
@@ -1550,12 +1730,9 @@ ${
                                 }
                               />
                             </label>
-
-                            {/* File Info Box */}
                             {(docState?.fileName || docState?.file) && (
                               <div className="relative flex-1 min-w-0 flex items-center gap-3 bg-gray-100 dark:bg-gray-800 rounded-md px-3 py-2 border border-gray-200 dark:border-gray-700">
                                 <div className="flex-1 min-w-0">
-                                  {/* Upload Progress – ONLY for new uploads */}
                                   {!docState?.isExisting && (
                                     <div className="flex items-center gap-2 mb-1">
                                       <span className="text-[10px] uppercase font-bold text-green-600 whitespace-nowrap">
@@ -1577,8 +1754,6 @@ ${
                                       </div>
                                     </div>
                                   )}
-
-                                  {/* File Name */}
                                   <p
                                     className="text-xs text-primary-600 truncate font-medium cursor-pointer hover:underline"
                                     title={
@@ -1591,8 +1766,6 @@ ${
                                     {docState?.file?.name || docState?.fileName}
                                   </p>
                                 </div>
-
-                                {/* Remove Button */}
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -1668,7 +1841,6 @@ ${
                   touched={touched}
                   disabled={editDisabled.companyCodePrefix}
                 />
-
                 <InputField
                   label="Start Series:*"
                   name="companyStartSeries"
@@ -1679,7 +1851,6 @@ ${
                   touched={touched}
                   disabled={editDisabled.companyStartSeries}
                 />
-
                 <SelectField
                   label="Default Currency:*"
                   name="defaultCurrency"
@@ -1691,7 +1862,6 @@ ${
                   loading={loadingCurrency}
                   disabled={editDisabled.defaultCurrency}
                 />
-
                 <InputField
                   label="Bill Prefix:*"
                   name="billPrefix"
@@ -1704,7 +1874,6 @@ ${
                   touched={touched}
                   disabled={editDisabled.billPrefix}
                 />
-
                 <TextAreaField
                   label="Invoice Terms"
                   name="invoiceTerms"
@@ -1716,7 +1885,6 @@ ${
                   className="md:col-span-4"
                   disabled={editDisabled.invoiceTerms}
                 />
-
                 <div className="flex items-center gap-2 mt-2">
                   <input
                     type="checkbox"
@@ -1751,7 +1919,6 @@ ${
                   touched={touched}
                   disabled={editDisabled.employeeStartSeries}
                 />
-
                 <InputField
                   label="Start Series:*"
                   name="employeeStartSeries"
@@ -1764,19 +1931,171 @@ ${
                 />
               </div>
             )}
+
+            {/* TAB 5: Logo Settings (Banner Images) */}
+            {tab === 5 && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-5 animate-fadeIn">
+                {/* Dark Theme Logo */}
+                <div className="p-6 space-y-6">
+                  <p className="text-lg font-semibold">Dark Theme Logo</p>
+                  <div className="w-full md:w-auto flex-shrink-0 flex justify-center md:justify-start">
+                    <div className="relative w-36 h-36 group">
+                      <div className="w-full h-full rounded-xl border-[4px] border-white dark:border-gray-700 shadow-md overflow-hidden bg-gray-200 dark:bg-gray-800 flex items-center justify-center relative">
+                        {companyData[0]?.DarkThemeLogo ? (
+                          <img
+                            src={`${IMAGE_PREVIEW_URL}CompanyDocs/${companyData[0]?.DarkThemeLogo}`}
+                            alt="Dark Logo Preview"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : darkLogoPath ? (
+                          <img
+                            src={`${IMAGE_PREVIEW_URL}CompanyDocs/${darkLogoPath}`}
+                            alt="Dark Logo"
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              console.error(
+                                "Failed to load image:",
+                                darkLogoPath,
+                              );
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          <ImageIcon className="text-6xl text-gray-400 dark:text-gray-600" />
+                        )}
+                        {darkLogo?.uploading && (
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-20">
+                            <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                          </div>
+                        )}
+                      </div>
+                      <label className="absolute -top-3 -right-3 w-9 h-9 flex items-center justify-center bg-white dark:bg-gray-800 text-primary-500 rounded-full shadow-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-all z-10 border border-gray-100 dark:border-gray-600">
+                        <FaUpload size={14} />
+                        <input
+                          type="file"
+                          hidden
+                          accept="image/*"
+                          onChange={(e) => handleImageUpload(e, "dark")}
+                        />
+                      </label>
+                      {(darkLogo?.preview || darkLogoPath) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDarkLogo(null);
+                            setDarkLogoPath("");
+                            formikRef.current?.setFieldValue(
+                              "darkLogoPath",
+                              "",
+                            );
+                          }}
+                          className="absolute -bottom-3 -right-3 w-9 h-9 flex items-center justify-center bg-white dark:bg-gray-800 text-red-400 rounded-full shadow-lg hover:bg-red-50 dark:hover:bg-gray-700 transition-all z-10 border border-gray-200 dark:border-gray-600"
+                        >
+                          <FaTimes size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Light Theme Logo */}
+                <div className="p-6 space-y-6">
+                  <p className="text-lg font-semibold">Light Theme Logo</p>
+                  <div className="w-full md:w-auto flex-shrink-0 flex justify-center md:justify-start">
+                    <div className="relative w-36 h-36 group">
+                      <div className="w-full h-full rounded-xl border-[4px] border-white dark:border-gray-700 shadow-md overflow-hidden bg-gray-200 dark:bg-gray-800 flex items-center justify-center relative">
+                        {companyData[0]?.LightThemeLogo ? (
+                          <img
+                            src={`${IMAGE_PREVIEW_URL}CompanyDocs/${companyData[0]?.LightThemeLogo}`}
+                            alt="Light Logo Preview"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : lightLogoPath ? (
+                          <img
+                            src={`${IMAGE_PREVIEW_URL}CompanyDocs/${lightLogoPath}`}
+                            alt="Light Logo"
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              console.error(
+                                "Failed to load image:",
+                                lightLogoPath,
+                              );
+                              e.currentTarget.style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          <ImageIcon className="text-6xl text-gray-400 dark:text-gray-600" />
+                        )}
+                        {lightLogo?.uploading && (
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-20">
+                            <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin"></div>
+                          </div>
+                        )}
+                      </div>
+                      <label className="absolute -top-3 -right-3 w-9 h-9 flex items-center justify-center bg-white dark:bg-gray-800 text-primary-500 rounded-full shadow-lg cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700 transition-all z-10 border border-gray-100 dark:border-gray-600">
+                        <FaUpload size={14} />
+                        <input
+                          type="file"
+                          hidden
+                          accept="image/*"
+                          onChange={(e) => handleImageUpload(e, "light")}
+                        />
+                      </label>
+                      {(lightLogo?.preview || lightLogoPath) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setLightLogo(null);
+                            setLightLogoPath("");
+                            formikRef.current?.setFieldValue(
+                              "lightLogoPath",
+                              "",
+                            );
+                          }}
+                          className="absolute -bottom-3 -right-3 w-9 h-9 flex items-center justify-center bg-white dark:bg-gray-800 text-red-400 rounded-full shadow-lg hover:bg-red-50 dark:hover:bg-gray-700 transition-all z-10 border border-gray-200 dark:border-gray-600"
+                        >
+                          <FaTimes size={14} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Cropper Modal */}
+                <CropperModal
+                  open={showBannerCropper}
+                  image={rawBannerImage}
+                  aspectRatio={1}
+                  onClose={() => {
+                    setShowBannerCropper(false);
+                    setSelectedLogoType("");
+                  }}
+                  onCrop={(croppedImage: string) => {
+                    handleCroppedImage(croppedImage);
+                  }}
+                />
+                <ToastContainer position="top-right" autoClose={3000} />
+              </div>
+            )}
           </div>
 
+          {/* Company Logo Cropper Modal */}
           <CropperModal
-            open={showCropper}
-            image={rawImage}
+            open={showLogoCropper}
+            image={rawLogoImage}
             aspectRatio={1}
-            onClose={() => setShowCropper(false)}
+            onClose={() => {
+              setShowLogoCropper(false);
+              setLogoPreview("");
+              setRawLogoImage("");
+            }}
             onCrop={(croppedImage: string) => {
-              setRawImage(croppedImage);
+              setLogoPreview(croppedImage);
               uploadLogo(croppedImage);
-              setShowCropper(false);
+              setShowLogoCropper(false);
             }}
           />
+
           <ToastContainer position="top-right" autoClose={3000} />
         </form>
       )}

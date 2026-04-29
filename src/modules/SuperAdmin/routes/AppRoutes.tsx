@@ -90,6 +90,7 @@ import MailTemplateMaster from "../components/WebsiteManagement/MailTemplateMast
 import InvestmentReport from "../components/Reports/InvestmentReport.js";
 import Withdraw from "../components/Reports/WithdrawReport.js";
 import TeamReport from "../components/Reports/TeamReport.js";
+import P2PReport from "../components/Reports/p2pReport.js";
 
 //Support
 import CreateSupportTicket from "../components/Support/CreateSupportTicket.js";
@@ -452,6 +453,10 @@ const AppRoutes = () => {
               <Route
                 path="/superadmin/reports/team-report"
                 element={<TeamReport />}
+              />
+              <Route
+                path="/superadmin/reports/p2p-report"
+                element={<P2PReport />}
               />
               //Withdrawal
               <Route
