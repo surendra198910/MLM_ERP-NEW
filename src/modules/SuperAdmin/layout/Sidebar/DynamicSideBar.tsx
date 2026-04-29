@@ -16,7 +16,6 @@ import {
 import { ApiService } from "../../../../services/ApiService";
 import SidebarSkeleton from "./SidebarSkeleton";
 
-
 const DotIcon = <Circle size={4} fill="currentColor" className="opacity-70" />;
 
 /* --------------------------------------------
@@ -127,7 +126,7 @@ const DynamicSideBar: React.FC = () => {
             : Array.isArray(res)
               ? res
               : [];
-
+        console.log(rows);
         setMenuData(rows);
       } catch (err) {
         console.error("Sidebar Error:", err);
@@ -184,7 +183,7 @@ const DynamicSideBar: React.FC = () => {
           ParentCategoryId: row.ParentCategoryId,
           ParentCategoryName: row.ParentCategoryName,
           Icon: row.Icon,
-          IconColor: row.IconColor,   // ✅ ADD THIS
+          IconColor: row.IconColor, // ✅ ADD THIS
           Forms: [],
           Children: [],
         });
@@ -194,7 +193,7 @@ const DynamicSideBar: React.FC = () => {
         row.ShowInMenu &&
         !(
           row.FormDisplayName?.trim().toLowerCase() ===
-          row.FormCategoryName?.trim().toLowerCase() &&
+            row.FormCategoryName?.trim().toLowerCase() &&
           row.ParentCategoryId !== MASTER_CATEGORY_ID
         )
       ) {
@@ -278,8 +277,8 @@ const DynamicSideBar: React.FC = () => {
               slug(f.FormNameWithExt || f.FormDisplayName),
             )}
             className="text-primary-sidebar-text dark:text-gray-100 flex items-center py-2 px-3 rounded-md text-sm transition-colors hover:bg-primary-sidebar-bg-hover dark:hover:bg-gray-800"
-          // Apply text color directly here to ensure icons inside don't get forced to this color if handled separately
-          // className="text-primary-sidebar-text dark:text-gray-100"
+            // Apply text color directly here to ensure icons inside don't get forced to this color if handled separately
+            // className="text-primary-sidebar-text dark:text-gray-100"
           >
             {/* Arrow inherits text color */}
             <ArrowRight size={12} className="mr-2 opacity-60" />
@@ -298,7 +297,7 @@ const DynamicSideBar: React.FC = () => {
                 className="text-primary-sidebar-text dark:text-gray-100 flex justify-between items-center cursor-pointer px-2 py-2 rounded-md transition-colors hover:bg-primary-sidebar-bg-hover dark:hover:bg-gray-800
 "
                 onClick={() => toggle(childKey)}
-              // className="text-primary-sidebar-text dark:text-gray-100"
+                // className="text-primary-sidebar-text dark:text-gray-100"
               >
                 <div className="flex items-center gap-2 overflow-hidden">
                   <span className="text-primary-sidebar-text dark:text-gray-100">
@@ -345,10 +344,10 @@ const DynamicSideBar: React.FC = () => {
       style={
         !isDarkMode
           ? ({
-            "--sidebar-bg": panelSettings.SidebarColor,
-            "--sidebar-text": panelSettings.TextColor,
-            "--sidebar-hover": panelSettings.HoverColor,
-          } as React.CSSProperties)
+              "--sidebar-bg": panelSettings.SidebarColor,
+              "--sidebar-text": panelSettings.TextColor,
+              "--sidebar-hover": panelSettings.HoverColor,
+            } as React.CSSProperties)
           : undefined
       }
     >
@@ -369,7 +368,7 @@ const DynamicSideBar: React.FC = () => {
           />
           <span
             className="font-bold text-lg leading-tight truncate text-primary-sidebar-text dark:text-gray-100"
-          // className="text-primary-sidebar-text dark:text-gray-100"
+            // className="text-primary-sidebar-text dark:text-gray-100"
           >
             {panelSettings.SidebarHeader}
           </span>
@@ -404,14 +403,15 @@ const DynamicSideBar: React.FC = () => {
                         {/* Icon retains its own color from iconMap */}
                         <span
                           className="material-symbols-outlined"
-                          style={{ color: cat.IconColor || "#fff", fontSize: 20 }}
+                          style={{
+                            color: cat.IconColor || "#fff",
+                            fontSize: 20,
+                          }}
                         >
                           {cat.Icon || "dashboard"}
                         </span>
                         {/* Text forced to theme color */}
-                        <span
-                          className="font-medium text-sm text-primary-sidebar-text dark:text-gray-100"
-                                                >
+                        <span className="font-medium text-sm text-primary-sidebar-text dark:text-gray-100">
                           Dashboard
                         </span>
                       </Link>
@@ -421,7 +421,6 @@ const DynamicSideBar: React.FC = () => {
 
                 const key = `${cat.FormCategoryId}`;
                 const isOpen = openState[key];
-                
 
                 return (
                   <li key={key}>
@@ -440,13 +439,13 @@ const DynamicSideBar: React.FC = () => {
                             color: cat.IconColor || "#458d0e",
                             fontSize: 20,
                           }}
-                        > 
+                        >
                           {cat.Icon || "circle"}
                         </span>
                         {/* Text Container - Uses dynamic theme color */}
                         <span
                           className="font-medium text-sm truncate text-primary-sidebar-text dark:text-gray-100"
-                        // className="text-primary-sidebar-text dark:text-gray-100"
+                          // className="text-primary-sidebar-text dark:text-gray-100"
                         >
                           {cat.FormCategoryName}
                         </span>
