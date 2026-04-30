@@ -70,6 +70,7 @@ import BinaryIncomeSetting from "../components/settings/BinaryIncomeSetting.js";
 // import ProcessROIIncome from "../components/Commission/ProcessROIIncome.js";
 import IncomeSetting from "../components/settings/IncomeSetting.js";
 import ROIIncomeReport from "../components/Commission/ROIIncomeReport.js";
+
 import AddReport from "../components/AdministrativeTools/AddReport/AddReport.js";
 import ManageReports from "../components/AdministrativeTools/AddReport/ManageReport.js";
 import ContactTypeV2 from "../components/Common/ContactTypeV2.js";
@@ -114,6 +115,7 @@ import ManageCryptowallet from "../components/settings/ManageCryptoWallet.js";
 import ManageWalletType from "../components/settings/ManageWalletType.js";
 import CompanyBankAccount from "../../SuperAdmin/components/settings/ManagebankAccount.js";
 import ProtectedRoute from "../../../utils/ProtectedRoutes.js";
+import RequestFundReport from "../components/Reports/RequestFundReport.js";
 
 const AppRoutes = () => {
   const [active, setActive] = useState(false);
@@ -360,6 +362,11 @@ const AppRoutes = () => {
               <Route
                 path="/superadmin/commission/roi-income-report"
                 element={<ROIIncomeReport />}
+              />
+
+               <Route
+                path="/superadmin/reports/request-fund-report"
+                element={<RequestFundReport />}
               />
               <Route
                 path="/superadmin/mlm-setting/add-report/:id?"
