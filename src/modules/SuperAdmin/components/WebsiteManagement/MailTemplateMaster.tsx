@@ -768,233 +768,319 @@ setEditorContent(templateData.EmailContent || "");
 
       {/* Template Editor Modal */}
       {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-xl w-full max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
-            {/* Modal Header */}
-            <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700">
-              <h4 className="text-xl font-bold text-gray-900 dark:text-white">
-                {modalMode === "add" ? "Create Email Template" : "Edit Email Template"}
-              </h4>
-              <button onClick={handleCloseModal} className="text-gray-400 hover:text-gray-600">
-                <i className="material-symbols-outlined">close</i>
-              </button>
+     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+  <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden">
+
+    {/* Header */}
+    <div className="flex justify-between items-center px-6 py-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+      <h4 className="text-lg font-semibold text-gray-800 dark:text-white">
+        {modalMode === "add" ? "Create Email Template" : "Edit Email Template"}
+      </h4>
+      <button onClick={handleCloseModal} className="p-2 rounded-md hover:bg-gray-200 dark:hover:bg-gray-700">
+        <i className="material-symbols-outlined">close</i>
+      </button>
+    </div>
+
+    {/* Body */}
+    <div className="flex-1 overflow-y-auto px-6 py-5">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+
+        {/* LEFT */}
+        <div className="lg:col-span-3 space-y-5">
+
+          {/* Row */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">Template Name *</label>
+              <input
+                type="text"
+                value={formData.TemplateName}
+                onChange={(e) => setFormData({ ...formData, TemplateName: e.target.value })}
+                className="w-full h-10 px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-primary-500 outline-none"
+              />
             </div>
 
-            <div className="flex-1 overflow-y-auto p-6">
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                {/* Left Column - Template Details */}
-                <div className="lg:col-span-3 space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Template Name *</label>
-                      <input
-                        type="text"
-                        value={formData.TemplateName}
-                        onChange={(e) => setFormData({ ...formData, TemplateName: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                        placeholder="Enter template name"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Template Type</label>
-                      <select
-                        value={formData.Type}
-                        onChange={(e) => setFormData({ ...formData, Type: e.target.value })}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      >
-                        <option value="Public">Public</option>
-                        <option value="Private">Private</option>
-                      </select>
-                    </div>
-                  </div>
+            <div>
+              <label className="text-xs font-medium text-gray-500 mb-1 block">Template Type</label>
+              <select
+                value={formData.Type}
+                onChange={(e) => setFormData({ ...formData, Type: e.target.value })}
+                className="w-full h-10 px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-primary-500 outline-none"
+              >
+                <option value="Public">Public</option>
+                <option value="Private">Private</option>
+              </select>
+            </div>
+          </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Subject *</label>
-                    <input
-                      type="text"
-                      value={formData.Subject}
-                      onChange={(e) => setFormData({ ...formData, Subject: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-primary-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white"
-                      placeholder="Enter email subject"
-                    />
-                  </div>
+          {/* Subject */}
+          <div>
+            <label className="text-xs font-medium text-gray-500 mb-1 block">Email Subject *</label>
+            <input
+              type="text"
+              value={formData.Subject}
+              onChange={(e) => setFormData({ ...formData, Subject: e.target.value })}
+              className="w-full h-10 px-3 border border-gray-300 dark:border-gray-600 rounded-md bg-gray-50 dark:bg-gray-800 focus:ring-2 focus:ring-primary-500 outline-none"
+            />
+          </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Email Content</label>
-                    
-                    {/* Editor Toolbar */}
+          {/* Editor Section */}
+          <div>
+            <label className="text-xs font-medium text-gray-500 mb-2 block">Email Content</label>
 
-                    <div className="border border-gray-300 dark:border-gray-600 rounded-t-lg p-2 bg-gray-50 dark:bg-gray-900 flex flex-wrap gap-1 sticky top-0 z-10">
-                     
-                    {/* -------------------------- */}
-<button
-  type="button"
-  onClick={() => setHtmlMode(!htmlMode)}
-  className="px-3 py-1 text-sm bg-yellow-200 dark:bg-yellow-700 rounded hover:bg-yellow-300"
->
-  {htmlMode ? "</>" : "</>"}
-</button>
-                    {/* ---------------------- */}
-                     
-                     
-                      <button type="button" onClick={() => execCommand('bold')} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded" title="Bold">
-                        <i className="material-symbols-outlined text-lg">format_bold</i>
-                      </button>
-                      <button type="button" onClick={() => execCommand('italic')} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded" title="Italic">
-                        <i className="material-symbols-outlined text-lg">format_italic</i>
-                      </button>
-                      <button type="button" onClick={() => execCommand('underline')} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded" title="Underline">
-                        <i className="material-symbols-outlined text-lg">format_underlined</i>
-                      </button>
-                      
-                      <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
-                      
-                      <button type="button" onClick={() => handleTextAlign('left')} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded" title="Align Left">
-                        <i className="material-symbols-outlined text-lg">format_align_left</i>
-                      </button>
-                      <button type="button" onClick={() => handleTextAlign('center')} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded" title="Align Center">
-                        <i className="material-symbols-outlined text-lg">format_align_center</i>
-                      </button>
-                      <button type="button" onClick={() => handleTextAlign('right')} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded" title="Align Right">
-                        <i className="material-symbols-outlined text-lg">format_align_right</i>
-                      </button>
-                      
-                      <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
-                      
-                      <button type="button" onClick={() => execCommand('insertUnorderedList')} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded" title="Bullet List">
-                        <i className="material-symbols-outlined text-lg">format_list_bulleted</i>
-                      </button>
-                      <button type="button" onClick={() => execCommand('insertOrderedList')} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded" title="Numbered List">
-                        <i className="material-symbols-outlined text-lg">format_list_numbered</i>
-                      </button>
-                      
-                      <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
-                      
-                      <select onChange={(e) => handleFontSize(e.target.value)} className="px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-white dark:bg-gray-800">
-                        <option value="3">Normal</option>
-                        <option value="1">Small</option>
-                        <option value="4">Large</option>
-                        <option value="5">Huge</option>
-                        <option value="6">Very Large</option>
-                        <option value="7">Maximum</option>
-                      </select>
-                      
-                      <input type="color" onChange={(e) => handleTextColor(e.target.value)} className="w-8 h-8 p-0 border rounded cursor-pointer" title="Text Color" />
-                      <input type="color" onChange={(e) => handleBackgroundColor(e.target.value)} className="w-8 h-8 p-0 border rounded cursor-pointer" title="Background Color" />
-                      
-                      <div className="w-px h-6 bg-gray-300 dark:bg-gray-600 mx-1"></div>
-                      
-                      <button type="button" onClick={handleInsertLink} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded" title="Insert Link">
-                        <i className="material-symbols-outlined text-lg">link</i>
-                      </button>
-                      <button type="button" onClick={handleInsertImage} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded" title="Insert Image URL">
-                        <i className="material-symbols-outlined text-lg">image</i>
-                      </button>
-                      
-                      <input type="file" ref={fileInputRef} onChange={handleLocalImageUpload} accept="image/*" className="hidden" />
-                      <button type="button" onClick={() => fileInputRef.current?.click()} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-700 rounded" title="Upload Image">
-                        <i className="material-symbols-outlined text-lg">upload_file</i>
-                      </button>
-                    </div>
-                    
-                    {/* Editor Content - Fixed positioning */}
-                    {/* Preview Toggle Button */}
-<div className="flex justify-end mb-2">
+            {/* Toolbar stays SAME (your improved one) */}
+            
+
+            {/* Add wrapper for editor */}
+            <div className="border border-gray-300 dark:border-gray-700 rounded-lg overflow-hidden bg-white dark:bg-gray-800 shadow-sm">
+
+              {/* YOUR TOOLBAR HERE (UNCHANGED) */}
+              {/* Editor Toolbar */}
+
+<div className="sticky top-0 z-10 flex flex-wrap items-center gap-1 px-2 py-1 
+bg-white dark:bg-gray-900 
+border border-gray-300 dark:border-gray-700 
+rounded-t-md shadow-sm">
+
+  {/* HTML Toggle */}
   <button
-    onClick={() => setPreviewMode(!previewMode)}
-    className="px-3 py-1 text-sm bg-gray-200 dark:bg-gray-700 rounded hover:bg-gray-300"
+    type="button"
+    onClick={() => setHtmlMode(!htmlMode)}
+    className="h-8 px-2 text-sm font-mono 
+    bg-gray-100 dark:bg-gray-800 
+    border border-gray-300 dark:border-gray-600 
+    rounded-md 
+    hover:bg-gray-200 dark:hover:bg-gray-700"
   >
-    {previewMode ? "Edit Mode" : "Preview Mode"}
+    {htmlMode ? "</>" : "</>"}
   </button>
+
+  {/* Bold */}
+  <button type="button" onClick={() => execCommand('bold')}
+    className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+    title="Bold">
+    <i className="material-symbols-outlined text-[18px] leading-none">format_bold</i>
+  </button>
+
+  {/* Italic */}
+  <button type="button" onClick={() => execCommand('italic')}
+    className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+    title="Italic">
+    <i className="material-symbols-outlined text-[18px] leading-none">format_italic</i>
+  </button>
+
+  {/* Underline */}
+  <button type="button" onClick={() => execCommand('underline')}
+    className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+    title="Underline">
+    <i className="material-symbols-outlined text-[18px] leading-none">format_underlined</i>
+  </button>
+
+  <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+
+  {/* Align Left */}
+  <button type="button" onClick={() => handleTextAlign('left')}
+    className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+    title="Align Left">
+    <i className="material-symbols-outlined text-[18px] leading-none">format_align_left</i>
+  </button>
+
+  {/* Align Center */}
+  <button type="button" onClick={() => handleTextAlign('center')}
+    className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+    title="Align Center">
+    <i className="material-symbols-outlined text-[18px] leading-none">format_align_center</i>
+  </button>
+
+  {/* Align Right */}
+  <button type="button" onClick={() => handleTextAlign('right')}
+    className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+    title="Align Right">
+    <i className="material-symbols-outlined text-[18px] leading-none">format_align_right</i>
+  </button>
+
+  <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+
+  {/* Bullet List */}
+  <button type="button" onClick={() => execCommand('insertUnorderedList')}
+    className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+    title="Bullet List">
+    <i className="material-symbols-outlined text-[18px] leading-none">format_list_bulleted</i>
+  </button>
+
+  {/* Numbered List */}
+  <button type="button" onClick={() => execCommand('insertOrderedList')}
+    className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+    title="Numbered List">
+    <i className="material-symbols-outlined text-[18px] leading-none">format_list_numbered</i>
+  </button>
+
+  <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+
+  {/* Font Size */}
+  <select
+    onChange={(e) => handleFontSize(e.target.value)}
+    className="h-8 text-sm px-2 
+    border border-gray-300 dark:border-gray-600 
+    rounded-md 
+    bg-white dark:bg-gray-800 
+    focus:outline-none">
+    <option value="3">Normal</option>
+    <option value="1">Small</option>
+    <option value="4">Large</option>
+    <option value="5">Huge</option>
+    <option value="6">Very Large</option>
+    <option value="7">Maximum</option>
+  </select>
+
+  {/* Text Color */}
+  <input
+    type="color"
+    onChange={(e) => handleTextColor(e.target.value)}
+    className="h-8 w-8 p-0 border border-gray-300 dark:border-gray-600 
+    rounded-md cursor-pointer overflow-hidden"
+    title="Text Color"
+  />
+
+  {/* Background Color */}
+  <input
+    type="color"
+    onChange={(e) => handleBackgroundColor(e.target.value)}
+    className="h-8 w-8 p-0 border border-gray-300 dark:border-gray-600 
+    rounded-md cursor-pointer overflow-hidden"
+    title="Background Color"
+  />
+
+  <div className="w-px h-5 bg-gray-300 dark:bg-gray-600 mx-1"></div>
+
+  {/* Insert Link */}
+  <button type="button" onClick={handleInsertLink}
+    className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+    title="Insert Link">
+    <i className="material-symbols-outlined text-[18px] leading-none">link</i>
+  </button>
+
+  {/* Insert Image URL */}
+  <button type="button" onClick={handleInsertImage}
+    className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+    title="Insert Image URL">
+    <i className="material-symbols-outlined text-[18px] leading-none">image</i>
+  </button>
+
+  {/* Upload Image */}
+  <input
+    type="file"
+    ref={fileInputRef}
+    onChange={handleLocalImageUpload}
+    accept="image/*"
+    className="hidden"
+  />
+  <button
+    type="button"
+    onClick={() => fileInputRef.current?.click()}
+    className="h-8 w-8 flex items-center justify-center rounded-md hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+    title="Upload Image">
+    <i className="material-symbols-outlined text-[18px] leading-none">upload_file</i>
+  </button>
+
 </div>
 
-{/* Editor / Preview */}
-{/* {previewMode ? (
-  <div
-    className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 min-h-[400px] bg-white dark:bg-gray-700 text-gray-900 dark:text-white overflow-y-auto"
-    dangerouslySetInnerHTML={{ __html: editorContent }}
-  />
-) : (
-  <div
-    ref={editorRef}
-    contentEditable
-    dir="ltr"
-    onInput={updateContent}
-    className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 
-    min-h-[400px] bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none overflow-y-auto"
-    style={{ lineHeight: '1.6', cursor: 'text' }}
-  />
-)} */}
+              {/* Preview Toggle */}
+              <div className="flex justify-end px-3 py-2 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900">
+                <button
+                  onClick={() => setPreviewMode(!previewMode)}
+                  className="text-xs px-3 py-1 rounded-md bg-gray-200 dark:bg-gray-700 hover:bg-gray-300"
+                >
+                  {previewMode ? "Edit Mode" : "Preview Mode"}
+                </button>
+              </div>
 
-{htmlMode ? (
-  // ✅ RAW HTML EDIT MODE
-  <textarea
-    value={editorContent}
-    onChange={(e) => {
-      setEditorContent(e.target.value);
-      setFormData(prev => ({ ...prev, EmailContent: e.target.value }));
-    }}
-    className="w-full min-h-[400px] border border-gray-300 dark:border-gray-600 rounded-lg p-4 font-mono bg-black text-green-400"
-  />
-) : previewMode ? (
-  // ✅ PREVIEW MODE
-  <div
-    className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 min-h-[400px] bg-white dark:bg-gray-700 text-gray-900 dark:text-white overflow-y-auto"
-    dangerouslySetInnerHTML={{ __html: editorContent }}
-  />
-) : (
-  // ✅ NORMAL EDITOR
-  <div
-    ref={editorRef}
-    contentEditable
-    dir="ltr"
-    onInput={updateContent}
-    className="border border-gray-300 dark:border-gray-600 rounded-lg p-4 min-h-[400px] bg-white dark:bg-gray-700 text-gray-900 dark:text-white focus:outline-none overflow-y-auto"
-  />
-)}
-                    <p className="text-xs text-gray-500 mt-2">
-                      <i className="material-symbols-outlined text-xs align-middle">info</i> 
-                      Click on an image to see resize handles at the corners. Drag to resize. Click outside image to hide handles.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Right Column - Tags */}
-                <div className="lg:col-span-1">
-                  <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-4 border border-gray-200 dark:border-gray-700 sticky top-0">
-                    <label className="font-semibold text-gray-700 dark:text-gray-300 mb-3 block">
-                      <i className="material-symbols-outlined text-sm align-middle mr-1">local_offer</i>
-                      Select TAG Master
-                    </label>
-                    <div className="text-xs text-gray-500 mb-2">Click on any tag to insert at cursor position</div>
-                    <div className="space-y-1 max-h-96 overflow-y-auto">
-                      {['FNAME', 'LNAME', 'EMAIL', 'COMPANY', 'MOBILE', 'DATE', 'ADDRESS', 'CITY', 'STATE', 'COUNTRY', 'WEBSITE', 'ORDER_ID'].map((tag) => (
-                        <div
-                          key={tag}
-                          onClick={() => insertTag(`{${tag}}`)}
-                          className="p-2 bg-white dark:bg-gray-800 rounded cursor-pointer hover:bg-primary-100 dark:hover:bg-primary-900/30 font-mono text-sm transition-colors border border-gray-200 dark:border-gray-700"
-                        >
-                          {'{' + tag + '}'}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+              {/* Editor Area */}
+              <div className="p-4">
+                {htmlMode ? (
+                  <textarea
+                    value={editorContent}
+                    onChange={(e) => {
+                      setEditorContent(e.target.value);
+                      setFormData(prev => ({ ...prev, EmailContent: e.target.value }));
+                    }}
+                    className="w-full min-h-[400px] font-mono text-sm bg-black text-green-400 p-4 rounded-md"
+                  />
+                ) : previewMode ? (
+                  <div
+                    className="min-h-[400px]"
+                    dangerouslySetInnerHTML={{ __html: editorContent }}
+                  />
+                ) : (
+                  <div
+                    ref={editorRef}
+                    contentEditable
+                    dir="ltr"
+                    onInput={updateContent}
+                    className="min-h-[400px] focus:outline-none"
+                  />
+                )}
               </div>
             </div>
 
-            {/* Modal Footer */}
-            <div className="flex justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700">
-              <button onClick={handleCloseModal} className="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700">
-                Cancel
-              </button>
-              <button onClick={handleSaveTemplate} disabled={saving} className="px-4 py-2 bg-primary-500 text-white rounded-lg hover:bg-primary-600 disabled:opacity-50 flex items-center gap-2">
-                {saving ? <SpinnerLoader /> : <i className="material-symbols-outlined text-sm">save</i>}
-                {modalMode === "add" ? "Add Template" : "Update Template"}
-              </button>
-            </div>
+            <p className="text-xs text-gray-400 mt-2">
+              Click image to resize. Drag corners. Click outside to exit resize.
+            </p>
           </div>
         </div>
+
+        {/* RIGHT PANEL */}
+        <div className="lg:col-span-1">
+          <div className="border border-gray-200 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-900 sticky top-0">
+
+            <div className="flex items-center gap-2 mb-3">
+              <i className="material-symbols-outlined text-sm">sell</i>
+              <span className="text-sm font-semibold">Select TAG Master</span>
+            </div>
+
+            <p className="text-xs text-gray-500 mb-3">
+              Click to insert at cursor position
+            </p>
+
+            <div className="flex flex-wrap gap-2 max-h-96 overflow-y-auto">
+              {['FNAME','LNAME','EMAIL','COMPANY','MOBILE','DATE','ADDRESS','CITY','STATE','COUNTRY','WEBSITE','ORDER_ID'].map(tag => (
+                <button
+                  key={tag}
+                  onClick={() => insertTag(`{${tag}}`)}
+                  className="px-3 py-1 text-xs rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-primary-500 hover:text-white transition"
+                >
+                  {`{${tag}}`}
+                </button>
+              ))}
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    {/* Footer */}
+    <div className="flex justify-end gap-3 px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+      <button
+        onClick={handleCloseModal}
+        className="px-4 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md hover:bg-gray-100 dark:hover:bg-gray-700"
+      >
+        Cancel
+      </button>
+
+      <button
+        onClick={handleSaveTemplate}
+        disabled={saving}
+        className="px-4 py-2 text-sm bg-primary-500 text-white rounded-md hover:bg-primary-600 disabled:opacity-50 flex items-center gap-2"
+      >
+        {saving ? <SpinnerLoader /> : <i className="material-symbols-outlined text-sm">save</i>}
+        {modalMode === "add" ? "Add Template" : "Update Template"}
+      </button>
+    </div>
+
+  </div>
+</div>
       )}
 
       {/* Image URL Modal */}
