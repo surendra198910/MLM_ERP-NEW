@@ -13,6 +13,9 @@ interface ThemeContextType {
   theme: PanelSettings;
   refreshTheme: () => Promise<void>;
   setTheme: (theme: PanelSettings) => void;
+
+  dynamicTheme: string;
+  setDynamicTheme: (val: string) => void;
 }
 
 const ThemeContext = createContext<ThemeContextType | null>(null);
@@ -28,6 +31,7 @@ const defaultTheme: PanelSettings = {
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
+  const [dynamicTheme, setDynamicTheme] = useState("");
   const { universalService } = ApiService();
   const [theme, setThemeState] = useState<PanelSettings>(defaultTheme);
 
@@ -40,6 +44,10 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   // 🔹 Fetch latest from API
   const refreshTheme = async () => {
     try {
+      const [dynamicTheme, setDynamicTheme] = useState(
+        localStorage.getItem("theme") || "light",
+      );
+
       const res = await universalService({
         procName: "USP_PanelSetting",
         Para: JSON.stringify({ ActionMode: "GET_GLOBAL" }),
@@ -61,7 +69,15 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, refreshTheme, setTheme }}>
+    <ThemeContext.Provider
+      value={{
+        theme,
+        refreshTheme,
+        setTheme,
+        dynamicTheme,
+        setDynamicTheme,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );
