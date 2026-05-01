@@ -38,7 +38,6 @@ const InputField = ({
   touched,
 }: any) => (
   <div className="flex flex-col dark:text-gray-100">
-
     <label className="text-sm text-gray-700 dark:text-gray-300 mb-1">
       {label}
     </label>
@@ -48,18 +47,15 @@ const InputField = ({
       placeholder={placeholder}
       value={values[name] || ""}
       onChange={handleChange}
-      className={`${bigInputClasses} ${errors[name] && touched[name]
-        ? "border-red-500 focus:ring-red-500"
-        : ""
-        }`}
+      className={`${bigInputClasses} ${
+        errors[name] && touched[name] ? "border-red-500 focus:ring-red-500" : ""
+      }`}
     />
 
     {/* reserve error space */}
     <div className="min-h-[16px] mt-1">
       {errors[name] && touched[name] && (
-        <span className="text-xs text-red-600">
-          {errors[name]}
-        </span>
+        <span className="text-xs text-red-600">{errors[name]}</span>
       )}
     </div>
   </div>
@@ -74,7 +70,6 @@ const TextareaField = ({
   touched,
 }: any) => (
   <div className="flex flex-col">
-
     <label className="text-sm text-gray-700 dark:text-gray-300 mb-1">
       {label}
     </label>
@@ -91,9 +86,7 @@ const TextareaField = ({
 
     <div className="min-h-[16px] mt-1">
       {errors[name] && touched[name] && (
-        <span className="text-xs text-red-600">
-          {errors[name]}
-        </span>
+        <span className="text-xs text-red-600">{errors[name]}</span>
       )}
     </div>
   </div>
@@ -107,7 +100,9 @@ const AddReport: React.FC = () => {
   const { universalService } = ApiService();
   const navigate = useNavigate();
   const { id } = useParams();
-  const [reportId, setReportId] = useState<number | null>(id ? Number(id) : null);
+  const [reportId, setReportId] = useState<number | null>(
+    id ? Number(id) : null,
+  );
   const initialValues: ReportFormValues = {
     reportName: "",
     procedureName: "",
@@ -117,7 +112,7 @@ const AddReport: React.FC = () => {
 
   const handleSubmit = async (
     values: ReportFormValues,
-    helpers: FormikHelpers<ReportFormValues>
+    helpers: FormikHelpers<ReportFormValues>,
   ) => {
     await saveReportWithColumns(values);
     helpers.setSubmitting(false);
@@ -140,7 +135,6 @@ const AddReport: React.FC = () => {
       const res = await universalService(payload);
       const result = res?.data ?? res;
 
-
       if (!Array.isArray(result)) {
         Swal.fire("Error", result?.Msg || "Query failed", "error");
         return;
@@ -152,31 +146,41 @@ const AddReport: React.FC = () => {
         return;
       }
 
-
-      setColumns(prev => {
+      setColumns((prev) => {
         const existingMap = new Map(
-          prev.map(c => [c.columnName.toLowerCase(), c])
+          prev.map((c) => [c.columnName?.toLowerCase(), c]),
         );
 
         const merged: ReportColumn[] = result.map((c: any, i: number) => {
-          const old = existingMap.get(c.name.toLowerCase());
+          const colName = c.ColumnName || c.name; // ✅ handle both safely
+          const key = colName?.toLowerCase();
+
+          const old = existingMap.get(key);
 
           if (old) {
             return {
               ...old,
-              id: i + 1,
+
+              // ✅ keep latest backend structure
+              columnName: colName,
+              displayName: old.displayName || colName,
+
+              // ✅ update ordering safely
+              id: old.id ?? i + 1,
               displayOrder: i + 1,
-              columnIndex: c.ColumnIndex,  // ✅ preserve original
+
+              // ✅ always trust backend index
+              columnIndex: c.ColumnIndex,
             };
           }
 
           return {
             id: i + 1,
-            columnName: c.name,
-            displayName: c.name,
+            columnName: colName,
+            displayName: colName,
             displayOrder: i + 1,
 
-            columnIndex: c.ColumnIndex,   // ⭐ VERY IMPORTANT
+            columnIndex: c.ColumnIndex, // ✅ critical
 
             isDefault: true,
             isCurrency: false,
@@ -199,14 +203,12 @@ const AddReport: React.FC = () => {
         timer: 1200,
         showConfirmButton: false,
       });
-
     } catch (err) {
       console.error(err);
       Swal.fire("Error", "Failed to generate columns", "error");
     }
   };
   const saveReportWithColumns = async (values: ReportFormValues) => {
-
     if (!columns.length) {
       Swal.fire("Warning", "Generate columns first", "warning");
       return;
@@ -217,7 +219,7 @@ const AddReport: React.FC = () => {
       icon: "question",
       showCancelButton: true,
       confirmButtonText: "Yes, Save",
-      cancelButtonText: "Cancel"
+      cancelButtonText: "Cancel",
     });
 
     if (!confirm.isConfirmed) return;
@@ -227,7 +229,7 @@ const AddReport: React.FC = () => {
       Swal.fire({
         title: "Saving...",
         allowOutsideClick: false,
-        didOpen: () => Swal.showLoading()
+        didOpen: () => Swal.showLoading(),
       });
 
       const actionMode = reportId ? "SaveColumnsBulk" : "Insert";
@@ -251,7 +253,7 @@ const AddReport: React.FC = () => {
               DisplayName: c.displayName,
 
               DisplayOrder: c.displayOrder,
-              ColumnIndex: c.columnIndex,   // ⭐ USE ORIGINAL / SWAPPED VALUE
+              ColumnIndex: c.columnIndex, // ⭐ USE ORIGINAL / SWAPPED VALUE
 
               DefaultVisible: c.isDefault,
               IsCurrency: c.isCurrency,
@@ -264,10 +266,10 @@ const AddReport: React.FC = () => {
                   ? "DESC"
                   : "ASC",
 
-              TableAlias: null
-            }))
-          )
-        })
+              TableAlias: null,
+            })),
+          ),
+        }),
       };
 
       const res = await universalService(payload);
@@ -277,7 +279,6 @@ const AddReport: React.FC = () => {
       const response = Array.isArray(data) ? data[0] : data;
 
       if (response?.Status === 1 || response?.Status === "1") {
-
         if (!reportId && response?.ReportId) {
           setReportId(response.ReportId);
         }
@@ -286,20 +287,17 @@ const AddReport: React.FC = () => {
           icon: "success",
           title: "Success",
           text: response?.Message || "Report saved successfully",
-          confirmButtonText: "OK"
+          confirmButtonText: "OK",
         });
-
       } else {
         Swal.fire("Error", response?.Message || "Save failed", "error");
       }
-
     } catch (e) {
       console.error("Save report failed:", e);
       Swal.fire("Error", "Server error occurred", "error");
     }
   };
   const executeQueryTest = async (query: string) => {
-
     if (!query) {
       Swal.fire("Warning", "Please enter query first", "warning");
       return;
@@ -309,15 +307,15 @@ const AddReport: React.FC = () => {
       Swal.fire({
         title: "Executing...",
         allowOutsideClick: false,
-        didOpen: () => Swal.showLoading()
+        didOpen: () => Swal.showLoading(),
       });
 
       const payload = {
         procName: "SystemReport",
         Para: JSON.stringify({
           ActionMode: "TestQuery",
-          Query: encodeURIComponent(query)
-        })
+          Query: encodeURIComponent(query),
+        }),
       };
 
       const res = await universalService(payload);
@@ -338,7 +336,6 @@ const AddReport: React.FC = () => {
 
       /* ⭐ ROWS PREVIEW */
       if (Array.isArray(data)) {
-
         const preview = data.slice(0, 2);
         const columns = Object.keys(preview[0] || {});
 
@@ -347,19 +344,31 @@ const AddReport: React.FC = () => {
           <table style="width:100%;border-collapse:collapse;font-size:12px">
             <thead>
               <tr>
-                ${columns.map(c => `
+                ${columns
+                  .map(
+                    (c) => `
                   <th style="border:1px solid #ddd;padding:6px;background:#f3f4f6">${c}</th>
-                `).join("")}
+                `,
+                  )
+                  .join("")}
               </tr>
             </thead>
             <tbody>
-              ${preview.map(row => `
+              ${preview
+                .map(
+                  (row) => `
                 <tr>
-                  ${columns.map(c => `
+                  ${columns
+                    .map(
+                      (c) => `
                     <td style="border:1px solid #ddd;padding:6px">${row[c] ?? ""}</td>
-                  `).join("")}
+                  `,
+                    )
+                    .join("")}
                 </tr>
-              `).join("")}
+              `,
+                )
+                .join("")}
             </tbody>
           </table>
         </div>
@@ -372,12 +381,11 @@ const AddReport: React.FC = () => {
           <div>Returned <b>${data.length}</b> rows</div>
           ${tableHtml}
         `,
-          width: 700
+          width: 700,
         });
 
         return;
       }
-
     } catch (e) {
       console.error(e);
       Swal.fire("Error", "Execution failed", "error");
@@ -385,7 +393,7 @@ const AddReport: React.FC = () => {
   };
   const fetchProcedureQuery = async (
     procedureName: string,
-    setFieldValue: any
+    setFieldValue: any,
   ) => {
     if (!procedureName) return;
 
@@ -396,10 +404,10 @@ const AddReport: React.FC = () => {
 
     try {
       const payload = {
-        procName: cleanProcName,   // ⭐ use cleaned name
+        procName: cleanProcName, // ⭐ use cleaned name
         Para: JSON.stringify({
-          IsFetchReportColumn: 1
-        })
+          IsFetchReportColumn: 1,
+        }),
       };
 
       const res = await universalService(payload);
@@ -410,7 +418,6 @@ const AddReport: React.FC = () => {
       if (query) {
         setFieldValue("query", query);
       }
-
     } catch (e) {
       console.error("Dynamic query fetch failed", e);
     }
@@ -424,8 +431,8 @@ const AddReport: React.FC = () => {
           procName: "SystemReport",
           Para: JSON.stringify({
             ActionMode: "GetReportById",
-            ReportId: id
-          })
+            ReportId: id,
+          }),
         };
 
         const res = await universalService(payload);
@@ -440,13 +447,11 @@ const AddReport: React.FC = () => {
             reportName: report.ReportName,
             procedureName: report.USPName,
             description: report.Description,
-            query: report.ReportQuery
+            query: report.ReportQuery,
           });
         }
 
-        const cols = report.ColumnJson
-          ? JSON.parse(report.ColumnJson)
-          : [];
+        const cols = report.ColumnJson ? JSON.parse(report.ColumnJson) : [];
 
         const mapped: ReportColumn[] = cols.map((c: any, i: number) => ({
           id: i + 1,
@@ -460,9 +465,10 @@ const AddReport: React.FC = () => {
           // ✅ NEW
           isSort: c.IsSort ?? false,
           isHidden: c.IsHidden ?? false,
-          sortDirection: (c.SortDir ?? c.SortDirection ?? "ASC").toUpperCase() === "DESC"
-            ? "DESC"
-            : "ASC",
+          sortDirection:
+            (c.SortDir ?? c.SortDirection ?? "ASC").toUpperCase() === "DESC"
+              ? "DESC"
+              : "ASC",
         }));
 
         setColumns(mapped);
@@ -487,15 +493,14 @@ const AddReport: React.FC = () => {
           reportName: "",
           procedureName: "",
           description: "",
-          query: ""
-        }
+          query: "",
+        },
       });
     }
   }, [id]);
   const formikRef = useRef<any>(null);
   return (
     <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-2xl shadow-sm">
-
       {/* HEADER */}
       <div className="flex items-center justify-between pb-2 border-b border-gray-200 dark:border-gray-700 mb-6 px-9 -mx-7">
         <h5 className="font-bold text-xl text-black dark:text-white">
@@ -528,10 +533,8 @@ const AddReport: React.FC = () => {
           setFieldValue,
         }) => (
           <form id="reportForm" onSubmit={handleSubmit} className="space-y-1">
-
             {/* GRID */}
             <div className="grid md:grid-cols-2 gap-5">
-
               {/* REPORT NAME */}
               <InputField
                 label={
@@ -583,7 +586,6 @@ const AddReport: React.FC = () => {
                   )}
                 </div>
               </div>
-
             </div>
 
             {/* DESCRIPTION */}
@@ -614,7 +616,6 @@ const AddReport: React.FC = () => {
 
             {/* ACTION BUTTONS */}
             <div className="flex flex-wrap gap-3 pt-2">
-
               <button
                 type="button"
                 onClick={() => generateColumns(values.query)}
@@ -649,23 +650,17 @@ transition"
               >
                 Copy Query
               </button>
-
             </div>
 
             {/* <p className="text-xs text-gray-400">
               Global Parameters: @CompanyId, @EmployeeId
             </p> */}
-
           </form>
         )}
       </Formik>
 
-
       {showColumns && (
-        <ReportColumnsConfig
-          columns={columns}
-          setColumns={setColumns}
-        />
+        <ReportColumnsConfig columns={columns} setColumns={setColumns} />
       )}
     </div>
   );
