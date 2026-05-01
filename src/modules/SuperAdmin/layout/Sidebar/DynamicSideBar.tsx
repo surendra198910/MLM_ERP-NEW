@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ChevronDown,
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { ApiService } from "../../../../services/ApiService";
 import SidebarSkeleton from "./SidebarSkeleton";
+import { useTheme } from "../../context/ThemeContext";
 
 const DotIcon = <Circle size={4} fill="currentColor" className="opacity-70" />;
 
@@ -68,7 +69,7 @@ const DynamicSideBar: React.FC = () => {
   const [openState, setOpenState] = useState<Record<string, boolean>>({});
 
   const { universalService } = ApiService();
-  const IMAGE_PREVIEW_URL = import.meta.env.VITE_IMAGE_PREVIEW_URL; // ✅ Get Env Variable
+  const IMAGE_PREVIEW_URL = import.meta.env.VITE_IMAGE_PREVIEW_URL_2; // ✅ Get Env Variable
 
   // 1. Fetch LocalStorage Data
   const activeModuleId = Number(localStorage.getItem("ActiveModuleId")) || null;
@@ -328,11 +329,11 @@ const DynamicSideBar: React.FC = () => {
    MAIN RENDER
   --------------------------------------------- */
   // Determine Logo URL
-  const logoUrl = panelSettings.Logo
-    ? IMAGE_PREVIEW_URL
-      ? `${IMAGE_PREVIEW_URL}${panelSettings.Logo}`
-      : panelSettings.Logo
-    : "/images/logo-icon.svg";
+  const { dynamicTheme } = useTheme();
+  const logoUrl =
+    dynamicTheme == "light"
+      ? `${IMAGE_PREVIEW_URL}/CompanyDocs/${employee?.LightThemeLogo}`
+      : `${IMAGE_PREVIEW_URL}/CompanyDocs/${employee?.DarkThemeLogo}`;
 
   return (
     <div
@@ -360,18 +361,18 @@ const DynamicSideBar: React.FC = () => {
           <img
             src={logoUrl}
             alt="logo"
-            className="w-8 h-8 object-contain rounded-full"
+            className="w-60 object-contain rounded-full"
             onError={(e) => {
               // Fallback if image fails to load
               (e.target as HTMLImageElement).src = "/images/logo-icon.svg";
             }}
           />
-          <span
+          {/* <span
             className="font-bold text-lg leading-tight truncate text-primary-sidebar-text dark:text-gray-100"
             // className="text-primary-sidebar-text dark:text-gray-100"
           >
             {panelSettings.SidebarHeader}
-          </span>
+          </span> */}
         </Link>
       </div>
 

@@ -10,19 +10,21 @@ export const AuthProvider = ({ children }) => {
   // Load token and user profile on app mount
   useEffect(() => {
     const token = localStorage.getItem("Token");
-    const storedProfile = JSON.parse(localStorage.getItem("adnexaPublisherInfo"));
+    const storedProfile = JSON.parse(
+      localStorage.getItem("adnexaPublisherInfo"),
+    );
 
     if (token) setIsAuthenticated(true);
-    if (storedProfile) setUserProfile(storedProfile); 
+    if (storedProfile) setUserProfile(storedProfile);
     setLoading(false);
   }, []);
 
   // Login function
   const login = (publisherInfo, token) => {
     localStorage.setItem("Token", token);
-    localStorage.setItem("adnexaPublisherInfo", JSON.stringify(publisherInfo)); 
+    localStorage.setItem("adnexaPublisherInfo", JSON.stringify(publisherInfo));
     setIsAuthenticated(true);
-    setUserProfile(publisherInfo); 
+    setUserProfile(publisherInfo);
   };
 
   // Logout function
@@ -37,7 +39,7 @@ export const AuthProvider = ({ children }) => {
   // Update user profile (e.g., after editing profile)
   const updateUserProfile = (updatedProfile) => {
     setUserProfile(updatedProfile);
-    localStorage.setItem("adnexaPublisherInfo", JSON.stringify(updatedProfile)); 
+    localStorage.setItem("adnexaPublisherInfo", JSON.stringify(updatedProfile));
   };
 
   return (

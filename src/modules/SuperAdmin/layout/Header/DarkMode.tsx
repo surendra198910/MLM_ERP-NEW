@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
+import { useTheme } from "../../context/ThemeContext";
 
 const DarkMode: React.FC = () => {
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
+  const { dynamicTheme, setDynamicTheme } = useTheme();
 
   useEffect(() => {
     const storedPreference = localStorage.getItem("theme");
@@ -16,6 +18,7 @@ const DarkMode: React.FC = () => {
 
   useEffect(() => {
     localStorage.setItem("theme", isDarkMode ? "dark" : "light");
+    setDynamicTheme(isDarkMode ? "dark" : "light");
 
     const htmlElement = document.querySelector("html");
     if (htmlElement) {
