@@ -27,7 +27,9 @@ const ManageEmailTemplates: React.FC = () => {
   const swal = useSweetAlert();
   
   const ShowSuccessAlert = swal?.ShowSuccessAlert || ((msg: string) => alert(msg));
+
   const ShowErrorAlert = swal?.ShowErrorAlert || ((msg: string) => alert(msg));
+  
   const [previewMode, setPreviewMode] = useState(false);
   
   // --- State ---
