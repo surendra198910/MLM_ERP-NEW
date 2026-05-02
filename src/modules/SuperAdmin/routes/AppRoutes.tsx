@@ -91,7 +91,9 @@ import MailTemplateMaster from "../components/WebsiteManagement/MailTemplateMast
 import InvestmentReport from "../components/Reports/InvestmentReport.js";
 import Withdraw from "../components/Reports/WithdrawReport.js";
 import TeamReport from "../components/Reports/TeamReport.js";
-import P2PReport from "../components/Reports/p2pReport.js";
+import LevelWiseTeam from "../components/Reports/LevelWiseTeamReport.js";
+
+
 
 //Support
 import CreateSupportTicket from "../components/Support/CreateSupportTicket.js";
@@ -109,6 +111,8 @@ import SocialMediaPlatform from "../components/Common/SocialMediaPlatform.js";
 import WithrawalBy from "../components/Common/WithdrawalBy.js";
 import MemberThemeManagement from "../components/ThemeManagement/MemberThemeManagement.js";
 import NewsAndAnnoucement from "../components/WebsiteManagement/NewsAndAnnouncement.js";
+
+import P2PReport from "../components/Reports/P2PReport.js";
 
 // Crypto wallet setting
 import ManageCryptowallet from "../components/settings/ManageCryptoWallet.js";
@@ -461,6 +465,12 @@ const AppRoutes = () => {
                 path="/superadmin/reports/team-report"
                 element={<TeamReport />}
               />
+
+                <Route
+                path="/superadmin/reports/level-wise-team"
+                element={<LevelWiseTeam />}
+              />
+
               <Route
                 path="/superadmin/reports/p2p-report"
                 element={<P2PReport />}
