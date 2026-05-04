@@ -22,7 +22,7 @@ import { FaEye } from "react-icons/fa";
 
 const Template: React.FC = () => {
   const [searchInput, setSearchInput] = useState("");
-  const [filterColumn, setFilterColumn] = useState("");
+  const [filterColumn, setFilterColumn] = useState("Username");
   const [showTable, setShowTable] = useState(false); // Toggle to show 'Oops' or 'Welcome'
   const { universalService } = ApiService();
   const [hasVisitedTable, setHasVisitedTable] = useState(false);
@@ -58,29 +58,31 @@ const Template: React.FC = () => {
 
   const statsConfig = [
     {
-      key: "TotalRequests",
-      title: "Total Requests",
+      key: "TotalTeam",
+      title: "Total Team",
       icon: "list_alt",
       showCurrency: false,
     },
-    {
-      key: "TotalAmount",
-      title: "Total Amount",
-      icon: "payments",
-      showCurrency: true,
-    },
-    {
-      key: "ThisMonthAmount",
-      title: "This Month",
-      icon: "calendar_month",
-      showCurrency: true,
-    },
-    {
-      key: "TodayAmount",
+     {
+      key: "TodayTeam",
       title: "Today",
       icon: "today",
-      showCurrency: true,
+      showCurrency: false,
     },
+    {
+      key: "ThisMonthTeam",
+      title: "This Month",
+      icon: "calendar_month",
+      showCurrency: false,
+    },
+   
+    {
+      key: "LastMonthTeam",
+      title: "Last Month Team",
+      icon: "payments",
+      showCurrency: false,
+    },
+    
   ];
   // const [showModal, setShowModal] = useState(false);
   const [selectedRow, setSelectedRow] = useState<any>(null);
@@ -244,26 +246,26 @@ const Template: React.FC = () => {
           cell: (row: any) => {
             if (row.__isTotal) return null;
 
-            if (row.Status == "Pending") {
-              return (
-                <button
-                  onClick={() => handleGetDetails(row.Id)}
-                  className="text-primary-button-bg hover:underline text-xs font-medium"
-                >
-                  Take Action
-                </button>
-              );
-            } else {
-              return (
-                <button
-                  onClick={() => handleGetDetails(row.Id)}
-                  className="text-primary-button-bg hover:underline text-xs font-medium"
-                >
-                  {/* eye icon */}
-                  <FaEye style={{ fontSize: "20px" }} title="View Details" />
-                </button>
-              );
-            }
+            // if (row.Status == "Pending") {
+            //   return (
+            //     <button
+            //       onClick={() => handleGetDetails(row.Id)}
+            //       className="text-primary-button-bg hover:underline text-xs font-medium"
+            //     >
+            //       Take Action
+            //     </button>
+            //   );
+            // } else {
+            //   return (
+            //     <button
+            //       onClick={() => handleGetDetails(row.Id)}
+            //       className="text-primary-button-bg hover:underline text-xs font-medium"
+            //     >
+            //       {/* eye icon */}
+            //       <FaEye style={{ fontSize: "20px" }} title="View Details" />
+            //     </button>
+            //   );
+            // }
           },
           ignoreRowClick: true,
           button: true,
@@ -688,7 +690,7 @@ const Template: React.FC = () => {
                                : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
                            }`}
                 >
-                  <option value="">Select Filter Option</option>
+                 
                   <option value="Username">Username</option>
                   {/* <option value="Status">Status</option> */}
                 </select>
@@ -764,7 +766,8 @@ const Template: React.FC = () => {
                 <button
                   type="button"
                   onClick={applySearch}
-                  disabled={!SmartActions.canSearch(formName)}
+                  
+                  disabled={ !SmartActions.canSearch(formName) || !searchInput.trim()}
                   className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-primary-button-bg text-primary-button-bg hover:bg-primary-button-bg hover:text-white transition-all shadow-sm disabled:opacity-50"
                 >
                   <i className="material-symbols-outlined text-[20px]">
