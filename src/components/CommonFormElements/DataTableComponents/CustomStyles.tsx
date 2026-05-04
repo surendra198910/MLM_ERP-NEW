@@ -10,6 +10,7 @@ const customStyles = {
       backgroundColor: "var(--color-primary-table-bg)",
       borderBottom: "1px solid var(--table-border)",
       minHeight: "45px",
+      whiteSpace: "normal !important" ,
     },
   },
 
@@ -18,6 +19,7 @@ const customStyles = {
       color: "var(--color-primary-table-text)",
       fontWeight: 600,
       fontSize: "13px",
+      whiteSpace: "normal !important" ,
     },
   },
 
