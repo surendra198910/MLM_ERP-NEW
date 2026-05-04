@@ -662,7 +662,7 @@ const statsConfig = [
                 >
                   <option value="">Select Filter Option</option>
                   <option value="Username">Username</option>
-                  <option value="Status">Status</option>
+                 
                 </select>
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
                   <i className="material-symbols-outlined !text-[18px]">
