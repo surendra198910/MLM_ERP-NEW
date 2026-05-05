@@ -102,6 +102,7 @@ import SearchTicketAll from "../components/Support/SearchTicketAll.js";
 import SupportDetailPage from "../components/Support/SupportDetailPage.js";
 //Withdrawal
 import WithdrawalSetting from "../components/WithdrawalSetting/WithdrawalSetting.js";
+import WithdrawReport from "../components/Withdraw/WIthdrawReport.js"
 //Social Media
 import SocialMediaSetting from "../components/SocialMediaSetting/SocialMediaSetting.js";
 
@@ -466,6 +467,10 @@ const AppRoutes = () => {
               <Route
                 path="/superadmin/withdraw/withdraw-report"
                 element={<Withdraw />}
+              />
+              <Route
+                path="/superadmin/withdraw/withdraw-reports"
+                element={<WithdrawReport />}
               />
               <Route
                 path="/superadmin/reports/team-report"
