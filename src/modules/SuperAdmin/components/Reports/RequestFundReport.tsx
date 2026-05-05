@@ -238,8 +238,67 @@ const Template: React.FC = () => {
                 return "";
               }
 
+
+
+
               // ⭐ NORMAL ROW
               const value = row[c.ColumnKey];
+  const IMAGE_BASE_URL =
+    import.meta.env.VITE_IMAGE_PREVIEW_URL_2 + "ClientImages/";
+
+    //client logo 
+                  if (c.ColumnKey === "Member") {
+                const profileUrl = row.ClientLogo
+
+                  ? `${IMAGE_BASE_URL}${row.ClientLogo}`
+                  : `https://ui-avatars.com/api/?name=${row.MemberName}&background=random`;
+
+                return (
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={profileUrl}
+                      alt="user"
+                      className="w-9 h-9 rounded-full object-cover border"
+                      onError={(e: any) => {
+                        e.target.src = `https://ui-avatars.com/api/?name=${row.MemberName}`;
+                      }}
+                    />
+
+                    <div className="flex flex-col leading-tight">
+                      <span className="font-medium text-sm">
+                        {row.MemberName}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {row.UserName}
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
+
+              // STATUS BADGE
+              if (c.ColumnKey === "Status") {
+                const getStatusClass = (status: string) => {
+                  switch (status) {
+                    case "Approved":
+                      return "bg-green-100 text-green-700";
+                    case "Rejected":
+                      return "bg-red-100 text-red-700";
+                    default:
+                      return "bg-yellow-100 text-yellow-700"; // Pending
+                  }
+                };
+
+                return (
+                  <span
+                    className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusClass(
+                      value,
+                    )}`}
+                  >
+                    {value}
+                  </span>
+                );
+              }
 
               if (c.IsCurrency && value != null) {
                 return `$${Number(value).toLocaleString()}`;
@@ -633,6 +692,7 @@ const Template: React.FC = () => {
                 allowedText="Filter by Date"
               >
                 <DateRangeFilter
+                disabled={!SmartActions.canDateFilter(formName)}
                   initialRange={{ start: oneYearAgo, end: today }}
                   onChange={(range) => {
                     setPendingRange({
@@ -741,7 +801,7 @@ const Template: React.FC = () => {
                 </div>
               </PermissionAwareTooltip>
               {/* ADD BUTTON */}
-              <PermissionAwareTooltip
+              {/* <PermissionAwareTooltip
                 allowed={SmartActions.canAdd(formName)}
                 allowedText="Add New"
               >
@@ -752,10 +812,10 @@ const Template: React.FC = () => {
                 >
                   <i className="material-symbols-outlined text-[20px]">add</i>
                 </button>
-              </PermissionAwareTooltip>
+              </PermissionAwareTooltip> */}
               {/* REFRESH BUTTON (Visible when showTable is true) */}
             </div>
-            {(filterColumn || searchInput) && (
+            {(filterColumn && searchInput) && (
               <PermissionAwareTooltip
                 allowed={SmartActions.canSearch(formName)}
                 allowedText="Reset filter"
