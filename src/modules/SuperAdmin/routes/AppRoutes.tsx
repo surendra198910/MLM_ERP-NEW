@@ -328,7 +328,7 @@ const AppRoutes = () => {
                 element={<ManageClient />}
               />
               <Route
-                path="/superadmin/client/member-investment"
+                path="/superadmin/investment/member-investment"
                 element={<MemberInvestment />}
               />
               //Package
@@ -370,7 +370,7 @@ const AppRoutes = () => {
               />
 
                <Route
-                path="/superadmin/reports/approve-reject-requestfund"
+                path="/superadmin/request-fund/approve-reject-requestfund"
                 element={<ApproveRejectRequestFund />}
               />
 
@@ -421,7 +421,7 @@ const AppRoutes = () => {
                 element={<NewsAndAnnoucement />}
               />
               <Route
-                path="/superadmin/website-management/email-template"
+                path="/superadmin/templates/email-template"
                 element={<MailTemplateMaster />}
               />
               //Support
@@ -460,7 +460,7 @@ const AppRoutes = () => {
               />
               //Report
               <Route
-                path="/superadmin/reports/investment-report"
+                path="/superadmin/investment/investment-report"
                 element={<InvestmentReport />}
               />
               <Route
