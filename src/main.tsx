@@ -15,71 +15,71 @@ import "./index.css";
 
 import { applyTheme } from "./theme/applyTheme";
 import { plainUniversalService } from "./services/plainApi";
+import { AuthProvider } from "./context/AuthContext.tsx";
+import axios from "axios";
 
 /* ================= THEME BOOTSTRAP ================= */
 
 async function bootstrapTheme() {
   try {
-    const payload = {
-      procName: "AppThemeMaster",
-      Para: JSON.stringify({
-        ActionMode: "GetActive",
-      }),
-    };
+    const themeURL = import.meta.env.VITE_THEME_URL;
 
-    const response = await plainUniversalService(payload);
-    const res = response?.data;
+    
+      const response = await axios.post(themeURL, {});
+      const res = response?.data;
 
-    if (!Array.isArray(res) || res.length === 0) return;
+      if (!Array.isArray(res) || res.length === 0) return;
 
-    const row = res[0];
-    const themeJson = JSON.parse(row.ThemeJson || "{}");
+      const row = res[0];
+      const themeJson = JSON.parse(row.ThemeJson || "{}");
 
-    const colors: Record<string, string> = {};
+      const colors: Record<string, string> = {};
 
-    // flatten nested color structure
-    Object.entries(themeJson).forEach(([key, value]) => {
-      if (typeof value === "object" && value !== null) {
-        Object.entries(value).forEach(([shade, color]) => {
-          colors[`${key}-${shade}`] = color as string;
-        });
-      }
-    });
+      // flatten nested color structure
+      Object.entries(themeJson).forEach(([key, value]) => {
+        if (typeof value === "object" && value !== null) {
+          Object.entries(value).forEach(([shade, color]) => {
+            colors[`${key}-${shade}`] = color as string;
+          });
+        }
+      });
 
-    applyTheme({
-      mode: themeJson.darkModeDefault ? "dark" : "light",
-      font: themeJson.fontBody,
-      colors,
-    });
+      applyTheme({
+        mode: themeJson.darkModeDefault ? "dark" : "light",
+        font: themeJson.fontBody,
+        colors,
+      });
 
-  } catch (err) {
-    console.warn("Theme load failed, using default theme.");
+    } catch (err) {
+      console.warn("Theme load failed, using default theme.");
+    }
   }
-}
 
 /* ================= APP START ================= */
 
 async function startApp() {
-  // Wait for theme BEFORE rendering React
-  await bootstrapTheme();
+    // Wait for theme BEFORE rendering React
+    await bootstrapTheme();
 
-  createRoot(document.getElementById("root")!).render(
-    <StrictMode>
-      <SweetAlertProvider>
-        <App />
-        <ToastContainer
-          position="top-right"
-          autoClose={4000}
-          hideProgressBar={false}
-          newestOnTop
-          closeOnClick
-          pauseOnHover
-          draggable
-          theme="colored"
-        />
-      </SweetAlertProvider>
-    </StrictMode>
-  );
-}
+    createRoot(document.getElementById("root")!).render(
+      <StrictMode>
+        <AuthProvider>
+          <SweetAlertProvider>
+            <App />
+            <ToastContainer
+              position="top-right"
+              autoClose={4000}
+              hideProgressBar={false}
+              newestOnTop
+              closeOnClick
+              pauseOnHover
+              draggable
+              theme="colored"
+            />
+          </SweetAlertProvider>
+        </AuthProvider>
+      </StrictMode>
+    );
+  }
 
-startApp();
+  startApp();

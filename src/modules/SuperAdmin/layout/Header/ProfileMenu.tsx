@@ -1,16 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
-
-/* ====================================================
-   TYPES
-==================================================== */
-interface EmployeeInfo {
-  FirstName?: string;
-  LastName?: string;
-  EmailId?: string;
-  DesignationName?: string;
-  ProfilePic?: string;
-}
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { useAuth } from "../../../../context/AuthContext"; // adjust path as needed
 
 /* ====================================================
    ENV
@@ -19,25 +9,11 @@ const IMAGE_PREVIEW_URL = import.meta.env.VITE_IMAGE_PREVIEW_URL;
 
 const ProfileMenu: React.FC = () => {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
-
   const [active, setActive] = useState(false);
-  const [employee, setEmployee] = useState<EmployeeInfo>({});
 
-  /* ====================================================
-     LOAD EMPLOYEE FROM LOCAL STORAGE
-==================================================== */
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem("EmployeeDetails");
-      if (!raw) return;
-
-      const parsed: EmployeeInfo = JSON.parse(raw);
-      setEmployee(parsed);
-    } catch (err) {
-      console.error("Invalid EmployeeDetails JSON", err);
-    }
-  }, []);
+  const { userProfile, logout } = useAuth();
 
   /* ====================================================
      CLOSE ON OUTSIDE CLICK
@@ -57,16 +33,30 @@ const ProfileMenu: React.FC = () => {
   }, []);
 
   /* ====================================================
+     CLOSE ON ROUTE CHANGE
+==================================================== */
+  useEffect(() => {
+    setActive(false);
+  }, [pathname]);
+
+  /* ====================================================
      HELPERS
 ==================================================== */
-  const fullName = `${employee.FirstName || ""} ${
-    employee.LastName || ""
+  const fullName = `${userProfile?.FirstName || ""} ${
+    userProfile?.LastName || ""
   }`.trim();
 
   const profileImage =
-    employee.ProfilePic && IMAGE_PREVIEW_URL
-      ? `${IMAGE_PREVIEW_URL}${employee.ProfilePic.split("|")[0]}`
-      : "/images/admin.png";
+    userProfile?.ProfilePic && IMAGE_PREVIEW_URL
+      ? `${IMAGE_PREVIEW_URL}${userProfile.ProfilePic.split("|")[0]}`
+      : "/images/default_user.png";
+
+    
+
+  const handleLogout = () => {
+    logout();
+    navigate("/authentication/sign-in");
+  };
 
   /* ====================================================
      UI
@@ -114,7 +104,6 @@ const ProfileMenu: React.FC = () => {
                    pointer-events-none"
       >
         Profile
-        {/* ARROW */}
         <div
           className="absolute -top-1 left-1/2 -translate-x-1/2
                      w-0 h-0
@@ -151,13 +140,13 @@ const ProfileMenu: React.FC = () => {
             />
             <div>
               <span className="block text-black dark:text-white font-medium text-sm">
-                {fullName}
+                {fullName || "User"}
               </span>
               <span className="block text-xs text-gray-500">
-                {employee.DesignationName}
+                {userProfile?.DesignationName}
               </span>
               <span className="block text-xs text-gray-500 truncate max-w-[180px]">
-                {employee.EmailId}
+                {userProfile?.EmailId}
               </span>
             </div>
           </div>
@@ -176,10 +165,7 @@ const ProfileMenu: React.FC = () => {
                                 : "text-black dark:text-white"
                             }`}
               >
-                <i
-                  className="material-symbols-outlined absolute ltr:left-[20px]
-                               top-1/2 -translate-y-1/2 !text-[22px]"
-                >
+                <i className="material-symbols-outlined absolute ltr:left-[20px] top-1/2 -translate-y-1/2 !text-[22px]">
                   account_circle
                 </i>
                 My Profile
@@ -194,10 +180,7 @@ const ProfileMenu: React.FC = () => {
                            text-black dark:text-white
                            hover:text-primary-500"
               >
-                <i
-                  className="material-symbols-outlined absolute ltr:left-[20px]
-                               top-1/2 -translate-y-1/2 !text-[22px]"
-                >
+                <i className="material-symbols-outlined absolute ltr:left-[20px] top-1/2 -translate-y-1/2 !text-[22px]">
                   support
                 </i>
                 My Support Tickets
@@ -212,10 +195,7 @@ const ProfileMenu: React.FC = () => {
                            text-black dark:text-white
                            hover:text-primary-500"
               >
-                <i
-                  className="material-symbols-outlined absolute ltr:left-[20px]
-                               top-1/2 -translate-y-1/2 !text-[22px]"
-                >
+                <i className="material-symbols-outlined absolute ltr:left-[20px] top-1/2 -translate-y-1/2 !text-[22px]">
                   format_list_bulleted
                 </i>
                 My Tasks
@@ -230,10 +210,7 @@ const ProfileMenu: React.FC = () => {
                            text-black dark:text-white
                            hover:text-primary-500"
               >
-                <i
-                  className="material-symbols-outlined absolute ltr:left-[20px]
-                               top-1/2 -translate-y-1/2 !text-[22px]"
-                >
+                <i className="material-symbols-outlined absolute ltr:left-[20px] top-1/2 -translate-y-1/2 !text-[22px]">
                   lock
                 </i>
                 Change Password
@@ -241,27 +218,22 @@ const ProfileMenu: React.FC = () => {
             </li>
           </ul>
 
-          <div
-            className="border-t border-gray-100 dark:border-[#172036]
-                          mx-[20px] my-[10px]"
-          />
+          <div className="border-t border-gray-100 dark:border-[#172036] mx-[20px] my-[10px]" />
 
           <ul>
             <li>
-              <a
-                href="/authentication/logout"
-                className="block relative py-[8px]
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="w-full text-left block relative py-[8px]
                            ltr:pl-[50px] ltr:pr-[20px]
                            text-red-500 hover:text-red-600"
               >
-                <i
-                  className="material-symbols-outlined absolute ltr:left-[20px]
-                               top-1/2 -translate-y-1/2 !text-[22px]"
-                >
+                <i className="material-symbols-outlined absolute ltr:left-[20px] top-1/2 -translate-y-1/2 !text-[22px]">
                   logout
                 </i>
                 Logout
-              </a>
+              </button>
             </li>
           </ul>
         </div>
