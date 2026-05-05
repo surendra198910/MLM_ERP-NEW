@@ -17,7 +17,7 @@ import Loader from "../../common/Loader";
 import AccessRestricted from "../../common/AccessRestricted";
 import { useCurrency } from "../../context/CurrencyContext";
 import LandingIllustration from "../../../../components/CommonFormElements/LandingIllustration/LandingIllustration";
-import WithdrawActionModal from "../Reports/WithdrawalPopUp";
+import WithdrawActionModal from "./WithdrawalPopUp";
 import ViewActionCell from "./ViewActionCell";
 
 interface DateRange {
