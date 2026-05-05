@@ -44,22 +44,52 @@ const Template: React.FC = () => {
   const path = location.pathname;
   const formName = path.split("/").pop();
   const canExport = SmartActions.canExport(formName);
+  interface DateRange {
+    from: string;
+    to: string;
+  }
   const today = new Date();
-  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const fromStr = format(firstDayOfMonth, "yyyy-MM-dd");
+
+  const oneYearAgo = new Date(today);
+  oneYearAgo.setFullYear(today.getFullYear() - 1);
+
+  const fromStr = format(oneYearAgo, "yyyy-MM-dd");
   const toStr = format(today, "yyyy-MM-dd");
+  const [pendingRange, setPendingRange] = useState<DateRange>({
+    from: fromStr,
+    to: toStr,
+  });
   const [dateRange, setDateRange] = useState({
     from: fromStr,
     to: toStr,
-    preset: "thisMonth",
   });
 
- const statsConfig = [
-  { key: "LifetimeIncome", title: "Lifetime Income", icon: "payments", showCurrency: true },
-  { key: "ThisMonthIncome", title: "This Month Income", icon: "calendar_month", showCurrency: true },
-  { key: "LastMonthIncome", title: "Last Month Income", icon: "history", showCurrency: true },
-  { key: "TodayIncome", title: "Today Income", icon: "today", showCurrency: true }, 
-];
+  const statsConfig = [
+    {
+      key: "LifetimeIncome",
+      title: "Lifetime Income",
+      icon: "payments",
+      showCurrency: true,
+    },
+    {
+      key: "ThisMonthIncome",
+      title: "This Month Income",
+      icon: "calendar_month",
+      showCurrency: true,
+    },
+    {
+      key: "LastMonthIncome",
+      title: "Last Month Income",
+      icon: "history",
+      showCurrency: true,
+    },
+    {
+      key: "TodayIncome",
+      title: "Today Income",
+      icon: "today",
+      showCurrency: true,
+    },
+  ];
   const fetchFormPermissions = async () => {
     try {
       setPermissionsLoading(true);
@@ -84,14 +114,12 @@ const Template: React.FC = () => {
         return;
       }
 
-
       const pagePermission = data.find(
         (p) =>
           String(p.FormNameWithExt).trim().toLowerCase() ===
           formName?.trim().toLowerCase(),
       );
 
-   
       if (
         !pagePermission ||
         !pagePermission.Action ||
@@ -143,7 +171,6 @@ const Template: React.FC = () => {
       const res = await universalService(payload);
       const data = res?.data || res;
       if (Array.isArray(data)) {
-
         const visibleSorted = data
           .filter((c: any) => c.IsVisible)
           .sort((a: any, b: any) => a.ColumnOrder - b.ColumnOrder);
@@ -151,15 +178,16 @@ const Template: React.FC = () => {
         const defaultSortCol = visibleSorted.find((c: any) => c.isSort);
 
         if (defaultSortCol) {
-          const index = visibleSorted.findIndex(
-            (c: any) => c.ColumnKey === defaultSortCol.ColumnKey
-          ) + 1;
-     
+          const index =
+            visibleSorted.findIndex(
+              (c: any) => c.ColumnKey === defaultSortCol.ColumnKey,
+            ) + 1;
+
           setSortIndex("");
           setSortDirection(
             (defaultSortCol.SortDir || "ASC").toUpperCase() === "DESC"
               ? "DESC"
-              : "ASC"
+              : "ASC",
           );
         }
 
@@ -184,10 +212,8 @@ const Template: React.FC = () => {
             selector: (row: any) => row[c.ColumnKey],
 
             cell: (row: any) => {
-
               // ⭐ TOTAL ROW
               if (row.__isTotal) {
-
                 // 👉 show TOTAL text in first column
                 if (index === 0) return "Total";
 
@@ -210,12 +236,12 @@ const Template: React.FC = () => {
               }
 
               return value ?? "-";
-            }
-          }))
+            },
+          }));
         const actionColumn = {
           name: "Action",
           cell: (row: any) => {
-            if (row.__isTotal) return null;  
+            if (row.__isTotal) return null;
 
             return (
               <ActionCell
@@ -243,10 +269,10 @@ const Template: React.FC = () => {
     // open modal or navigate
   };
   const exportColumns = columns
-    .filter(c => c.columnKey)
-    .map(c => ({
+    .filter((c) => c.columnKey)
+    .map((c) => ({
       key: c.columnKey,
-      label: c.name
+      label: c.name,
     }));
   const fetchExportData = async () => {
     const payload = {
@@ -282,14 +308,12 @@ const Template: React.FC = () => {
 
     setStats(result[0] || {});
 
-
     return result;
   };
 
   const handleDelete = (row) => {
     if (confirm(`Delete ${row.UserName}?`)) {
       console.log("Delete Row:", row);
-
     }
   };
 
@@ -312,8 +336,8 @@ const Template: React.FC = () => {
           SortIndexColumn: sortIndex,
           SortDir: sortDirection,
 
-          FromDate: range.from || null,
-          ToDate: range.to || null,
+          FromDate: pendingRange.from || null,
+          ToDate: pendingRange.to || null,
         }),
       };
 
@@ -374,14 +398,7 @@ const Template: React.FC = () => {
     if (!showTable || !hasVisitedTable) return;
 
     fetchGridData();
-  }, [
-  page,
-  perPage,
-  sortIndex,
-  sortDirection,
-  searchTrigger,
-  dateRange
-]);
+  }, [page, perPage, sortIndex, sortDirection, searchTrigger, dateRange]);
   const applySearch = () => {
     if (!SmartActions.canSearch(formName)) return;
 
@@ -407,24 +424,22 @@ const Template: React.FC = () => {
   const totalRow =
     Object.keys(pageTotals).length > 0
       ? columns.reduce((acc: any, col: any, index: number) => {
-        if (!col.columnKey) {
-          acc.__label = "Page Total";
+          if (!col.columnKey) {
+            acc.__label = "Page Total";
+            return acc;
+          }
+
+          if (col.isTotal) {
+            acc[col.columnKey] = pageTotals[col.columnKey];
+          } else {
+            acc[col.columnKey] = "";
+          }
+
           return acc;
-        }
-
-        if (col.isTotal) {
-          acc[col.columnKey] = pageTotals[col.columnKey];
-        } else {
-          acc[col.columnKey] = "";
-        }
-
-        return acc;
-      }, {})
+        }, {})
       : null;
   const tableData =
-    hasData && totalRow
-      ? [...data, { ...totalRow, __isTotal: true }]
-      : data;
+    hasData && totalRow ? [...data, { ...totalRow, __isTotal: true }] : data;
   if (permissionsLoading) {
     return <Loader />;
   }
@@ -451,12 +466,12 @@ const Template: React.FC = () => {
               >
                 <DateRangeFilter
                   disabled={!SmartActions.canDateFilter(formName)}
-                  onChange={(r) => {
-                    if (!SmartActions.canDateFilter(formName)) return; // safety
-
-                    setPage(1); // reset pagination
-                    setDateRange(r);
-                    setSearchTrigger((p) => p + 1);
+                  initialRange={{ start: oneYearAgo, end: today }}
+                  onChange={(range) => {
+                    setPendingRange({
+                      from: format(range.start, "yyyy-MM-dd"),
+                      to: format(range.end, "yyyy-MM-dd"),
+                    });
                   }}
                 />
               </PermissionAwareTooltip>
@@ -476,10 +491,11 @@ const Template: React.FC = () => {
                   value={filterColumn}
                   onChange={(e) => setFilterColumn(e.target.value)}
                   className={`w-full h-[34px] pl-8 pr-8 text-xs rounded-md appearance-none outline-none border transition-all
-                           ${SmartActions.canAdvancedSearch(formName)
-                      ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
-                      : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                    }`}
+                           ${
+                             SmartActions.canAdvancedSearch(formName)
+                               ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
+                               : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                           }`}
                 >
                   <option value="">Select Filter Option</option>
                   <option value="Username">Username</option>
@@ -499,7 +515,9 @@ const Template: React.FC = () => {
                 allowedText="Enter Criteria"
               >
                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-500">
-                  <i className="material-symbols-outlined !text-[18px]">search</i>
+                  <i className="material-symbols-outlined !text-[18px]">
+                    search
+                  </i>
                 </span>
                 <input
                   type="text"
@@ -509,10 +527,11 @@ const Template: React.FC = () => {
                   onChange={(e) => setSearchInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && applySearch()}
                   className={`h-[34px] w-full pl-8 pr-3 text-xs rounded-md outline-none border transition-all
-                           ${SmartActions.canSearch(formName)
-                      ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
-                      : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                    }`}
+                           ${
+                             SmartActions.canSearch(formName)
+                               ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
+                               : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                           }`}
                 />
               </PermissionAwareTooltip>
             </div>
@@ -530,7 +549,9 @@ const Template: React.FC = () => {
                   disabled={!SmartActions.canSearch(formName)}
                   className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-primary-button-bg text-primary-button-bg hover:bg-primary-button-bg hover:text-white transition-all shadow-sm disabled:opacity-50"
                 >
-                  <i className="material-symbols-outlined text-[20px]">search</i>
+                  <i className="material-symbols-outlined text-[20px]">
+                    search
+                  </i>
                 </button>
               </PermissionAwareTooltip>
               {/* COLUMN SELECTOR BUTTON */}
@@ -539,10 +560,11 @@ const Template: React.FC = () => {
                 allowedText="Manage Columns"
               >
                 <div
-                  className={`h-[34px] flex items-center ${!SmartActions.canManageColumns(formName)
-                    ? "pointer-events-none opacity-50"
-                    : ""
-                    }`}
+                  className={`h-[34px] flex items-center ${
+                    !SmartActions.canManageColumns(formName)
+                      ? "pointer-events-none opacity-50"
+                      : ""
+                  }`}
                 >
                   <ColumnSelector
                     procName="USP_FetchROIIncome"
@@ -564,7 +586,6 @@ const Template: React.FC = () => {
                 </button>
               </PermissionAwareTooltip>
               {/* REFRESH BUTTON (Visible when showTable is true) */}
-
             </div>
             {(filterColumn || searchInput) && (
               <PermissionAwareTooltip
@@ -581,10 +602,11 @@ const Template: React.FC = () => {
                     setSearchTrigger((p) => p + 1);
                   }}
                   className={`w-[34px] h-[34px] flex items-center justify-center rounded-md
-        ${SmartActions.canSearch(formName)
-                      ? "border border-gray-400 text-gray-600 hover:bg-gray-200"
-                      : "border border-gray-300 text-gray-300 cursor-not-allowed"
-                    }`}
+        ${
+          SmartActions.canSearch(formName)
+            ? "border border-gray-400 text-gray-600 hover:bg-gray-200"
+            : "border border-gray-300 text-gray-300 cursor-not-allowed"
+        }`}
                 >
                   <i className="material-symbols-outlined text-[20px]">
                     refresh
@@ -602,8 +624,10 @@ const Template: React.FC = () => {
           addLabel="Add Income"
           description={
             <>
-              Search ROI income using filters above.<br />
-              Manage records, export reports and analyse performance.<br />
+              Search ROI income using filters above.
+              <br />
+              Manage records, export reports and analyse performance.
+              <br />
               {/* <span className="font-medium">OR</span><br />
               Click below to create a new income entry. */}
             </>
@@ -630,7 +654,6 @@ const Template: React.FC = () => {
             </div>
           ) : hasData ? (
             <div className="flex justify-between items-center py-2 mb-[10px]">
-
               {/* PAGE SIZE */}
               <div className="relative">
                 <select
@@ -668,7 +691,9 @@ const Template: React.FC = () => {
 
               {/* EXPORT */}
               <PermissionAwareTooltip allowed={canExport}>
-                <div className={!canExport ? "pointer-events-none opacity-50" : ""}>
+                <div
+                  className={!canExport ? "pointer-events-none opacity-50" : ""}
+                >
                   <ExportButtons
                     title="ROI Income Report"
                     columns={exportColumns}
@@ -680,11 +705,13 @@ const Template: React.FC = () => {
             </div>
           ) : null}
           {/* --- CONTENT CONTAINER --- */}
-          <div className="trezo-card-content 
+          <div
+            className="trezo-card-content 
   bg-white dark:bg-[#0f172a]
   text-gray-800 dark:text-gray-200
   border border-gray-200 dark:border-gray-700
-  rounded-lg overflow-hidden">
+  rounded-lg overflow-hidden"
+          >
             <DataTable
               title=""
               columns={columns}
@@ -706,20 +733,16 @@ const Template: React.FC = () => {
               sortServer
               progressPending={tableLoading}
               progressComponent={
-                <TableSkeleton
-                  rows={perPage}
-                  columns={columns.length || 8}
-
-                />
+                <TableSkeleton rows={perPage} columns={columns.length || 8} />
               }
               conditionalRowStyles={[
                 {
-                  when: row => row.__isTotal,
+                  when: (row) => row.__isTotal,
                   style: {
                     fontWeight: 700,
                     backgroundColor: "var(--color-primary-table-bg)",
-                  }
-                }
+                  },
+                },
               ]}
               noDataComponent={!tableLoading && <OopsNoData />}
               defaultSortFieldId={sortIndex}
