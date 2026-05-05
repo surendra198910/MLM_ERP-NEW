@@ -8,6 +8,8 @@ import "react-toastify/dist/ReactToastify.css";
 import { FaEye, FaEyeSlash, FaSpinner } from "react-icons/fa";
 import { useCurrency } from "../../modules/SuperAdmin/context/CurrencyContext";
 import { useAuth } from "../../context/AuthContext";
+import DarkThemeLogo from "../../../public/images/MLM-ERP.png";
+import LightThemeLogo from "../../../public/images/MLM-ERP-White.png";
 
 /* ====================================================
    ENV
@@ -24,7 +26,7 @@ const SignInForm: React.FC = () => {
   const { login, userProfile } = useAuth(); // ✅ userProfile from context
 
   const initialValues = { adminId: "", password: "" };
-    const employee = JSON.parse(localStorage.getItem("EmployeeDetails") || "{}");
+  const employee = JSON.parse(localStorage.getItem("EmployeeDetails") || "{}");
 
   const validationSchema = Yup.object({
     adminId: Yup.string().required("Email is required"),
@@ -77,7 +79,6 @@ const SignInForm: React.FC = () => {
       <div className="auth-main-content bg-white dark:bg-[#0a0e19] py-[60px] md:py-[80px] lg:py-[135px]">
         <div className="mx-auto px-[12.5px] md:max-w-[720px] lg:max-w-[960px] xl:max-w-[1255px]">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-[25px] items-center">
-
             {/* LEFT SIDE IMAGE */}
             <div className="xl:ltr:-mr-[25px] xl:rtl:-ml-[25px] 2xl:ltr:-mr-[45px] 2xl:rtl:-ml-[45px] rounded-[25px] order-2 lg:order-1">
               <img
@@ -91,7 +92,6 @@ const SignInForm: React.FC = () => {
 
             {/* RIGHT SIDE FORM */}
             <div className="xl:ltr:pl-[90px] xl:rtl:pr-[90px] 2xl:ltr:pl-[120px] 2xl:rtl:pr-[120px] order-1 lg:order-2">
-
               {/* LIGHT LOGO */}
               <img
                 src={`${IMAGE_PREVIEW_URL}/CompanyDocs/${userProfile?.LightThemeLogo}`}
@@ -99,7 +99,7 @@ const SignInForm: React.FC = () => {
                 className="object-contain inline-block dark:hidden"
                 width={142}
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = "/images/logo-big.svg";
+                  (e.target as HTMLImageElement).src = DarkThemeLogo;
                 }}
               />
 
@@ -110,7 +110,7 @@ const SignInForm: React.FC = () => {
                 className="object-contain hidden dark:inline-block"
                 width={142}
                 onError={(e) => {
-                  (e.target as HTMLImageElement).src = "/images/white-logo-big.svg";
+                  (e.target as HTMLImageElement).src = LightThemeLogo;
                 }}
               />
 
@@ -125,16 +125,22 @@ const SignInForm: React.FC = () => {
 
               {/* SOCIAL LOGIN BUTTONS */}
               <div className="flex items-center justify-between mb-[20px] md:mb-[23px] gap-[12px]">
-                {["google.svg", "facebook2.svg", "apple.svg"].map((icon, idx) => (
-                  <div className="grow" key={idx}>
-                    <button
-                      type="button"
-                      className="block w-full rounded-md py-[10.5px] px-[25px] border border-[#D6DAE1] dark:border-[#172036] bg-white dark:bg-[#0a0e19] text-black dark:text-white hover:border-primary-500 shadow-sm"
-                    >
-                      <img src={`/images/icons/${icon}`} width={25} height={25} />
-                    </button>
-                  </div>
-                ))}
+                {["google.svg", "facebook2.svg", "apple.svg"].map(
+                  (icon, idx) => (
+                    <div className="grow" key={idx}>
+                      <button
+                        type="button"
+                        className="block w-full rounded-md py-[10.5px] px-[25px] border border-[#D6DAE1] dark:border-[#172036] bg-white dark:bg-[#0a0e19] text-black dark:text-white hover:border-primary-500 shadow-sm"
+                      >
+                        <img
+                          src={`/images/icons/${icon}`}
+                          width={25}
+                          height={25}
+                        />
+                      </button>
+                    </div>
+                  ),
+                )}
               </div>
 
               {/* API ERROR */}
@@ -217,7 +223,8 @@ const SignInForm: React.FC = () => {
                         </>
                       ) : (
                         <>
-                          <i className="material-symbols-outlined">login</i> Sign In
+                          <i className="material-symbols-outlined">login</i>{" "}
+                          Sign In
                         </>
                       )}
                     </button>
