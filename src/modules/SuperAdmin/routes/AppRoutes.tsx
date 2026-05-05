@@ -119,6 +119,7 @@ import ManageCryptowallet from "../components/settings/ManageCryptoWallet.js";
 import ManageWalletType from "../components/settings/ManageWalletType.js";
 import CompanyBankAccount from "../../SuperAdmin/components/settings/ManagebankAccount.js";
 import ProtectedRoute from "../../../utils/ProtectedRoutes.js";
+import ApproveRejectRequestFund from "../components/Reports/ApproveRejectRequestFund.js";
 import RequestFundReport from "../components/Reports/RequestFundReport.js";
 
 const AppRoutes = () => {
@@ -369,6 +370,11 @@ const AppRoutes = () => {
               />
 
                <Route
+                path="/superadmin/reports/approve-reject-requestfund"
+                element={<ApproveRejectRequestFund />}
+              />
+
+                <Route
                 path="/superadmin/reports/request-fund-report"
                 element={<RequestFundReport />}
               />
