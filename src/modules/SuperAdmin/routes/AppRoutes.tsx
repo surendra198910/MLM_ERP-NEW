@@ -88,10 +88,10 @@ import WalletTransferReport from "../components/PaymentMaster/WalletTransferRepo
 import MailTemplateMaster from "../components/WebsiteManagement/MailTemplateMaster.js";
 
 //Report
-import InvestmentReport from "../components/Reports/InvestmentReport.js";
-import Withdraw from "../components/Reports/WithdrawReport.js";
+import InvestmentReport from "../components/Investment/InvestmentReport.js";
+import Withdraw from "../components/Withdraw/Withdraw.js";
 import TeamReport from "../components/Reports/TeamReport.js";
-import LevelWiseTeam from "../components/Reports/LevelWiseTeamReport.js";
+import LevelWiseTeam from "../components/Team/LevelWiseTeamReport.js";
 
 
 
@@ -120,8 +120,8 @@ import ManageCryptowallet from "../components/settings/ManageCryptoWallet.js";
 import ManageWalletType from "../components/settings/ManageWalletType.js";
 import CompanyBankAccount from "../../SuperAdmin/components/settings/ManagebankAccount.js";
 import ProtectedRoute from "../../../utils/ProtectedRoutes.js";
-import ApproveRejectRequestFund from "../components/Reports/ApproveRejectRequestFund.js";
-import RequestFundReport from "../components/Reports/RequestFundReport.js";
+import ApproveRejectRequestFund from "../components/RequestFund/ApproveRejectRequestFund.js";
+import RequestFundReport from "../components/RequestFund/RequestFundReport.js";
 
 const AppRoutes = () => {
   const [active, setActive] = useState(false);
@@ -376,7 +376,7 @@ const AppRoutes = () => {
               />
 
                 <Route
-                path="/superadmin/reports/request-fund-report"
+                path="/superadmin/request-fund/request-fund-report"
                 element={<RequestFundReport />}
               />
               <Route
