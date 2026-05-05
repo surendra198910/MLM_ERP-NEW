@@ -20,6 +20,12 @@ import { useCurrency } from "../../context/CurrencyContext";
 import LandingIllustration from "../../../../components/CommonFormElements/LandingIllustration/LandingIllustration";
 import WithdrawActionModal from "./WithdrawalPopUp";
 import Swal from "sweetalert2";
+
+interface DateRange {
+  from: string;
+  to: string;
+}
+
 const Template: React.FC = () => {
   const [searchInput, setSearchInput] = useState("");
   const [filterColumn, setFilterColumn] = useState("");
@@ -46,17 +52,23 @@ const Template: React.FC = () => {
   const location = useLocation();
   const path = location.pathname;
   const formName = path.split("/").pop();
-  const canExport = SmartActions.canExport(formName);
-  const today = new Date();
-  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const fromStr = format(firstDayOfMonth, "yyyy-MM-dd");
-  const toStr = format(today, "yyyy-MM-dd");
   const [statusFilter, setStatusFilter] = useState("Pending");
   const [selectedRows, setSelectedRows] = useState<any[]>([]);
+  const canExport = SmartActions.canExport(formName);
+  const today = new Date();
+
+  const oneYearAgo = new Date(today);
+  oneYearAgo.setFullYear(today.getFullYear() - 1);
+
+  const fromStr = format(oneYearAgo, "yyyy-MM-dd");
+  const toStr = format(today, "yyyy-MM-dd");
+  const [pendingRange, setPendingRange] = useState<DateRange>({
+    from: fromStr,
+    to: toStr,
+  });
   const [dateRange, setDateRange] = useState({
     from: fromStr,
     to: toStr,
-    preset: "thisMonth",
   });
   const [open, setOpen] = useState(false);
   const [selectedRow, setSelectedRow] = useState(null);
@@ -566,8 +578,9 @@ const Template: React.FC = () => {
           PageSize: 0,
           SortIndexColumn: sortIndex,
           SortDir: sortDirection,
-          FromDate: dateRange.from || null,
-          ToDate: dateRange.to || null,
+
+          FromDate: pendingRange.from || null,
+          ToDate: pendingRange.to || null,
           ActionMode: "GetReport",
         }),
       };
@@ -623,7 +636,6 @@ const Template: React.FC = () => {
   };
   useEffect(() => {
     fetchGridColumns();
-    
   }, [refreshGrid]);
   useEffect(() => {
     if (!showTable || !hasVisitedTable) return;
@@ -656,19 +668,19 @@ const Template: React.FC = () => {
   const totalRow =
     Object.keys(pageTotals).length > 0
       ? columns.reduce((acc: any, col: any, index: number) => {
-        if (!col.columnKey) {
-          acc.__label = "Page Total";
+          if (!col.columnKey) {
+            acc.__label = "Page Total";
+            return acc;
+          }
+
+          if (col.isTotal) {
+            acc[col.columnKey] = pageTotals[col.columnKey];
+          } else {
+            acc[col.columnKey] = "";
+          }
+
           return acc;
-        }
-
-        if (col.isTotal) {
-          acc[col.columnKey] = pageTotals[col.columnKey];
-        } else {
-          acc[col.columnKey] = "";
-        }
-
-        return acc;
-      }, {})
+        }, {})
       : null;
   const tableData =
     hasData && totalRow ? [...data, { ...totalRow, __isTotal: true }] : data;
@@ -697,13 +709,12 @@ const Template: React.FC = () => {
                 allowedText="Filter by Date"
               >
                 <DateRangeFilter
-                  disabled={!SmartActions.canDateFilter(formName)}
-                  onChange={(r) => {
-                    if (!SmartActions.canDateFilter(formName)) return; // safety
-
-                    setPage(1); // reset pagination
-                    setDateRange(r);
-                    setSearchTrigger((p) => p + 1);
+                  initialRange={{ start: oneYearAgo, end: today }}
+                  onChange={(range) => {
+                    setPendingRange({
+                      from: format(range.start, "yyyy-MM-dd"),
+                      to: format(range.end, "yyyy-MM-dd"),
+                    });
                   }}
                 />
               </PermissionAwareTooltip>
@@ -723,10 +734,11 @@ const Template: React.FC = () => {
                   value={filterColumn}
                   onChange={(e) => setFilterColumn(e.target.value)}
                   className={`w-full h-[34px] pl-8 pr-8 text-xs rounded-md appearance-none outline-none border transition-all
-                           ${SmartActions.canAdvancedSearch(formName)
-                      ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
-                      : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                    }`}
+                           ${
+                             SmartActions.canAdvancedSearch(formName)
+                               ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
+                               : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                           }`}
                 >
                   <option value="">Select Filter Option</option>
                   <option value="UserName">Username</option>
@@ -761,10 +773,11 @@ const Template: React.FC = () => {
                   onChange={(e) => setSearchInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && applySearch()}
                   className={`h-[34px] w-full pl-8 pr-3 text-xs rounded-md outline-none border transition-all
-                           ${SmartActions.canSearch(formName)
-                      ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
-                      : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                    }`}
+                           ${
+                             SmartActions.canSearch(formName)
+                               ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
+                               : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                           }`}
                 />
               </PermissionAwareTooltip>
             </div>
@@ -814,10 +827,11 @@ const Template: React.FC = () => {
                 allowedText="Manage Columns"
               >
                 <div
-                  className={`h-[34px] flex items-center ${!SmartActions.canManageColumns(formName)
-                    ? "pointer-events-none opacity-50"
-                    : ""
-                    }`}
+                  className={`h-[34px] flex items-center ${
+                    !SmartActions.canManageColumns(formName)
+                      ? "pointer-events-none opacity-50"
+                      : ""
+                  }`}
                 >
                   <ColumnSelector
                     procName="USP_AdminWithdrawFundReport"
@@ -843,10 +857,11 @@ const Template: React.FC = () => {
                     setSearchTrigger((p) => p + 1);
                   }}
                   className={`w-[34px] h-[34px] flex items-center justify-center rounded-md
-        ${SmartActions.canSearch(formName)
-                      ? "border border-gray-400 text-gray-600 hover:bg-gray-200"
-                      : "border border-gray-300 text-gray-300 cursor-not-allowed"
-                    }`}
+        ${
+          SmartActions.canSearch(formName)
+            ? "border border-gray-400 text-gray-600 hover:bg-gray-200"
+            : "border border-gray-300 text-gray-300 cursor-not-allowed"
+        }`}
                 >
                   <i className="material-symbols-outlined text-[20px]">
                     refresh
@@ -894,7 +909,6 @@ const Template: React.FC = () => {
             </div>
           ) : hasData ? (
             <div className="flex justify-between items-center py-2 mb-[10px] gap-3 flex-wrap">
-
               {/* LEFT — Page Size */}
               <div className="relative">
                 <select
@@ -930,7 +944,6 @@ const Template: React.FC = () => {
 
               {/* RIGHT — Export + Bulk Actions */}
               <div className="flex items-center gap-2 flex-wrap">
-
                 {/* APPROVE SELECTED */}
                 <button
                   disabled={selectedRows.length === 0}
@@ -939,7 +952,9 @@ const Template: React.FC = () => {
           bg-green-600 hover:bg-green-700 text-white
           rounded-md transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <i className="material-symbols-outlined text-[16px]">check_circle</i>
+                  <i className="material-symbols-outlined text-[16px]">
+                    check_circle
+                  </i>
                   Approve Selected
                 </button>
 
@@ -951,13 +966,19 @@ const Template: React.FC = () => {
           bg-red-600 hover:bg-red-700 text-white
           rounded-md transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <i className="material-symbols-outlined text-[16px]">cancel</i>
+                  <i className="material-symbols-outlined text-[16px]">
+                    cancel
+                  </i>
                   Reject Selected
                 </button>
 
                 {/* EXPORT */}
                 <PermissionAwareTooltip allowed={canExport}>
-                  <div className={!canExport ? "pointer-events-none opacity-50" : ""}>
+                  <div
+                    className={
+                      !canExport ? "pointer-events-none opacity-50" : ""
+                    }
+                  >
                     <ExportButtons
                       title="Withdraw Report"
                       columns={exportColumns}
@@ -966,7 +987,6 @@ const Template: React.FC = () => {
                     />
                   </div>
                 </PermissionAwareTooltip>
-
               </div>
             </div>
           ) : null}
@@ -980,7 +1000,9 @@ const Template: React.FC = () => {
           >
             <DataTable
               selectableRows
-              selectableRowDisabled={(row) => row.__isTotal || row.Status !== "Pending"}
+              selectableRowDisabled={(row) =>
+                row.__isTotal || row.Status !== "Pending"
+              }
               onSelectedRowsChange={({ selectedRows }) => {
                 setSelectedRows(selectedRows);
               }}
