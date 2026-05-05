@@ -16,7 +16,7 @@ interface EmployeeInfo {
 /* ====================================================
    ENV
 ==================================================== */
-const IMAGE_PREVIEW_URL = import.meta.env.VITE_IMAGE_PREVIEW_URL;
+const IMAGE_PREVIEW_URL = import.meta.env.VITE_IMAGE_PREVIEW_URL_2;
 
 const CompanyInfo: React.FC = () => {
   const [active, setActive] = useState(false);
@@ -60,7 +60,7 @@ const CompanyInfo: React.FC = () => {
      COMPANY LOGO (FROM EMPLOYEE)
 ==================================================== */
   const logoUrl =
- `${IMAGE_PREVIEW_URL}${employee.CompanyLogo}`
+ `${IMAGE_PREVIEW_URL}CompanyDocs/${employee.CompanyLogo}`
   
 
   const fullName = `${employee.FirstName || ""} ${

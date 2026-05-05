@@ -623,7 +623,7 @@ const Template: React.FC = () => {
   };
   useEffect(() => {
     fetchGridColumns();
-    GetStats();
+    
   }, [refreshGrid]);
   useEffect(() => {
     if (!showTable || !hasVisitedTable) return;
@@ -642,6 +642,7 @@ const Template: React.FC = () => {
   const hasData = data.length > 0;
   useEffect(() => {
     fetchFormPermissions();
+    GetStats();
   }, []);
 
   const pageTotals: any = {};
@@ -655,19 +656,19 @@ const Template: React.FC = () => {
   const totalRow =
     Object.keys(pageTotals).length > 0
       ? columns.reduce((acc: any, col: any, index: number) => {
-          if (!col.columnKey) {
-            acc.__label = "Page Total";
-            return acc;
-          }
-
-          if (col.isTotal) {
-            acc[col.columnKey] = pageTotals[col.columnKey];
-          } else {
-            acc[col.columnKey] = "";
-          }
-
+        if (!col.columnKey) {
+          acc.__label = "Page Total";
           return acc;
-        }, {})
+        }
+
+        if (col.isTotal) {
+          acc[col.columnKey] = pageTotals[col.columnKey];
+        } else {
+          acc[col.columnKey] = "";
+        }
+
+        return acc;
+      }, {})
       : null;
   const tableData =
     hasData && totalRow ? [...data, { ...totalRow, __isTotal: true }] : data;
@@ -722,11 +723,10 @@ const Template: React.FC = () => {
                   value={filterColumn}
                   onChange={(e) => setFilterColumn(e.target.value)}
                   className={`w-full h-[34px] pl-8 pr-8 text-xs rounded-md appearance-none outline-none border transition-all
-                           ${
-                             SmartActions.canAdvancedSearch(formName)
-                               ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
-                               : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                           }`}
+                           ${SmartActions.canAdvancedSearch(formName)
+                      ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
+                      : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                    }`}
                 >
                   <option value="">Select Filter Option</option>
                   <option value="UserName">Username</option>
@@ -761,17 +761,16 @@ const Template: React.FC = () => {
                   onChange={(e) => setSearchInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && applySearch()}
                   className={`h-[34px] w-full pl-8 pr-3 text-xs rounded-md outline-none border transition-all
-                           ${
-                             SmartActions.canSearch(formName)
-                               ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
-                               : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                           }`}
+                           ${SmartActions.canSearch(formName)
+                      ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
+                      : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                    }`}
                 />
               </PermissionAwareTooltip>
             </div>
             <div className="relative w-full sm:w-[160px]">
               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500">
-                <i className="material-symbols-outlined !text-[18px]">
+                <i className="material-symbols-outlined !text-[18px] mt-2">
                   pending_actions
                 </i>
               </span>
@@ -781,7 +780,8 @@ const Template: React.FC = () => {
                 onChange={(e) => {
                   setStatusFilter(e.target.value);
                 }}
-                className="w-full h-[34px] pl-8 pr-8 text-xs rounded-md border border-gray-300 bg-white"
+                className="w-full h-[34px] pl-8 pr-8 text-xs rounded-md appearance-none outline-none border transition-all
+                           bg-white text-black border-gray-300 focus:border-primary-button-bg"
               >
                 <option value="">All Status</option>
                 <option value="Pending">Pending</option>
@@ -814,11 +814,10 @@ const Template: React.FC = () => {
                 allowedText="Manage Columns"
               >
                 <div
-                  className={`h-[34px] flex items-center ${
-                    !SmartActions.canManageColumns(formName)
-                      ? "pointer-events-none opacity-50"
-                      : ""
-                  }`}
+                  className={`h-[34px] flex items-center ${!SmartActions.canManageColumns(formName)
+                    ? "pointer-events-none opacity-50"
+                    : ""
+                    }`}
                 >
                   <ColumnSelector
                     procName="USP_AdminWithdrawFundReport"
@@ -844,11 +843,10 @@ const Template: React.FC = () => {
                     setSearchTrigger((p) => p + 1);
                   }}
                   className={`w-[34px] h-[34px] flex items-center justify-center rounded-md
-        ${
-          SmartActions.canSearch(formName)
-            ? "border border-gray-400 text-gray-600 hover:bg-gray-200"
-            : "border border-gray-300 text-gray-300 cursor-not-allowed"
-        }`}
+        ${SmartActions.canSearch(formName)
+                      ? "border border-gray-400 text-gray-600 hover:bg-gray-200"
+                      : "border border-gray-300 text-gray-300 cursor-not-allowed"
+                    }`}
                 >
                   <i className="material-symbols-outlined text-[20px]">
                     refresh
@@ -881,7 +879,7 @@ const Template: React.FC = () => {
           <StatsCards
             stats={stats}
             config={statsConfig}
-            loading={tableLoading}
+            // loading={tableLoading}
           />
 
           {tableLoading ? (
@@ -895,17 +893,16 @@ const Template: React.FC = () => {
               </div>
             </div>
           ) : hasData ? (
-            <div className="flex justify-between items-center py-2 mb-[10px]">
-              {/* PAGE SIZE */}
+            <div className="flex justify-between items-center py-2 mb-[10px] gap-3 flex-wrap">
+
+              {/* LEFT — Page Size */}
               <div className="relative">
                 <select
                   value={perPage}
                   onChange={(e) => {
                     const size = Number(e.target.value);
-
                     setPerPage(size);
                     setPage(1);
-
                     fetchGridData({
                       ...dateRange,
                       pageOverride: 1,
@@ -913,10 +910,10 @@ const Template: React.FC = () => {
                     });
                   }}
                   className="h-8 w-[120px] px-3 pr-7 text-xs font-semibold
-        text-gray-600 dark:text-gray-300
-        bg-transparent border border-gray-300 dark:border-gray-600
-        rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800
-        transition-all appearance-none"
+          text-gray-600 dark:text-gray-300
+          bg-transparent border border-gray-300 dark:border-gray-600
+          rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800
+          transition-all appearance-none"
                 >
                   <option value="10">10 / page</option>
                   <option value="25">25 / page</option>
@@ -931,34 +928,46 @@ const Template: React.FC = () => {
                 </span>
               </div>
 
-              {/* EXPORT */}
-              <PermissionAwareTooltip allowed={canExport}>
-                <div
-                  className={!canExport ? "pointer-events-none opacity-50" : ""}
-                >
-                  <ExportButtons
-                    title="Withdraw Report"
-                    columns={exportColumns}
-                    fetchData={fetchExportData}
-                    disabled={!canExport}
-                  />
-                </div>
-              </PermissionAwareTooltip>
-              <button
-                disabled={selectedRows.length === 0}
-                onClick={() => handleBulkAction("Approved")}
-                className="px-3 py-1 bg-green-600 text-white rounded disabled:opacity-50"
-              >
-                Approve Selected
-              </button>
+              {/* RIGHT — Export + Bulk Actions */}
+              <div className="flex items-center gap-2 flex-wrap">
 
-              <button
-                disabled={selectedRows.length === 0}
-                onClick={() => handleBulkAction("Rejected")}
-                className="px-3 py-1 bg-red-600 text-white rounded disabled:opacity-50"
-              >
-                Reject Selected
-              </button>
+                {/* APPROVE SELECTED */}
+                <button
+                  disabled={selectedRows.length === 0}
+                  onClick={() => handleBulkAction("Approved")}
+                  className="h-8 flex items-center gap-1 px-3 text-xs font-medium
+          bg-green-600 hover:bg-green-700 text-white
+          rounded-md transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <i className="material-symbols-outlined text-[16px]">check_circle</i>
+                  Approve Selected
+                </button>
+
+                {/* REJECT SELECTED */}
+                <button
+                  disabled={selectedRows.length === 0}
+                  onClick={() => handleBulkAction("Rejected")}
+                  className="h-8 flex items-center gap-1 px-3 text-xs font-medium
+          bg-red-600 hover:bg-red-700 text-white
+          rounded-md transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <i className="material-symbols-outlined text-[16px]">cancel</i>
+                  Reject Selected
+                </button>
+
+                {/* EXPORT */}
+                <PermissionAwareTooltip allowed={canExport}>
+                  <div className={!canExport ? "pointer-events-none opacity-50" : ""}>
+                    <ExportButtons
+                      title="Withdraw Report"
+                      columns={exportColumns}
+                      fetchData={fetchExportData}
+                      disabled={!canExport}
+                    />
+                  </div>
+                </PermissionAwareTooltip>
+
+              </div>
             </div>
           ) : null}
           {/* --- CONTENT CONTAINER --- */}
@@ -1004,6 +1013,7 @@ const Template: React.FC = () => {
                     fontWeight: 700,
                     backgroundColor: "var(--color-primary-table-bg)",
                   },
+                  classNames: ["hide-checkbox"], // ✅ hides checkbox via CSS
                 },
                 {
                   when: (row) => row.isRemoving,

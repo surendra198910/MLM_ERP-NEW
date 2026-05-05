@@ -1940,3 +1940,9 @@ html[dir="rtl"] {
   white-space: normal !important;
   
 }
+/* Hide checkbox only on total row */
+.rdt_TableRow.hide-checkbox .rdt_TableCell:first-child input[type="checkbox"],
+.rdt_TableRow.hide-checkbox .rdt_TableCell:first-child label {
+  display: none !important;
+  pointer-events: none;
+}
