@@ -20,6 +20,10 @@ import LandingIllustration from "../../../../components/CommonFormElements/Landi
 import Swal from "sweetalert2";
 import { FaEye } from "react-icons/fa";
 
+interface DateRange {
+  from: string;
+  to: string;
+}
 
 const Template: React.FC = () => {
   const [searchInput, setSearchInput] = useState("");
@@ -48,41 +52,48 @@ const Template: React.FC = () => {
   const formName = path.split("/").pop();
   const canExport = SmartActions.canExport(formName);
   const today = new Date();
-  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const fromStr = format(firstDayOfMonth, "yyyy-MM-dd");
+
+  const oneYearAgo = new Date(today);
+  oneYearAgo.setFullYear(today.getFullYear() - 1);
+
+  const fromStr = format(oneYearAgo, "yyyy-MM-dd");
   const toStr = format(today, "yyyy-MM-dd");
+  const [pendingRange, setPendingRange] = useState<DateRange>({
+    from: fromStr,
+    to: toStr,
+  });
   const [dateRange, setDateRange] = useState({
     from: fromStr,
     to: toStr,
     preset: "thisMonth",
   });
 
-const statsConfig = [
-  {
-    key: "TotalRequests",
-    title: "Total Requests",
-    icon: "list_alt",
-    showCurrency: false,
-  },
-  {
-    key: "TotalAmount",
-    title: "Total Amount",
-    icon: "payments",
-    showCurrency: true,
-  },
-  {
-    key: "ThisMonthAmount",
-    title: "This Month",
-    icon: "calendar_month",
-    showCurrency: true,
-  },
-  {
-    key: "TodayAmount",
-    title: "Today",
-    icon: "today",
-    showCurrency: true,
-  },
-];
+  const statsConfig = [
+    {
+      key: "TotalRequests",
+      title: "Total Requests",
+      icon: "list_alt",
+      showCurrency: false,
+    },
+    {
+      key: "TotalAmount",
+      title: "Total Amount",
+      icon: "payments",
+      showCurrency: true,
+    },
+    {
+      key: "ThisMonthAmount",
+      title: "This Month",
+      icon: "calendar_month",
+      showCurrency: true,
+    },
+    {
+      key: "TodayAmount",
+      title: "Today",
+      icon: "today",
+      showCurrency: true,
+    },
+  ];
   const [showModal, setShowModal] = useState(false);
   const [selectedRow, setSelectedRow] = useState<any>(null);
   const [actionStatus, setActionStatus] = useState("");
@@ -242,31 +253,25 @@ const statsConfig = [
           cell: (row: any) => {
             if (row.__isTotal) return null;
 
-            if (row.Status=='Pending')
-            {
-            return (
-              
-              <button
-                onClick={() => handleGetDetails(row.Id)}
-                className="text-primary-button-bg hover:underline text-xs font-medium"
-              >
-               Take Action
-              </button>
-            );
-            }
-            else {
-
-                return (
-              
-              <button
-                onClick={() => handleGetDetails(row.Id)}
-                className="text-primary-button-bg hover:underline text-xs font-medium"
-              >
-                {/* eye icon */}
-              <FaEye style={{fontSize: "20px"}} title="View Details" />  
-
-              </button>
-            );
+            if (row.Status == "Pending") {
+              return (
+                <button
+                  onClick={() => handleGetDetails(row.Id)}
+                  className="text-primary-button-bg hover:underline text-xs font-medium"
+                >
+                  Take Action
+                </button>
+              );
+            } else {
+              return (
+                <button
+                  onClick={() => handleGetDetails(row.Id)}
+                  className="text-primary-button-bg hover:underline text-xs font-medium"
+                >
+                  {/* eye icon */}
+                  <FaEye style={{ fontSize: "20px" }} title="View Details" />
+                </button>
+              );
             }
           },
           ignoreRowClick: true,
@@ -355,8 +360,8 @@ const statsConfig = [
           SortIndexColumn: sortIndex,
           SortDir: sortDirection,
 
-          FromDate: range.from || null,
-          ToDate: range.to || null,
+          FromDate: pendingRange.from || null,
+          ToDate: pendingRange.to || null,
         }),
       };
 
@@ -429,24 +434,24 @@ const statsConfig = [
 
   //////////////
 
-//   const GetStats = async () => {
-//   const payload = {
-//     procName: "FetchFundRequests",
-//     Para: JSON.stringify({
-//       ActionMode: "GetStats",
-//     }),
-//   };
+  //   const GetStats = async () => {
+  //   const payload = {
+  //     procName: "FetchFundRequests",
+  //     Para: JSON.stringify({
+  //       ActionMode: "GetStats",
+  //     }),
+  //   };
 
-//   const res = await universalService(payload);
-//   const result = res?.data ?? res ?? [];
+  //   const res = await universalService(payload);
+  //   const result = res?.data ?? res ?? [];
 
-//   const rawStats = result[0] || {};
+  //   const rawStats = result[0] || {};
 
-//   // 🔥 convert dynamic
-//   // const formatted = formatStats(rawStats);
+  //   // 🔥 convert dynamic
+  //   // const formatted = formatStats(rawStats);
 
-//   setStats(formatted);
-// };
+  //   setStats(formatted);
+  // };
 
   const handleGetDetails = async (id: any) => {
     try {
@@ -616,7 +621,7 @@ const statsConfig = [
       <div className="trezo-card-header mb-[10px] md:mb-[10px] sm:flex items-center justify-between pb-5 border-b border-gray-200 -mx-[20px] md:-mx-[25px] px-[20px] md:px-[25px]">
         <div className="trezo-card-title">
           <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
-            Approve Reject Request Fund 
+            Approve Reject Request Fund
           </h5>
         </div>
 
@@ -628,13 +633,12 @@ const statsConfig = [
                 allowedText="Filter by Date"
               >
                 <DateRangeFilter
-                  disabled={!SmartActions.canDateFilter(formName)}
-                  onChange={(r) => {
-                    if (!SmartActions.canDateFilter(formName)) return; // safety
-
-                    setPage(1); // reset pagination
-                    setDateRange(r);
-                    setSearchTrigger((p) => p + 1);
+                  initialRange={{ start: oneYearAgo, end: today }}
+                  onChange={(range) => {
+                    setPendingRange({
+                      from: format(range.start, "yyyy-MM-dd"),
+                      to: format(range.end, "yyyy-MM-dd"),
+                    });
                   }}
                 />
               </PermissionAwareTooltip>
@@ -662,7 +666,6 @@ const statsConfig = [
                 >
                   <option value="">Select Filter Option</option>
                   <option value="Username">Username</option>
-                 
                 </select>
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
                   <i className="material-symbols-outlined !text-[18px]">
@@ -717,7 +720,6 @@ const statsConfig = [
                     search
                   </i>
                 </button>
-                
               </PermissionAwareTooltip>
               {/* COLUMN SELECTOR BUTTON */}
               <PermissionAwareTooltip
@@ -944,12 +946,16 @@ const statsConfig = [
                 <div className="grid grid-cols-3 gap-3 text-sm">
                   <div>
                     <p className="text-xs !mb-0 text-gray-400">User</p>
-                    <p className="font-semibold !mb-0">{selectedRow.UserName}</p>
+                    <p className="font-semibold !mb-0">
+                      {selectedRow.UserName}
+                    </p>
                   </div>
 
                   <div>
                     <p className="text-xs !mb-0 text-gray-400">Name</p>
-                    <p className="font-semibold !mb-0">{selectedRow.MemberName}</p>
+                    <p className="font-semibold !mb-0">
+                      {selectedRow.MemberName}
+                    </p>
                   </div>
 
                   <div>
@@ -970,7 +976,9 @@ const statsConfig = [
                   </div>
 
                   <div>
-                    <p className="text-xs !mb-0 text-gray-400">Transaction No</p>
+                    <p className="text-xs !mb-0 text-gray-400">
+                      Transaction No
+                    </p>
                     <p>{selectedRow.TransactionReference || "-"}</p>
                   </div>
 
@@ -1000,7 +1008,9 @@ const statsConfig = [
                 {selectedRow.PaymentMode !== "UPI" && (
                   <div className="grid grid-cols-2 gap-3 mb-2 text-sm border-t pt-3 border-gray-200 dark:border-gray-700">
                     <div>
-                      <p className="text-xs !mb-0 text-gray-400">Account Name</p>
+                      <p className="text-xs !mb-0 text-gray-400">
+                        Account Name
+                      </p>
                       <p>{selectedRow.AccountName}</p>
                     </div>
 
