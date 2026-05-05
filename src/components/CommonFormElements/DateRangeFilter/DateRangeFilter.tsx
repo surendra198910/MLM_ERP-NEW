@@ -30,6 +30,7 @@ import "react-day-picker/style.css";
 type Range = { from: Date | undefined; to: Date | undefined };
 type PickStep = 0 | 1 | 2;
 type Props = {
+  disabled?: boolean;
   onChange?: (range: { start: Date; end: Date }) => void;
   initialRange?: { start: Date; end: Date };
 };
@@ -156,7 +157,11 @@ function CustomCaption({
 }
 
 /* ─── Main Component ─────────────────────────────── */
-export default function DateRangeFilter({ onChange, initialRange }: Props) {
+export default function DateRangeFilter({
+  onChange,
+  initialRange,
+  disabled,
+}: Props) {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -251,6 +256,8 @@ export default function DateRangeFilter({ onChange, initialRange }: Props) {
 
   /* ── Open picker ── */
   const openPicker = () => {
+    if (disabled) return; // ✅ block interaction
+
     if (open) {
       setOpen(false);
       return;
@@ -476,6 +483,10 @@ export default function DateRangeFilter({ onChange, initialRange }: Props) {
     ? rangeLabel(committed)
     : "Select date range";
 
+  useEffect(() => {
+    if (disabled) setOpen(false);
+  }, [disabled]);
+
   return (
     <>
       <style>{CSS}</style>
@@ -485,11 +496,12 @@ export default function DateRangeFilter({ onChange, initialRange }: Props) {
         <button
           onClick={openPicker}
           type="button"
+          disabled={disabled}
           className={`
     h-[34px] min-w-[180px] px-2.5 flex items-center justify-between 
     text-xs rounded-md border transition-all outline-none bg-white
     ${open ? "border-primary-button-bg" : "border-gray-300"}
-    hover:border-gray-400
+    ${disabled ? "opacity-50 cursor-not-allowed bg-gray-100" : "hover:border-gray-400"}
   `}
         >
           <div className="flex items-center gap-2 overflow-hidden">
@@ -669,7 +681,7 @@ export default function DateRangeFilter({ onChange, initialRange }: Props) {
 
 /* ─── CSS ─────────────────────────────────────────── */
 const CSS = `
-.drf-root { position: relative; width: fit-content; z-index: 1000; }
+.drf-root { position: relative; width: fit-content; z-index: 0; }
 
 .drf-label {
   font-size: 11px; font-weight: 500;
