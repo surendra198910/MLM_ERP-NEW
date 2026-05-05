@@ -297,15 +297,15 @@ const AppRoutes = () => {
                 element={<MLMRegisterPage />}
               />
               <Route
-                path="/superadmin/client/generation-tree"
+                path="/superadmin/team/generation-tree"
                 element={<GenerationTree />}
               />
               <Route
-                path="/superadmin/client/binary-tree"
+                path="/superadmin/team/binary-tree"
                 element={<Geneaology />}
               />
               <Route
-                path="/superadmin/client/member-wallet"
+                path="/superadmin/wallet/member-wallet"
                 element={<MemberWallet />}
               />
               //Admin Tools
@@ -458,7 +458,7 @@ const AppRoutes = () => {
                 element={<InvestmentReport />}
               />
               <Route
-                path="/superadmin/reports/withdraw-report"
+                path="/superadmin/withdraw/withdraw-report"
                 element={<Withdraw />}
               />
               <Route
@@ -467,7 +467,7 @@ const AppRoutes = () => {
               />
 
                 <Route
-                path="/superadmin/reports/level-wise-team"
+                path="/superadmin/team/level-wise-team"
                 element={<LevelWiseTeam />}
               />
 
