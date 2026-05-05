@@ -696,9 +696,9 @@ const Template: React.FC = () => {
       {/* --- HEADER & SEARCH SECTION --- */}
       <div className="trezo-card-header mb-[10px] md:mb-[10px] sm:flex items-center justify-between pb-5 border-b border-gray-200 -mx-[20px] md:-mx-[25px] px-[20px] md:px-[25px]">
         <div className="trezo-card-title">
-          <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
-            Withdraw Report
-          </h5>
+          <h6 className="!mb-0 font-bold text-xl text-black dark:text-white">
+            Approve/Reject Withdraw
+          </h6>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:w-auto w-full">
@@ -709,6 +709,7 @@ const Template: React.FC = () => {
                 allowedText="Filter by Date"
               >
                 <DateRangeFilter
+                 disabled={!SmartActions.canDateFilter(formName)}
                   initialRange={{ start: oneYearAgo, end: today }}
                   onChange={(range) => {
                     setPendingRange({
@@ -874,9 +875,9 @@ const Template: React.FC = () => {
       </div>
       {!showTable && (
         <LandingIllustration
-          title="Withdraw Report"
+          title="Approve/Reject Withdraw"
           formName={formName}
-          addLabel="Add Income"
+          // addLabel="Add Income"
           description={
             <>
               Search Withdraw Report using filters above.
