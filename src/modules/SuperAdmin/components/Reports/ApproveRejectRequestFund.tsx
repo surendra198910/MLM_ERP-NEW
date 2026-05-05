@@ -20,10 +20,6 @@ import LandingIllustration from "../../../../components/CommonFormElements/Landi
 import Swal from "sweetalert2";
 import { FaEye } from "react-icons/fa";
 
-interface DateRange {
-  from: string;
-  to: string;
-}
 
 const Template: React.FC = () => {
   const [searchInput, setSearchInput] = useState("");
@@ -52,48 +48,41 @@ const Template: React.FC = () => {
   const formName = path.split("/").pop();
   const canExport = SmartActions.canExport(formName);
   const today = new Date();
-
-  const oneYearAgo = new Date(today);
-  oneYearAgo.setFullYear(today.getFullYear() - 1);
-
-  const fromStr = format(oneYearAgo, "yyyy-MM-dd");
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const fromStr = format(firstDayOfMonth, "yyyy-MM-dd");
   const toStr = format(today, "yyyy-MM-dd");
-  const [pendingRange, setPendingRange] = useState<DateRange>({
-    from: fromStr,
-    to: toStr,
-  });
   const [dateRange, setDateRange] = useState({
     from: fromStr,
     to: toStr,
     preset: "thisMonth",
   });
 
-  const statsConfig = [
-    {
-      key: "TotalRequests",
-      title: "Total Requests",
-      icon: "list_alt",
-      showCurrency: false,
-    },
-    {
-      key: "TotalAmount",
-      title: "Total Amount",
-      icon: "payments",
-      showCurrency: true,
-    },
-    {
-      key: "ThisMonthAmount",
-      title: "This Month",
-      icon: "calendar_month",
-      showCurrency: true,
-    },
-    {
-      key: "TodayAmount",
-      title: "Today",
-      icon: "today",
-      showCurrency: true,
-    },
-  ];
+const statsConfig = [
+  {
+    key: "TotalRequests",
+    title: "Total Requests",
+    icon: "list_alt",
+    showCurrency: false,
+  },
+  {
+    key: "TotalAmount",
+    title: "Total Amount",
+    icon: "payments",
+    showCurrency: true,
+  },
+  {
+    key: "ThisMonthAmount",
+    title: "This Month",
+    icon: "calendar_month",
+    showCurrency: true,
+  },
+  {
+    key: "TodayAmount",
+    title: "Today",
+    icon: "today",
+    showCurrency: true,
+  },
+];
   const [showModal, setShowModal] = useState(false);
   const [selectedRow, setSelectedRow] = useState<any>(null);
   const [actionStatus, setActionStatus] = useState("");
@@ -253,25 +242,31 @@ const Template: React.FC = () => {
           cell: (row: any) => {
             if (row.__isTotal) return null;
 
-            if (row.Status == "Pending") {
-              return (
-                <button
-                  onClick={() => handleGetDetails(row.Id)}
-                  className="text-primary-button-bg hover:underline text-xs font-medium"
-                >
-                  Take Action
-                </button>
-              );
-            } else {
-              return (
-                <button
-                  onClick={() => handleGetDetails(row.Id)}
-                  className="text-primary-button-bg hover:underline text-xs font-medium"
-                >
-                  {/* eye icon */}
-                  <FaEye style={{ fontSize: "20px" }} title="View Details" />
-                </button>
-              );
+            if (row.Status=='Pending')
+            {
+            return (
+              
+              <button
+                onClick={() => handleGetDetails(row.Id)}
+                className="text-primary-button-bg hover:underline text-xs font-medium"
+              >
+               Take Action
+              </button>
+            );
+            }
+            else {
+
+                return (
+              
+              <button
+                onClick={() => handleGetDetails(row.Id)}
+                className="text-primary-button-bg hover:underline text-xs font-medium"
+              >
+                {/* eye icon */}
+              <FaEye style={{fontSize: "20px"}} title="View Details" />  
+
+              </button>
+            );
             }
           },
           ignoreRowClick: true,
@@ -360,8 +355,8 @@ const Template: React.FC = () => {
           SortIndexColumn: sortIndex,
           SortDir: sortDirection,
 
-          FromDate: pendingRange.from || null,
-          ToDate: pendingRange.to || null,
+          FromDate: range.from || null,
+          ToDate: range.to || null,
         }),
       };
 
@@ -434,24 +429,24 @@ const Template: React.FC = () => {
 
   //////////////
 
-  //   const GetStats = async () => {
-  //   const payload = {
-  //     procName: "FetchFundRequests",
-  //     Para: JSON.stringify({
-  //       ActionMode: "GetStats",
-  //     }),
-  //   };
+//   const GetStats = async () => {
+//   const payload = {
+//     procName: "FetchFundRequests",
+//     Para: JSON.stringify({
+//       ActionMode: "GetStats",
+//     }),
+//   };
 
-  //   const res = await universalService(payload);
-  //   const result = res?.data ?? res ?? [];
+//   const res = await universalService(payload);
+//   const result = res?.data ?? res ?? [];
 
-  //   const rawStats = result[0] || {};
+//   const rawStats = result[0] || {};
 
-  //   // 🔥 convert dynamic
-  //   // const formatted = formatStats(rawStats);
+//   // 🔥 convert dynamic
+//   // const formatted = formatStats(rawStats);
 
-  //   setStats(formatted);
-  // };
+//   setStats(formatted);
+// };
 
   const handleGetDetails = async (id: any) => {
     try {
@@ -621,7 +616,7 @@ const Template: React.FC = () => {
       <div className="trezo-card-header mb-[10px] md:mb-[10px] sm:flex items-center justify-between pb-5 border-b border-gray-200 -mx-[20px] md:-mx-[25px] px-[20px] md:px-[25px]">
         <div className="trezo-card-title">
           <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
-            Request Fund Report
+            Approve Reject Request Fund 
           </h5>
         </div>
 
@@ -633,12 +628,13 @@ const Template: React.FC = () => {
                 allowedText="Filter by Date"
               >
                 <DateRangeFilter
-                  initialRange={{ start: oneYearAgo, end: today }}
-                  onChange={(range) => {
-                    setPendingRange({
-                      from: format(range.start, "yyyy-MM-dd"),
-                      to: format(range.end, "yyyy-MM-dd"),
-                    });
+                  disabled={!SmartActions.canDateFilter(formName)}
+                  onChange={(r) => {
+                    if (!SmartActions.canDateFilter(formName)) return; // safety
+
+                    setPage(1); // reset pagination
+                    setDateRange(r);
+                    setSearchTrigger((p) => p + 1);
                   }}
                 />
               </PermissionAwareTooltip>
@@ -665,8 +661,8 @@ const Template: React.FC = () => {
                            }`}
                 >
                   <option value="">Select Filter Option</option>
-                  <option value="Status">Status</option>
                   <option value="Username">Username</option>
+                 
                 </select>
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
                   <i className="material-symbols-outlined !text-[18px]">
@@ -721,6 +717,7 @@ const Template: React.FC = () => {
                     search
                   </i>
                 </button>
+                
               </PermissionAwareTooltip>
               {/* COLUMN SELECTOR BUTTON */}
               <PermissionAwareTooltip
@@ -947,16 +944,12 @@ const Template: React.FC = () => {
                 <div className="grid grid-cols-3 gap-3 text-sm">
                   <div>
                     <p className="text-xs !mb-0 text-gray-400">User</p>
-                    <p className="font-semibold !mb-0">
-                      {selectedRow.UserName}
-                    </p>
+                    <p className="font-semibold !mb-0">{selectedRow.UserName}</p>
                   </div>
 
                   <div>
                     <p className="text-xs !mb-0 text-gray-400">Name</p>
-                    <p className="font-semibold !mb-0">
-                      {selectedRow.MemberName}
-                    </p>
+                    <p className="font-semibold !mb-0">{selectedRow.MemberName}</p>
                   </div>
 
                   <div>
@@ -977,9 +970,7 @@ const Template: React.FC = () => {
                   </div>
 
                   <div>
-                    <p className="text-xs !mb-0 text-gray-400">
-                      Transaction No
-                    </p>
+                    <p className="text-xs !mb-0 text-gray-400">Transaction No</p>
                     <p>{selectedRow.TransactionReference || "-"}</p>
                   </div>
 
@@ -1009,9 +1000,7 @@ const Template: React.FC = () => {
                 {selectedRow.PaymentMode !== "UPI" && (
                   <div className="grid grid-cols-2 gap-3 mb-2 text-sm border-t pt-3 border-gray-200 dark:border-gray-700">
                     <div>
-                      <p className="text-xs !mb-0 text-gray-400">
-                        Account Name
-                      </p>
+                      <p className="text-xs !mb-0 text-gray-400">Account Name</p>
                       <p>{selectedRow.AccountName}</p>
                     </div>
 
@@ -1034,7 +1023,7 @@ const Template: React.FC = () => {
 
                 {/* REMARKS */}
                 <div>
-                  <p className="text-xs text-gray-400 mb-1">Remarks</p>
+                  <p className="text-xs !mb-0 text-gray-400 mb-1">Remarks</p>
                   <div className="px-3 py-2 border rounded-md bg-gray-50 dark:bg-[#0f172a]">
                     {selectedRow.UserRemarks || "-"}
                   </div>
@@ -1043,7 +1032,7 @@ const Template: React.FC = () => {
                 {/* RECEIPT */}
                 {selectedRow.ReceiptUrl && (
                   <div>
-                    <p className="text-xs text-gray-400 mb-2">Receipt</p>
+                    <p className="text-xs !mb-0 text-gray-400 mb-2">Receipt</p>
 
                     <div
                       className="flex items-center gap-3 p-2 border rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition"
