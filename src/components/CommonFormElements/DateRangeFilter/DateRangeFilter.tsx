@@ -681,7 +681,7 @@ export default function DateRangeFilter({
 
 /* ─── CSS ─────────────────────────────────────────── */
 const CSS = `
-.drf-root { position: relative; width: fit-content; z-index: 0; }
+.drf-root { position: relative; width: fit-content; z-index: 50; }
 
 .drf-label {
   font-size: 11px; font-weight: 500;

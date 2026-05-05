@@ -51,7 +51,7 @@ const Template: React.FC = () => {
     const location = useLocation();
     const path = location.pathname;
     const formName = path.split("/").pop();
-    const [statusFilter, setStatusFilter] = useState("Pending");
+    const [statusFilter, setStatusFilter] = useState("");
     const canExport = SmartActions.canExport(formName);
     const today = new Date();
 
