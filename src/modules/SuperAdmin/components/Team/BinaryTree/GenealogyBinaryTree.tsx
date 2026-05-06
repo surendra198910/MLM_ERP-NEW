@@ -133,6 +133,7 @@ const BinaryTreeComponent = () => {
   const [treeLoading, setTreeLoading]       = useState(false);
   const [expandingId, setExpandingId]       = useState<number | null>(null); // which node is loading
   const [treeError, setTreeError]           = useState<string | null>(null);
+  
 
   // Logged-in username from localStorage
   const [LoggedUserName] = useState<string>(
@@ -152,7 +153,7 @@ const BinaryTreeComponent = () => {
     const res = await universalService({
       procName: "TeamGenealogy",
       Para: JSON.stringify({
-        UserName:       userName,
+        UserName:  userName|| LoggedUserName,//==""?,
         SearchUserName: searchUserName,
       }),
     });
