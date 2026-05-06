@@ -11,7 +11,7 @@ import OopsNoData from "../../../../components/CommonFormElements/DataNotFound/O
 import TableSkeleton from "../Forms/TableSkeleton";
 import customStyles from "../../../../components/CommonFormElements/DataTableComponents/CustomStyles";
 import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
-import { SmartActions } from "../Security/SmartActionWithFormName"; 
+import { SmartActions } from "../Security/SmartActionWithFormName";
 import { useLocation } from "react-router-dom";
 import Loader from "../../common/Loader";
 import AccessRestricted from "../../common/AccessRestricted";
@@ -19,7 +19,6 @@ import ActionCell from "../../../../components/CommonFormElements/DataTableCompo
 import LandingIllustration from "../../../../components/CommonFormElements/LandingIllustration/LandingIllustration";
 import Swal from "sweetalert2";
 import { FaEye } from "react-icons/fa";
-
 
 const Template: React.FC = () => {
   const [searchInput, setSearchInput] = useState("");
@@ -43,17 +42,18 @@ const Template: React.FC = () => {
   const [permissionsLoading, setPermissionsLoading] = useState(true);
   const [hasPageAccess, setHasPageAccess] = useState(true);
   const [initialSortReady, setInitialSortReady] = useState(false);
+  const [filterStatus, setFilterStatus] = useState("Pending");
   const location = useLocation();
   const path = location.pathname;
   const formName = path.split("/").pop();
   const canExport = SmartActions.canExport(formName);
-  
+
   //New date forrmate --------------------------------
 
   interface DateRange {
-  from: string;
-  to: string;
-}
+    from: string;
+    to: string;
+  }
 
   const today = new Date();
 
@@ -70,7 +70,6 @@ const Template: React.FC = () => {
   const [dateRange, setDateRange] = useState({
     from: fromStr,
     to: toStr,
-   
   });
 
   //--------------------------New date forrmate End here --------------------//
@@ -246,12 +245,11 @@ const Template: React.FC = () => {
 
               // ⭐ NORMAL ROW
               const value = row[c.ColumnKey];
-   //client logo 
-   const IMAGE_BASE_URL =
-    import.meta.env.VITE_IMAGE_PREVIEW_URL_2 + "ClientImages/";
-                  if (c.ColumnKey === "Member") {
+              //client logo
+              const IMAGE_BASE_URL =
+                import.meta.env.VITE_IMAGE_PREVIEW_URL_2 + "ClientImages/";
+              if (c.ColumnKey === "Member") {
                 const profileUrl = row.ClientLogo
-
                   ? `${IMAGE_BASE_URL}${row.ClientLogo}`
                   : `https://ui-avatars.com/api/?name=${row.MemberName}&background=random`;
 
@@ -301,8 +299,6 @@ const Template: React.FC = () => {
                   </span>
                 );
               }
-
-
 
               if (c.IsCurrency && value != null) {
                 return `$${Number(value).toLocaleString()}`;
@@ -417,6 +413,7 @@ const Template: React.FC = () => {
         procName: "FetchFundRequests",
         Para: JSON.stringify({
           SearchBy: options?.searchBy ?? filterColumn ?? "",
+          Status: filterStatus,
           Criteria: options?.criteria ?? searchInput ?? "",
           Page: pageToUse,
           PageSize: perPageToUse,
@@ -707,7 +704,7 @@ const Template: React.FC = () => {
                 />
               </PermissionAwareTooltip>
             </div>
-            {/* 1. Filter Dropdown (Exactly from your design) */}
+            {/* 2. Filter Dropdown (Exactly from your design) */}
             <div className="relative w-full sm:w-[180px]">
               <PermissionAwareTooltip
                 allowed={SmartActions.canAdvancedSearch(formName)}
@@ -767,6 +764,41 @@ const Template: React.FC = () => {
               </PermissionAwareTooltip>
             </div>
 
+            {/* //Filter for the status */}
+
+            <div className="relative w-full sm:w-[180px]">
+              <PermissionAwareTooltip
+                allowed={SmartActions.canAdvancedSearch(formName)}
+                allowedText="Search By"
+              >
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-500">
+                  <i className="material-symbols-outlined !text-[18px]">
+                    filter_list
+                  </i>
+                </span>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className={`w-full h-[34px] pl-8 pr-8 text-xs rounded-md appearance-none outline-none border transition-all
+                           ${
+                             SmartActions.canAdvancedSearch(formName)
+                               ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
+                               : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                           }`}
+                >
+                  <option value="">Select Filter Option</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Rejected">Rejected</option>
+                </select>
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
+                  <i className="material-symbols-outlined !text-[18px]">
+                    expand_more
+                  </i>
+                </span>
+              </PermissionAwareTooltip>
+            </div>
+
             {/* 3. BUTTONS GROUP (Exactly from your design) */}
             <div className="flex items-center gap-2">
               {/* SEARCH BUTTON */}
@@ -803,19 +835,7 @@ const Template: React.FC = () => {
                   />
                 </div>
               </PermissionAwareTooltip>
-              {/* ADD BUTTON */}
-              <PermissionAwareTooltip
-                allowed={SmartActions.canAdd(formName)}
-                allowedText="Add New"
-              >
-                <button
-                  type="button"
-                  disabled={!SmartActions.canAdd(formName)}
-                  className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-primary-button-bg text-white bg-primary-button-bg hover:bg-white hover:border-primary-button-bg hover:text-primary-button-bg transition-all shadow-sm disabled:opacity-50"
-                >
-                  <i className="material-symbols-outlined text-[20px]">add</i>
-                </button>
-              </PermissionAwareTooltip>
+
               {/* REFRESH BUTTON (Visible when showTable is true) */}
             </div>
             {(filterColumn || searchInput) && (
@@ -1036,7 +1056,9 @@ const Template: React.FC = () => {
 
                   <div>
                     <p className="text-xs !mb-0 text-gray-400">Payment Mode</p>
-                    <p className="font-bold !mb-0 text-green-600 text-base">{selectedRow.PaymentMode}</p>
+                    <p className="font-bold !mb-0 text-green-600 text-base">
+                      {selectedRow.PaymentMode}
+                    </p>
                   </div>
 
                   <div>
