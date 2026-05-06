@@ -339,7 +339,7 @@ const Template: React.FC = () => {
         const payload = {
             procName: "AdminWithdrawFundReport",
             Para: JSON.stringify({
-                SearchBy: filterColumn,
+                SearchBy: filterColumn==""? "Username" :filterColumn,
                 Criteria: searchInput,
                 Page: page,
                 PageSize: 0,
@@ -374,7 +374,7 @@ const Template: React.FC = () => {
                 procName: "AdminWithdrawFundReport",
                 Para: JSON.stringify({
                     Status: statusFilter,
-                    SearchBy: filterColumn,
+                    SearchBy: filterColumn == ""?"Username" :filterColumn,
                     Criteria: searchInput,
                     Page: pageToUse,
                     PageSize: perPageToUse,
