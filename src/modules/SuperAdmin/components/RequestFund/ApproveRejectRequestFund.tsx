@@ -11,7 +11,7 @@ import OopsNoData from "../../../../components/CommonFormElements/DataNotFound/O
 import TableSkeleton from "../Forms/TableSkeleton";
 import customStyles from "../../../../components/CommonFormElements/DataTableComponents/CustomStyles";
 import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
-import { SmartActions } from "../Security/SmartActionWithFormName";
+import { SmartActions } from "../Security/SmartActionWithFormName"; 
 import { useLocation } from "react-router-dom";
 import Loader from "../../common/Loader";
 import AccessRestricted from "../../common/AccessRestricted";
@@ -20,10 +20,6 @@ import LandingIllustration from "../../../../components/CommonFormElements/Landi
 import Swal from "sweetalert2";
 import { FaEye } from "react-icons/fa";
 
-interface DateRange {
-  from: string;
-  to: string;
-}
 
 const Template: React.FC = () => {
   const [searchInput, setSearchInput] = useState("");
@@ -51,6 +47,14 @@ const Template: React.FC = () => {
   const path = location.pathname;
   const formName = path.split("/").pop();
   const canExport = SmartActions.canExport(formName);
+  
+  //New date forrmate --------------------------------
+
+  interface DateRange {
+  from: string;
+  to: string;
+}
+
   const today = new Date();
 
   const oneYearAgo = new Date(today);
@@ -62,12 +66,14 @@ const Template: React.FC = () => {
     from: fromStr,
     to: toStr,
   });
+
   const [dateRange, setDateRange] = useState({
     from: fromStr,
     to: toStr,
-    preset: "thisMonth",
+   
   });
 
+  //--------------------------New date forrmate End here --------------------//
   const statsConfig = [
     {
       key: "TotalRequests",
@@ -240,6 +246,63 @@ const Template: React.FC = () => {
 
               // ⭐ NORMAL ROW
               const value = row[c.ColumnKey];
+   //client logo 
+   const IMAGE_BASE_URL =
+    import.meta.env.VITE_IMAGE_PREVIEW_URL_2 + "ClientImages/";
+                  if (c.ColumnKey === "Member") {
+                const profileUrl = row.ClientLogo
+
+                  ? `${IMAGE_BASE_URL}${row.ClientLogo}`
+                  : `https://ui-avatars.com/api/?name=${row.MemberName}&background=random`;
+
+                return (
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={profileUrl}
+                      alt="user"
+                      className="w-9 h-9 rounded-full object-cover border"
+                      onError={(e: any) => {
+                        e.target.src = `https://ui-avatars.com/api/?name=${row.MemberName}`;
+                      }}
+                    />
+
+                    <div className="flex flex-col leading-tight">
+                      <span className="font-medium text-sm">
+                        {row.MemberName}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {row.UserName}
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
+
+              // STATUS BADGE
+              if (c.ColumnKey === "Status") {
+                const getStatusClass = (status: string) => {
+                  switch (status) {
+                    case "Approved":
+                      return "bg-green-100 text-green-700";
+                    case "Rejected":
+                      return "bg-red-100 text-red-700";
+                    default:
+                      return "bg-yellow-100 text-yellow-700"; // Pending
+                  }
+                };
+
+                return (
+                  <span
+                    className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusClass(
+                      value,
+                    )}`}
+                  >
+                    {value}
+                  </span>
+                );
+              }
+
+
 
               if (c.IsCurrency && value != null) {
                 return `$${Number(value).toLocaleString()}`;
@@ -634,6 +697,7 @@ const Template: React.FC = () => {
               >
                 <DateRangeFilter
                   initialRange={{ start: oneYearAgo, end: today }}
+                  disabled={!SmartActions.canDateFilter(formName)}
                   onChange={(range) => {
                     setPendingRange({
                       from: format(range.start, "yyyy-MM-dd"),
@@ -972,7 +1036,7 @@ const Template: React.FC = () => {
 
                   <div>
                     <p className="text-xs !mb-0 text-gray-400">Payment Mode</p>
-                    <p>{selectedRow.PaymentMode}</p>
+                    <p className="font-bold !mb-0 text-green-600 text-base">{selectedRow.PaymentMode}</p>
                   </div>
 
                   <div>

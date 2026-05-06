@@ -46,15 +46,32 @@ const Template: React.FC = () => {
   const path = location.pathname;
   const formName = path.split("/").pop();
   const canExport = SmartActions.canExport(formName);
+
+  //New date forrmate --------------------------------
+
+  interface DateRange {
+    from: string;
+    to: string;
+  }
+
   const today = new Date();
-  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const fromStr = format(firstDayOfMonth, "yyyy-MM-dd");
+
+  const oneYearAgo = new Date(today);
+  oneYearAgo.setFullYear(today.getFullYear() - 1);
+
+  const fromStr = format(oneYearAgo, "yyyy-MM-dd");
   const toStr = format(today, "yyyy-MM-dd");
+  const [pendingRange, setPendingRange] = useState<DateRange>({
+    from: fromStr,
+    to: toStr,
+  });
+
   const [dateRange, setDateRange] = useState({
     from: fromStr,
     to: toStr,
-    preset: "thisMonth",
   });
+
+  //--------------------------New date forrmate End here --------------------//
 
   const statsConfig = [
     {
@@ -63,7 +80,7 @@ const Template: React.FC = () => {
       icon: "list_alt",
       showCurrency: false,
     },
-     {
+    {
       key: "TodayTeam",
       title: "Today",
       icon: "today",
@@ -75,14 +92,13 @@ const Template: React.FC = () => {
       icon: "calendar_month",
       showCurrency: false,
     },
-   
+
     {
       key: "LastMonthTeam",
       title: "Last Month Team",
       icon: "payments",
       showCurrency: false,
     },
-    
   ];
   // const [showModal, setShowModal] = useState(false);
   const [selectedRow, setSelectedRow] = useState<any>(null);
@@ -234,6 +250,38 @@ const Template: React.FC = () => {
               // ⭐ NORMAL ROW
               const value = row[c.ColumnKey];
 
+               //client logo 
+   const IMAGE_BASE_URL =
+    import.meta.env.VITE_IMAGE_PREVIEW_URL_2 + "ClientImages/";
+                  if (c.ColumnKey == "Member") {
+                const profileUrl = row.ClientLogo
+
+                  ? `${IMAGE_BASE_URL}${row.ClientLogo}`
+                  : `https://ui-avatars.com/api/?name=${row.Name}&background=random`;
+
+                return (
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={profileUrl}
+                      alt="user"
+                      className="w-9 h-9 rounded-full object-cover border"
+                      onError={(e: any) => {
+                        e.target.src = `https://ui-avatars.com/api/?name=${row.Name}`;
+                      }}
+                    />
+
+                    <div className="flex flex-col leading-tight">
+                      <span className="font-medium text-sm">
+                        {row.Name}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {row.UserName}
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
+
               if (c.IsCurrency && value != null) {
                 return `$${Number(value).toLocaleString()}`;
               }
@@ -241,8 +289,8 @@ const Template: React.FC = () => {
               return value ?? "-";
             },
           }));
-        const actionColumn = {
-          name: "Action",
+        const actionColumn = {  
+          // name: "Action",
           cell: (row: any) => {
             if (row.__isTotal) return null;
 
@@ -281,7 +329,6 @@ const Template: React.FC = () => {
     }
   };
 
-
   const handleEdit = (row) => {
     console.log("Edit Row:", row.TotalRecords);
     // open modal or navigate
@@ -313,11 +360,9 @@ const Template: React.FC = () => {
     return res?.data ?? res ?? [];
   };
   const GetStats = async () => {
- 
-      if (!searchInput.trim()){
-
+    if (!searchInput.trim()) {
       searchRef.current.focus();
-      return 
+      return;
     }
     const payload = {
       procName: "LevelTeamReportByAdmin",
@@ -349,21 +394,19 @@ const Template: React.FC = () => {
 
     const pageToUse = options?.pageOverride ?? page;
     const perPageToUse = options?.perPageOverride ?? perPage;
-    if (!searchInput.trim()){
-
+    if (!searchInput.trim()) {
       searchRef.current.focus();
-      return 
+      return;
     }
     // debugger
     GetStats();
 
     try {
       setTableLoading(true);
- 
+
       const payload = {
         procName: "LevelTeamReportByAdmin",
         Para: JSON.stringify({
-          
           SearchBy: options?.searchBy ?? filterColumn ?? "",
           Criteria: options?.criteria ?? searchInput ?? "",
           Page: pageToUse,
@@ -371,8 +414,8 @@ const Template: React.FC = () => {
           SortIndexColumn: sortIndex,
           SortDir: sortDirection,
 
-          FromDate: range.from || null,
-          ToDate: range.to || null,
+          FromDate: pendingRange.from || null,
+          ToDate: pendingRange.to || null,
         }),
       };
 
@@ -427,7 +470,7 @@ const Template: React.FC = () => {
   };
   useEffect(() => {
     fetchGridColumns();
-  
+
     GetLevels();
   }, [refreshGrid]);
   useEffect(() => {
@@ -493,10 +536,10 @@ const Template: React.FC = () => {
       const res = await universalService(payload);
       const data = res?.data ?? res;
 
-      if (data && data.length > 0) {
-        setSelectedRow(data[0]);
-        setShowModal(true);
-      }
+      // if (data && data.length > 0) {
+      //   setSelectedRow(data[0]);
+      //   setShowModal(true);
+      // }
     } catch (err) {
       console.error(err);
     } finally {
@@ -645,9 +688,9 @@ const Template: React.FC = () => {
       {/* --- HEADER & SEARCH SECTION --- */}
       <div className="trezo-card-header mb-[10px] md:mb-[10px] sm:flex items-center justify-between pb-5 border-b border-gray-200 -mx-[20px] md:-mx-[25px] px-[20px] md:px-[25px]">
         <div className="trezo-card-title">
-          <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
+          <h6 className="!mb-0 font-bold text-xl text-black dark:text-white">
             Level Wise Team Report
-          </h5>
+          </h6>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:w-auto w-full">
@@ -658,19 +701,19 @@ const Template: React.FC = () => {
                 allowedText="Filter by Date"
               >
                 <DateRangeFilter
-                  disabled={!SmartActions.canDateFilter(formName)}
-                  onChange={(r) => {
-                    if (!SmartActions.canDateFilter(formName)) return; // safety
-
-                    setPage(1); // reset pagination
-                    setDateRange(r);
-                    setSearchTrigger((p) => p + 1);
+                  initialRange={{ start: oneYearAgo, end: today }}
+                      disabled={!SmartActions.canDateFilter(formName)}
+                  onChange={(range) => {
+                    setPendingRange({
+                      from: format(range.start, "yyyy-MM-dd"),
+                      to: format(range.end, "yyyy-MM-dd"),
+                    });
                   }}
                 />
               </PermissionAwareTooltip>
             </div>
             {/* 1. Filter Dropdown (Exactly from your design) */}
-            <div className="relative w-full sm:w-[180px]">
+            <div className="relative w-full sm:w-[146px]">
               <PermissionAwareTooltip
                 allowed={SmartActions.canAdvancedSearch(formName)}
                 allowedText="Search By"
@@ -690,7 +733,6 @@ const Template: React.FC = () => {
                                : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
                            }`}
                 >
-                 
                   <option value="Username">Username</option>
                   {/* <option value="Status">Status</option> */}
                 </select>
@@ -715,7 +757,7 @@ const Template: React.FC = () => {
                 </span>
                 <input
                   type="text"
-                   ref={searchRef}
+                  ref={searchRef}
                   value={searchInput}
                   placeholder="Enter Criteria..."
                   disabled={!SmartActions.canSearch(formName)}
@@ -766,8 +808,9 @@ const Template: React.FC = () => {
                 <button
                   type="button"
                   onClick={applySearch}
-                  
-                  disabled={ !SmartActions.canSearch(formName) || !searchInput.trim()}
+                  disabled={
+                    !SmartActions.canSearch(formName) || !searchInput.trim()
+                  }
                   className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-primary-button-bg text-primary-button-bg hover:bg-primary-button-bg hover:text-white transition-all shadow-sm disabled:opacity-50"
                 >
                   <i className="material-symbols-outlined text-[20px]">
@@ -794,7 +837,7 @@ const Template: React.FC = () => {
                 </div>
               </PermissionAwareTooltip>
               {/* ADD BUTTON */}
-              <PermissionAwareTooltip
+              {/* <PermissionAwareTooltip
                 allowed={SmartActions.canAdd(formName)}
                 allowedText="Add New"
               >
@@ -805,11 +848,10 @@ const Template: React.FC = () => {
                 >
                   <i className="material-symbols-outlined text-[20px]">add</i>
                 </button>
-           
-              </PermissionAwareTooltip>
+              </PermissionAwareTooltip> */}
               {/* REFRESH BUTTON (Visible when showTable is true) */}
             </div>
-            {(filterColumn || searchInput) && (
+            {(filterColumn && searchInput) && (
               <PermissionAwareTooltip
                 allowed={SmartActions.canSearch(formName)}
                 allowedText="Reset filter"
