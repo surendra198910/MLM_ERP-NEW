@@ -47,6 +47,7 @@ const Template: React.FC = () => {
   const [permissionsLoading, setPermissionsLoading] = useState(true);
   const [hasPageAccess, setHasPageAccess] = useState(true);
   const [initialSortReady, setInitialSortReady] = useState(false);
+  const [filterStatus, setFilterStatus] = useState("Pending");
   const location = useLocation();
   const path = location.pathname;
   const formName = path.split("/").pop();
@@ -238,18 +239,14 @@ const Template: React.FC = () => {
                 return "";
               }
 
-
-
-
               // ⭐ NORMAL ROW
               const value = row[c.ColumnKey];
-  const IMAGE_BASE_URL =
-    import.meta.env.VITE_IMAGE_PREVIEW_URL_2 + "ClientImages/";
+              const IMAGE_BASE_URL =
+                import.meta.env.VITE_IMAGE_PREVIEW_URL_2 + "ClientImages/";
 
-    //client logo 
-                  if (c.ColumnKey === "Member") {
+              //client logo
+              if (c.ColumnKey === "Member") {
                 const profileUrl = row.ClientLogo
-
                   ? `${IMAGE_BASE_URL}${row.ClientLogo}`
                   : `https://ui-avatars.com/api/?name=${row.MemberName}&background=random`;
 
@@ -414,6 +411,7 @@ const Template: React.FC = () => {
         Para: JSON.stringify({
           SearchBy: options?.searchBy ?? filterColumn ?? "",
           Criteria: options?.criteria ?? searchInput ?? "",
+          Status: filterStatus,
           Page: pageToUse,
           PageSize: perPageToUse,
           SortIndexColumn: sortIndex,
@@ -692,7 +690,7 @@ const Template: React.FC = () => {
                 allowedText="Filter by Date"
               >
                 <DateRangeFilter
-                disabled={!SmartActions.canDateFilter(formName)}
+                  disabled={!SmartActions.canDateFilter(formName)}
                   initialRange={{ start: oneYearAgo, end: today }}
                   onChange={(range) => {
                     setPendingRange({
@@ -726,7 +724,6 @@ const Template: React.FC = () => {
                 >
                   <option value="">Select Filter Option</option>
                   <option value="Status">Status</option>
-                  <option value="Username">Username</option>
                 </select>
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
                   <i className="material-symbols-outlined !text-[18px]">
@@ -761,6 +758,39 @@ const Template: React.FC = () => {
                                : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
                            }`}
                 />
+              </PermissionAwareTooltip>
+            </div>
+
+            <div className="relative w-full sm:w-[180px]">
+              <PermissionAwareTooltip
+                allowed={SmartActions.canAdvancedSearch(formName)}
+                allowedText="Search By"
+              >
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-500">
+                  <i className="material-symbols-outlined !text-[18px]">
+                    filter_list
+                  </i>
+                </span>
+                <select
+                  value={filterStatus}
+                  onChange={(e) => setFilterStatus(e.target.value)}
+                  className={`w-full h-[34px] pl-8 pr-8 text-xs rounded-md appearance-none outline-none border transition-all
+                           ${
+                             SmartActions.canAdvancedSearch(formName)
+                               ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
+                               : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                           }`}
+                >
+                  <option value="">Select Filter Option</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Approved">Approved</option>
+                  <option value="Rejected">Rejected</option>
+                </select>
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
+                  <i className="material-symbols-outlined !text-[18px]">
+                    expand_more
+                  </i>
+                </span>
               </PermissionAwareTooltip>
             </div>
 
@@ -815,7 +845,7 @@ const Template: React.FC = () => {
               </PermissionAwareTooltip> */}
               {/* REFRESH BUTTON (Visible when showTable is true) */}
             </div>
-            {(filterColumn && searchInput) && (
+            {filterColumn && searchInput && (
               <PermissionAwareTooltip
                 allowed={SmartActions.canSearch(formName)}
                 allowedText="Reset filter"
