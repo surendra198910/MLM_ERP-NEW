@@ -1,0 +1,536 @@
+// ─────────────────────────────────────────────────────────────────────────────
+// BinaryTree.scss — updated to match ASPX genealogy image UI
+// Keeps the original ul/li connector logic, updates all visuals
+// ─────────────────────────────────────────────────────────────────────────────
+
+// ── Variables ────────────────────────────────────────────────────────────────
+$connector-color  : #c7c7c7;   // light grey lines (matching image)
+$label-bg         : #6366f1;   // indigo/purple name pill
+$label-bg-hover   : #4f46e5;
+$paid-border      : #22c55e;   // green ring — Active/Paid
+$unpaid-border    : #ef4444;   // red ring   — InActive/UnPaid
+$empty-border     : #d1d5db;   // grey ring  — placeholder
+$chevron-color    : #6366f1;   // expand arrow
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tree shell
+// ─────────────────────────────────────────────────────────────────────────────
+.tree {
+  white-space: nowrap;
+  flex: 1 0 auto;
+  overflow-x: auto;
+
+  // ── Navigation buttons ──────────────────────────────────────────────────
+  .navigation-buttons {
+    align-items: center;
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 12px 16px;
+    border-top: 1px solid #e5e7eb;
+    margin-top: 8px;
+    background: #f9fafb;
+    border-radius: 0 0 12px 12px;
+
+    .button-tree {
+      background: linear-gradient(135deg, #6366f1, #818cf8);
+      border: none;
+      border-radius: 6px;
+      color: #ffffff !important;
+      cursor: pointer;
+      font-size: 9px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      padding: 0 12px;
+      text-transform: uppercase;
+      white-space: nowrap;
+      transition: opacity 0.2s, transform 0.15s;
+
+      &:hover { opacity: 0.9; transform: translateY(-1px); }
+      &:active { transform: translateY(0); }
+
+      &[disabled] {
+        opacity: 0.45;
+        cursor: not-allowed;
+        &:hover { opacity: 0.45; transform: none; }
+      }
+
+      svg, i {
+        width: 12px; height: 12px;
+        display: inline-block;
+        pointer-events: none;
+        color: inherit;
+        font-style: normal;
+      }
+    }
+
+    .buttons-bottom {
+      display: flex;
+      gap: 4px;
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ul / li connectors — keep original logic, update colours
+// ─────────────────────────────────────────────────────────────────────────────
+.tree ul {
+  padding-top: 20px;
+  position: relative;
+  transition: all 0.5s;
+}
+
+.tree li {
+  text-align: center;
+  list-style-type: none;
+  position: relative;
+  padding: 30px 5px 0 5px;
+  transition: all 0.5s;
+  float: none;
+  display: inline-block;
+  vertical-align: top;
+  white-space: nowrap;
+  margin: 0 -2px;
+}
+
+// Horizontal connectors
+.tree li::before,
+.tree li::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 50%;
+  border-top: 2px solid $connector-color;
+  width: 50%;
+  height: 30px;
+}
+.tree li::after {
+  right: auto;
+  left: 50%;
+  border-left: 2px solid $connector-color;
+}
+
+// Only child — no connectors
+.tree li:only-child::after,
+.tree li:only-child::before { display: none; }
+.tree li:only-child         { padding-top: 0; }
+
+// Remove outer edges
+.tree li:first-child::before,
+.tree li:last-child::after   { border: 0 none; }
+
+// Restore right edge of last child
+.tree li:last-child::before {
+  border-right: 2px solid $connector-color;
+}
+
+// Vertical drop from parent
+.tree ul ul::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 50%;
+  border-left: 2px solid $connector-color;
+  width: 0;
+  height: 20px;
+}
+
+// Hover: highlight connectors
+.tree li a:hover + ul li::after,
+.tree li a:hover + ul li::before,
+.tree li a:hover + ul::before,
+.tree li a:hover + ul ul::before {
+  border-color: $label-bg;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Node anchor (wraps avatar + tooltip)
+// ─────────────────────────────────────────────────────────────────────────────
+.tree li a {
+  border: 1px solid transparent;
+  padding: 4px 8px;
+  text-decoration: none;
+  color: #666;
+  font-family: 'Segoe UI', Arial, sans-serif;
+  font-size: 11px;
+  display: inline-block;
+  border-radius: 8px;
+  transition: all 0.3s;
+  position: relative;
+
+  &:hover .distributor-details { visibility: visible !important; opacity: 1; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// distributor-wrap — column layout for avatar + name label
+// ─────────────────────────────────────────────────────────────────────────────
+.distributor-wrap {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  font-size: 11px;
+  border-radius: 12px 12px 0 0;
+  padding: 6px 10px 4px;
+  min-width: 80px;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Avatar circle — matches image exactly
+// ─────────────────────────────────────────────────────────────────────────────
+.avatar {
+  width: 72px;
+  height: 72px;
+  line-height: 72px;
+  font-size: 11px;
+  border-radius: 50%;
+  border: 3px solid $empty-border;
+  background: #f3f4f6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  position: relative;
+  margin-bottom: 0;
+  transition: transform 0.15s, box-shadow 0.15s;
+
+  &:hover { transform: scale(1.06); box-shadow: 0 4px 16px rgba(0,0,0,0.15); }
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    display: block;
+  }
+
+  // ── Status rings ───────────────────────────────────────────────────────
+  &.paid {
+    border-color: $paid-border;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.18);
+  }
+  &.unpaid {
+    border-color: $unpaid-border;
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.18);
+  }
+
+  // ── Empty / placeholder slot — shows "+" like image ────────────────────
+  &.empty-slot {
+    border-color: $empty-border;
+    border-style: dashed;
+    background: #fafafa;
+    font-size: 28px;
+    font-weight: 300;
+    color: #c0c0c0;
+    cursor: default;
+    &:hover { transform: none; box-shadow: none; }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Name label — purple pill matching image
+// ─────────────────────────────────────────────────────────────────────────────
+.name {
+  display: inline-block;
+  margin-top: 6px;
+  background: $label-bg;
+  color: #ffffff !important;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  padding: 3px 10px;
+  border-radius: 4px;
+  text-align: center;
+  max-width: 90px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-transform: uppercase;
+  transition: background 0.2s;
+
+  .tree li a:hover & { background: $label-bg-hover; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Expand chevron (∨) — outside the <a> tag, below the label
+// ─────────────────────────────────────────────────────────────────────────────
+.expand-down-btn-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 4px;
+}
+
+.expand-down-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid $chevron-color;
+  background: #fff;
+  cursor: pointer;
+  color: $chevron-color;
+  transition: background 0.18s, transform 0.15s, box-shadow 0.18s, color 0.18s;
+  box-shadow: 0 2px 8px rgba(99, 102, 241, 0.18);
+
+  svg {
+    width: 13px;
+    height: 13px;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    transition: stroke 0.18s;
+  }
+
+  &:hover {
+    background: $chevron-color;
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.38);
+    transform: translateY(-1px) scale(1.1);
+  }
+
+  // Subtle pulse to draw attention
+  @keyframes chevPulse {
+    0%, 100% { box-shadow: 0 2px 8px rgba(99, 102, 241, 0.18); }
+    50%       { box-shadow: 0 2px 14px rgba(99, 102, 241, 0.5); }
+  }
+  animation: chevPulse 2s ease-in-out infinite;
+  &:hover { animation: none; }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tooltip panel — shown on node hover
+// ─────────────────────────────────────────────────────────────────────────────
+.distributor-details {
+  background: rgba(255, 255, 255, 0.97);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15), 0 2px 8px rgba(99,102,241,0.08);
+  left: 110%;
+  min-width: 260px;
+  max-width: 300px;
+  padding: 10px 12px;
+  position: absolute;
+  top: -10px;
+  transition: opacity 0.2s ease-in-out, visibility 0.2s;
+  visibility: hidden;
+  opacity: 0;
+  z-index: 100;
+
+  // Arrow pointer toward the node
+  &::before {
+    content: "";
+    position: absolute;
+    top: 18px;
+    left: -7px;
+    width: 12px;
+    height: 12px;
+    background: #fff;
+    border-left: 1px solid #e5e7eb;
+    border-bottom: 1px solid #e5e7eb;
+    transform: rotate(45deg);
+  }
+
+  .details-wrap { overflow-x: auto; }
+}
+
+// Tooltip header
+.details-title.header {
+  background: linear-gradient(135deg, #6366f1, #818cf8);
+  color: #fff;
+  padding: 7px 10px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  letter-spacing: 0.3px;
+}
+
+.close-btn {
+  cursor: pointer;
+  font-size: 16px;
+  opacity: 0.8;
+  &:hover { opacity: 1; }
+}
+
+// Tooltip rows
+.details-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 2px;
+  border-bottom: 1px solid #f3f4f6;
+  gap: 8px;
+
+  &:last-child { border-bottom: none; }
+}
+
+.label {
+  color: #6b7280;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.value {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 11px;
+  text-align: right;
+
+  &.highlight {
+    color: $label-bg;
+    font-weight: 700;
+  }
+}
+
+// Status badge
+.status-badge {
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+
+  &.active   { background: #dcfce7; color: #15803d; }
+  &.inactive { background: #fee2e2; color: #b91c1c; }
+}
+
+// Business section
+.details-subtitle {
+  font-weight: 700;
+  margin: 8px 0 5px;
+  font-size: 10px;
+  color: $label-bg;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.business-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.business-box {
+  background: #f9fafb;
+  border: 1px solid #f3f4f6;
+  padding: 5px 7px;
+  border-radius: 6px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 10px;
+
+  span { color: #9ca3af; }
+  b    { color: #1f2937; font-size: 12px; }
+}
+
+// Tooltip connector lines (decorative, from original)
+.horizontal-line {
+  background-color: #e5e7eb;
+  height: 2px;
+  left: -44px;
+  position: absolute;
+  top: 24px;
+  width: 44px;
+}
+
+.sloping-line {
+  background-color: $chevron-color;
+  height: 2px;
+  left: -60px;
+  position: absolute;
+  top: 25px;
+  transform: rotate(15deg);
+  width: 22px;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// #binary-tree shell + sidebar
+// ─────────────────────────────────────────────────────────────────────────────
+#binary-tree {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  height: 100%;
+  width: 100%;
+
+  .leftSidebar {
+    margin-right: 5px;
+    margin-top: 0;
+    width: 23px;
+
+    .levels-wrap .level {
+      background-color: $label-bg;
+      color: #fff;
+      text-transform: uppercase;
+      margin-bottom: 1px;
+
+      &-0 { border-radius: 5px 5px 0 0; height: 150px; padding-top: 70px; width: 23px; }
+      &-1 { height: 150px; padding-top: 75px; width: 23px; }
+      &-2 { height: 150px; padding-top: 73px; width: 23px; }
+      &-3 { border-radius: 0 0 5px 5px; height: 150px; padding-top: 66px; width: 23px; }
+
+      .level-label {
+        display: block;
+        font-size: 11px;
+        transform: rotate(-90deg);
+        white-space: nowrap;
+      }
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Scrollbars
+// ─────────────────────────────────────────────────────────────────────────────
+::-webkit-scrollbar       { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: #f1f1f1 !important; border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: $label-bg !important; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: $label-bg-hover !important; }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Modal (unchanged from original)
+// ─────────────────────────────────────────────────────────────────────────────
+.modal {
+  font-size: 12px;
+  display: block;
+  position: relative;
+  overflow: inherit;
+
+  > .header {
+    width: 100%;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 18px;
+    text-align: center;
+    padding: 5px;
+  }
+  > .content { width: 100%; padding: 10px 5px; }
+  > .actions  { width: 100%; padding: 10px 5px; margin: auto; text-align: center; }
+  > .close {
+    cursor: pointer;
+    position: absolute;
+    display: block;
+    padding: 2px 5px;
+    line-height: 20px;
+    right: -10px;
+    top: -10px;
+    font-size: 24px;
+    background: #fff;
+    border-radius: 18px;
+    border: 1px solid #cfcece;
+  }
+}
+.popup-content { width: auto; }

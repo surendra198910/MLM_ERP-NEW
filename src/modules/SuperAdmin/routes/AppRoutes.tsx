@@ -122,6 +122,7 @@ import CompanyBankAccount from "../../SuperAdmin/components/settings/ManagebankA
 import ProtectedRoute from "../../../utils/ProtectedRoutes.js";
 import ApproveRejectRequestFund from "../components/RequestFund/ApproveRejectRequestFund.js";
 import RequestFundReport from "../components/RequestFund/RequestFundReport.js";
+import BinaryTreeComponent from "../components/Team/BinaryTree/GenealogyBinaryTree.js";
 
 const AppRoutes = () => {
   const [active, setActive] = useState(false);
@@ -305,6 +306,10 @@ const AppRoutes = () => {
               <Route
                 path="/superadmin/team/binary-tree"
                 element={<Geneaology />}
+              />
+               <Route
+                path="/superadmin/team/new-binary-tree"
+                element={<BinaryTreeComponent />}
               />
               <Route
                 path="/superadmin/wallet/member-wallet"
