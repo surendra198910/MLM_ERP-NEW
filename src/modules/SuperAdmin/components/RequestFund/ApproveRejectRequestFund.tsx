@@ -69,17 +69,32 @@ const Template: React.FC = () => {
   const [dateRange, setDateRange] = useState({ from: fromStr, to: toStr });
 
   const statsConfig = [
-    { key: "TotalRequests", title: "Total Requests",  icon: "list_alt",      showCurrency: false },
-    { key: "TotalAmount",   title: "Total Amount",    icon: "payments",      showCurrency: true  },
-    { key: "ThisMonthAmount", title: "This Month",    icon: "calendar_month",showCurrency: true  },
-    { key: "TodayAmount",   title: "Today",           icon: "today",         showCurrency: true  },
+    {
+      key: "TotalRequests",
+      title: "Total Requests",
+      icon: "list_alt",
+      showCurrency: false,
+    },
+    {
+      key: "TotalAmount",
+      title: "Total Amount",
+      icon: "payments",
+      showCurrency: true,
+    },
+    {
+      key: "ThisMonthAmount",
+      title: "This Month",
+      icon: "calendar_month",
+      showCurrency: true,
+    },
+    { key: "TodayAmount", title: "Today", icon: "today", showCurrency: true },
   ];
 
   // single-row modal state
-  const [showModal, setShowModal]       = useState(false);
-  const [selectedRow, setSelectedRow]   = useState<any>(null);
+  const [showModal, setShowModal] = useState(false);
+  const [selectedRow, setSelectedRow] = useState<any>(null);
   const [actionStatus, setActionStatus] = useState("");
-  const [remarks, setRemarks]           = useState("");
+  const [remarks, setRemarks] = useState("");
   const [loadingDetails, setLoadingDetails] = useState(false);
 
   // ─────────────────────────────────────────────
@@ -103,13 +118,22 @@ const Template: React.FC = () => {
       const response = await universalService(payload);
       const data = response?.data ?? response;
 
-      if (!Array.isArray(data)) { setHasPageAccess(false); return; }
+      if (!Array.isArray(data)) {
+        setHasPageAccess(false);
+        return;
+      }
 
       const pagePermission = data.find(
-        (p) => String(p.FormNameWithExt).trim().toLowerCase() === formName?.trim().toLowerCase(),
+        (p) =>
+          String(p.FormNameWithExt).trim().toLowerCase() ===
+          formName?.trim().toLowerCase(),
       );
 
-      if (!pagePermission || !pagePermission.Action || pagePermission.Action.trim() === "") {
+      if (
+        !pagePermission ||
+        !pagePermission.Action ||
+        pagePermission.Action.trim() === ""
+      ) {
         setHasPageAccess(false);
         return;
       }
@@ -133,10 +157,13 @@ const Template: React.FC = () => {
     try {
       const payload = {
         procName: "GetUserGridColumns",
-        Para: JSON.stringify({ UserId: employeeId, GridName: "USP_FetchFundRequests" }),
+        Para: JSON.stringify({
+          UserId: employeeId,
+          GridName: "USP_FetchFundRequests",
+        }),
       };
 
-      const res  = await universalService(payload);
+      const res = await universalService(payload);
       const data = res?.data || res;
 
       if (Array.isArray(data)) {
@@ -148,7 +175,9 @@ const Template: React.FC = () => {
         if (defaultSortCol) {
           setSortIndex("");
           setSortDirection(
-            (defaultSortCol.SortDir || "ASC").toUpperCase() === "DESC" ? "DESC" : "ASC",
+            (defaultSortCol.SortDir || "ASC").toUpperCase() === "DESC"
+              ? "DESC"
+              : "ASC",
           );
         }
         setInitialSortReady(true);
@@ -184,7 +213,8 @@ const Template: React.FC = () => {
 
               // NORMAL ROW
               const value = row[c.ColumnKey];
-              const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_PREVIEW_URL_2 + "ClientImages/";
+              const IMAGE_BASE_URL =
+                import.meta.env.VITE_IMAGE_PREVIEW_URL_2 + "ClientImages/";
 
               if (c.ColumnKey === "Member") {
                 const profileUrl = row.ClientLogo
@@ -201,8 +231,12 @@ const Template: React.FC = () => {
                       }}
                     />
                     <div className="flex flex-col leading-tight">
-                      <span className="font-medium text-sm">{row.MemberName}</span>
-                      <span className="text-xs text-gray-500">{row.UserName}</span>
+                      <span className="font-medium text-sm">
+                        {row.MemberName}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        {row.UserName}
+                      </span>
                     </div>
                   </div>
                 );
@@ -211,13 +245,18 @@ const Template: React.FC = () => {
               if (c.ColumnKey === "Status") {
                 const getStatusClass = (status: string) => {
                   switch (status) {
-                    case "Approved": return "bg-green-100 text-green-700";
-                    case "Rejected": return "bg-red-100 text-red-700";
-                    default:         return "bg-yellow-100 text-yellow-700";
+                    case "Approved":
+                      return "bg-green-100 text-green-700";
+                    case "Rejected":
+                      return "bg-red-100 text-red-700";
+                    default:
+                      return "bg-yellow-100 text-yellow-700";
                   }
                 };
                 return (
-                  <span className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusClass(value)}`}>
+                  <span
+                    className={`px-2 py-1 text-xs font-medium rounded-full ${getStatusClass(value)}`}
+                  >
                     {value}
                   </span>
                 );
@@ -279,7 +318,7 @@ const Template: React.FC = () => {
     setSortIndex(column.columnKey);
     setSortDirection(direction.toUpperCase());
   };
- const exportColumns = columns
+  const exportColumns = columns
     .filter((c) => c.columnKey)
     .map((c) => ({
       key: c.columnKey,
@@ -299,7 +338,7 @@ const Template: React.FC = () => {
   // DATA FETCHING
   // ─────────────────────────────────────────────
   const fetchGridData = async (options?: any) => {
-    const pageToUse    = options?.pageOverride    ?? page;
+    const pageToUse = options?.pageOverride ?? page;
     const perPageToUse = options?.perPageOverride ?? perPage;
 
     try {
@@ -307,20 +346,20 @@ const Template: React.FC = () => {
       const payload = {
         procName: "FetchFundRequests",
         Para: JSON.stringify({
-          SearchBy:  options?.searchBy  ?? filterColumn ?? "",
-          Status:    filterStatus,
-          Criteria:  options?.criteria  ?? searchInput  ?? "",
-          Page:      pageToUse,
-          PageSize:  perPageToUse,
+          SearchBy: options?.searchBy ?? filterColumn ?? "",
+          Status: filterStatus,
+          Criteria: options?.criteria ?? searchInput ?? "",
+          Page: pageToUse,
+          PageSize: perPageToUse,
           SortIndexColumn: sortIndex,
-          SortDir:   sortDirection,
-          FromDate:  pendingRange.from || null,
-          ToDate:    pendingRange.to   || null,
+          SortDir: sortDirection,
+          FromDate: pendingRange.from || null,
+          ToDate: pendingRange.to || null,
           ActionMode: "GetReport",
         }),
       };
 
-      const res    = await universalService(payload);
+      const res = await universalService(payload);
       const result = res?.data || res;
 
       if (result?.rows && Array.isArray(result.rows)) {
@@ -345,7 +384,7 @@ const Template: React.FC = () => {
       procName: "FetchFundRequests",
       Para: JSON.stringify({ ActionMode: "GetStats" }),
     };
-    const res    = await universalService(payload);
+    const res = await universalService(payload);
     const result = res?.data ?? res ?? [];
     setStats(result[0] || {});
   };
@@ -356,12 +395,12 @@ const Template: React.FC = () => {
       Para: JSON.stringify({
         SearchBy: filterColumn,
         Criteria: searchInput,
-        Page:     page,
+        Page: page,
         PageSize: 0,
         SortIndexColumn: sortIndex,
-        SortDir:  sortDirection,
+        SortDir: sortDirection,
         FromDate: dateRange.from || null,
-        ToDate:   dateRange.to   || null,
+        ToDate: dateRange.to || null,
       }),
     };
     const res = await universalService(payload);
@@ -375,9 +414,9 @@ const Template: React.FC = () => {
       procName: "UniversalColumnSelector",
       Para: JSON.stringify({
         EmployeeId: employeeId,
-        USPName:    "USP_FetchFundRequests",
+        USPName: "USP_FetchFundRequests",
         ActionMode: "List",
-        Mode:       "Get",
+        Mode: "Get",
       }),
     };
     const response = await universalService(payload);
@@ -387,8 +426,10 @@ const Template: React.FC = () => {
         cols
           .map((c) => ({
             ...c,
-            IsVisible: c.IsVisible === true || c.IsVisible === 1 || c.IsVisible === "1",
-            IsHidden:  c.IsHidden  === false || c.IsHidden  === 0 || c.IsHidden  === "0",
+            IsVisible:
+              c.IsVisible === true || c.IsVisible === 1 || c.IsVisible === "1",
+            IsHidden:
+              c.IsHidden === false || c.IsHidden === 0 || c.IsHidden === "0",
           }))
           .sort((a, b) => a.DisplayOrder - b.DisplayOrder),
       );
@@ -407,7 +448,7 @@ const Template: React.FC = () => {
         procName: "ApproveRejectFundRequest",
         Para: JSON.stringify({ ActionMode: "GetDetailsById", RequestId: id }),
       };
-      const res  = await universalService(payload);
+      const res = await universalService(payload);
       const data = res?.data ?? res;
       if (data && data.length > 0) {
         setSelectedRow(data[0]);
@@ -445,33 +486,71 @@ const Template: React.FC = () => {
     if (!confirmResult.isConfirmed) return;
 
     try {
-      Swal.fire({ title: "Processing...", text: "Please wait", allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+      Swal.fire({
+        title: "Processing...",
+        text: "Please wait",
+        allowOutsideClick: false,
+        didOpen: () => Swal.showLoading(),
+      });
 
       const payload = {
         procName: "ApproveRejectFundRequest",
         Para: JSON.stringify({
           ActionMode: "Update",
-          RequestId:  selectedRow.Id,
-          Status:     actionStatus,
+          RequestId: selectedRow.Id,
+          Status: actionStatus,
           UserRemarks: remarks,
-          EmployeeID: JSON.parse(localStorage.getItem("EmployeeDetails") || "{}").EmployeeId,
+          EmployeeID: JSON.parse(
+            localStorage.getItem("EmployeeDetails") || "{}",
+          ).EmployeeId,
         }),
       };
 
-      const res    = await universalService(payload);
+      const res = await universalService(payload);
       const result = res?.data ?? res;
       Swal.close();
 
       if (result[0]?.StatusCode === 1) {
-        await Swal.fire({ icon: "success", title: "Success", text: result[0].msg, confirmButtonColor: "#28a745" });
+        await Swal.fire({
+          icon: "success",
+          title: "Success",
+          text: result[0].msg,
+          confirmButtonColor: "#28a745",
+        });
+
+        //  remove approved/rejected row locally
+        setData((prev: any[]) =>
+          prev.filter((row) => row.Id !== selectedRow.Id),
+        );
+
+        //  decrease total records
+        setTotalRows((prev) => Math.max(prev - 1, 0));
+
+        //  clear selected rows if needed
+        setSelectedRows((prev) =>
+          prev.filter((row) => row.Id !== selectedRow.Id),
+        );
+
         setShowModal(false);
-        fetchGridData();
+
+        // setShowModal(false);
+        // fetchGridData();
       } else {
-        Swal.fire({ icon: "error", title: "Failed", text: result[0]?.msg || "Something went wrong", confirmButtonColor: "#d33" });
+        Swal.fire({
+          icon: "error",
+          title: "Failed",
+          text: result[0]?.msg || "Something went wrong",
+          confirmButtonColor: "#d33",
+        });
       }
     } catch (err) {
       Swal.close();
-      Swal.fire({ icon: "error", title: "Error", text: "Server error. Try again.", confirmButtonColor: "#d33" });
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Server error. Try again.",
+        confirmButtonColor: "#d33",
+      });
       console.error(err);
     }
   };
@@ -506,16 +585,14 @@ const Template: React.FC = () => {
     const ids = pendingRows.map((r) => r.Id);
 
     try {
-      const res  = await bulkFundAction({ ids, status });
+      const res = await bulkFundAction({ ids, status });
       const data = res?.data?.[0] || res?.[0] || res;
 
       if (data?.Success === 1) {
         Swal.fire("Success", data.Message, "success");
 
         // ✅ Remove rows locally — no full reload needed
-        setData((prev: any[]) =>
-          prev.filter((row) => !ids.includes(row.Id)),
-        );
+        setData((prev: any[]) => prev.filter((row) => !ids.includes(row.Id)));
         setSelectedRows([]);
       } else {
         Swal.fire("Error", data?.Message || "Something went wrong", "error");
@@ -535,11 +612,11 @@ const Template: React.FC = () => {
     const actionMode = status === "Approved" ? "BulkApprove" : "BulkReject";
 
     const payload = {
-      procName: "ApproveRejectFundRequest",          // same SP, new ActionMode
+      procName: "ApproveRejectFundRequest", // same SP, new ActionMode
       Para: JSON.stringify({
-        ActionMode:    actionMode,
-        Ids:           ids.join(","),          // comma-separated e.g. "1,2,3"
-        AdminRemarks:  "",                     // optional — extend if needed
+        ActionMode: actionMode,
+        Ids: ids.join(","), // comma-separated e.g. "1,2,3"
+        AdminRemarks: "", // optional — extend if needed
       }),
     };
 
@@ -595,25 +672,28 @@ const Template: React.FC = () => {
   const totalRow =
     Object.keys(pageTotals).length > 0
       ? columns.reduce((acc: any, col: any) => {
-          if (!col.columnKey) { acc.__label = "Page Total"; return acc; }
+          if (!col.columnKey) {
+            acc.__label = "Page Total";
+            return acc;
+          }
           acc[col.columnKey] = col.isTotal ? pageTotals[col.columnKey] : "";
           return acc;
         }, {})
       : null;
 
-  const hasData   = data.length > 0;
-  const tableData = hasData && totalRow ? [...data, { ...totalRow, __isTotal: true }] : data;
+  const hasData = data.length > 0;
+  const tableData =
+    hasData && totalRow ? [...data, { ...totalRow, __isTotal: true }] : data;
   const isActionAllowed = selectedRow?.Status === "Pending";
 
   if (permissionsLoading) return <Loader />;
-  if (!hasPageAccess)     return <AccessRestricted />;
+  if (!hasPageAccess) return <AccessRestricted />;
 
   // ─────────────────────────────────────────────
   // RENDER
   // ─────────────────────────────────────────────
   return (
     <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-md">
-
       {/* ── HEADER ── */}
       <div className="trezo-card-header mb-[10px] md:mb-[10px] sm:flex items-center justify-between pb-5 border-b border-gray-200 -mx-[20px] md:-mx-[25px] px-[20px] md:px-[25px]">
         <div className="trezo-card-title">
@@ -624,17 +704,19 @@ const Template: React.FC = () => {
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:w-auto w-full">
           <div className="flex flex-col sm:flex-row items-center gap-3 flex-wrap justify-end">
-
             {/* DATE RANGE */}
             <div className="px-4">
-              <PermissionAwareTooltip allowed={SmartActions.canDateFilter(formName)} allowedText="Filter by Date">
+              <PermissionAwareTooltip
+                allowed={SmartActions.canDateFilter(formName)}
+                allowedText="Filter by Date"
+              >
                 <DateRangeFilter
                   initialRange={{ start: oneYearAgo, end: today }}
                   disabled={!SmartActions.canDateFilter(formName)}
                   onChange={(range) => {
                     setPendingRange({
                       from: format(range.start, "yyyy-MM-dd"),
-                      to:   format(range.end,   "yyyy-MM-dd"),
+                      to: format(range.end, "yyyy-MM-dd"),
                     });
                   }}
                 />
@@ -643,17 +725,24 @@ const Template: React.FC = () => {
 
             {/* SEARCH BY COLUMN */}
             <div className="relative w-full sm:w-[180px]">
-              <PermissionAwareTooltip allowed={SmartActions.canAdvancedSearch(formName)} allowedText="Search By">
+              <PermissionAwareTooltip
+                allowed={SmartActions.canAdvancedSearch(formName)}
+                allowedText="Search By"
+              >
                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-500">
-                  <i className="material-symbols-outlined !text-[18px]">filter_list</i>
+                  <i className="material-symbols-outlined !text-[18px]">
+                    filter_list
+                  </i>
                 </span>
                 <select
                   value={filterColumn}
                   onChange={(e) => setFilterColumn(e.target.value)}
                   className={`w-full h-[34px] pl-8 pr-8 text-xs rounded-md appearance-none outline-none border transition-all
-                    ${SmartActions.canAdvancedSearch(formName)
-                      ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
-                      : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"}`}
+                    ${
+                      SmartActions.canAdvancedSearch(formName)
+                        ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
+                        : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                    }`}
                 >
                   <option value="">Select Filter Option</option>
                   <option value="Username">Username</option>
@@ -662,16 +751,23 @@ const Template: React.FC = () => {
                   <option value="PaymentMode">Payment Mode</option>
                 </select>
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
-                  <i className="material-symbols-outlined !text-[18px]">expand_more</i>
+                  <i className="material-symbols-outlined !text-[18px]">
+                    expand_more
+                  </i>
                 </span>
               </PermissionAwareTooltip>
             </div>
 
             {/* SEARCH INPUT */}
             <div className="relative">
-              <PermissionAwareTooltip allowed={SmartActions.canSearch(formName)} allowedText="Enter Criteria">
+              <PermissionAwareTooltip
+                allowed={SmartActions.canSearch(formName)}
+                allowedText="Enter Criteria"
+              >
                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-500">
-                  <i className="material-symbols-outlined !text-[18px]">search</i>
+                  <i className="material-symbols-outlined !text-[18px]">
+                    search
+                  </i>
                 </span>
                 <input
                   type="text"
@@ -681,9 +777,11 @@ const Template: React.FC = () => {
                   onChange={(e) => setSearchInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && applySearch()}
                   className={`h-[34px] w-full pl-8 pr-3 text-xs rounded-md outline-none border transition-all
-                    ${SmartActions.canSearch(formName)
-                      ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
-                      : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"}`}
+                    ${
+                      SmartActions.canSearch(formName)
+                        ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
+                        : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                    }`}
                 />
               </PermissionAwareTooltip>
             </div>
@@ -691,7 +789,9 @@ const Template: React.FC = () => {
             {/* STATUS FILTER */}
             <div className="relative w-full sm:w-[160px]">
               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-500">
-                <i className="material-symbols-outlined !text-[18px] mt-2">pending_actions</i>
+                <i className="material-symbols-outlined !text-[18px] mt-2">
+                  pending_actions
+                </i>
               </span>
               <select
                 value={filterStatus}
@@ -705,32 +805,50 @@ const Template: React.FC = () => {
                 <option value="Rejected">Rejected</option>
               </select>
               <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
-                <i className="material-symbols-outlined !text-[18px]">expand_more</i>
+                <i className="material-symbols-outlined !text-[18px]">
+                  expand_more
+                </i>
               </span>
             </div>
 
             {/* BUTTONS GROUP */}
             <div className="flex items-center gap-2">
-              <PermissionAwareTooltip allowed={SmartActions.canSearch(formName)} allowedText="Search">
+              <PermissionAwareTooltip
+                allowed={SmartActions.canSearch(formName)}
+                allowedText="Search"
+              >
                 <button
                   type="button"
                   onClick={applySearch}
                   disabled={!SmartActions.canSearch(formName)}
                   className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-primary-button-bg text-primary-button-bg hover:bg-primary-button-bg hover:text-white transition-all shadow-sm disabled:opacity-50"
                 >
-                  <i className="material-symbols-outlined text-[20px]">search</i>
+                  <i className="material-symbols-outlined text-[20px]">
+                    search
+                  </i>
                 </button>
               </PermissionAwareTooltip>
 
-              <PermissionAwareTooltip allowed={SmartActions.canManageColumns(formName)} allowedText="Manage Columns">
-                <div className={`h-[34px] flex items-center ${!SmartActions.canManageColumns(formName) ? "pointer-events-none opacity-50" : ""}`}>
-                  <ColumnSelector procName="USP_FetchFundRequests" onApply={fetchVisibleColumns} />
+              <PermissionAwareTooltip
+                allowed={SmartActions.canManageColumns(formName)}
+                allowedText="Manage Columns"
+              >
+                <div
+                  className={`h-[34px] flex items-center ${!SmartActions.canManageColumns(formName) ? "pointer-events-none opacity-50" : ""}`}
+                >
+                  <ColumnSelector
+                    procName="USP_FetchFundRequests"
+                    onApply={fetchVisibleColumns}
+                  />
                 </div>
               </PermissionAwareTooltip>
             </div>
 
             {(filterColumn || searchInput) && (
-              <PermissionAwareTooltip allowed={SmartActions.canSearch(formName)} allowedText="Reset filter">
+              <PermissionAwareTooltip
+                allowed={SmartActions.canSearch(formName)}
+                allowedText="Reset filter"
+              >
                 <button
                   type="button"
                   disabled={!SmartActions.canSearch(formName)}
@@ -741,11 +859,15 @@ const Template: React.FC = () => {
                     setSearchTrigger((p) => p + 1);
                   }}
                   className={`w-[34px] h-[34px] flex items-center justify-center rounded-md
-                    ${SmartActions.canSearch(formName)
-                      ? "border border-gray-400 text-gray-600 hover:bg-gray-200"
-                      : "border border-gray-300 text-gray-300 cursor-not-allowed"}`}
+                    ${
+                      SmartActions.canSearch(formName)
+                        ? "border border-gray-400 text-gray-600 hover:bg-gray-200"
+                        : "border border-gray-300 text-gray-300 cursor-not-allowed"
+                    }`}
                 >
-                  <i className="material-symbols-outlined text-[20px]">refresh</i>
+                  <i className="material-symbols-outlined text-[20px]">
+                    refresh
+                  </i>
                 </button>
               </PermissionAwareTooltip>
             )}
@@ -771,7 +893,11 @@ const Template: React.FC = () => {
       {/* ── TABLE SECTION ── */}
       {showTable && (
         <div>
-          <StatsCards stats={stats} config={statsConfig} loading={tableLoading} />
+          <StatsCards
+            stats={stats}
+            config={statsConfig}
+            loading={tableLoading}
+          />
 
           {/* TOOLBAR ROW */}
           {tableLoading ? (
@@ -779,13 +905,15 @@ const Template: React.FC = () => {
               <div className="h-8 w-[120px] bg-gray-200 dark:bg-gray-700 rounded-md" />
               <div className="flex gap-2">
                 {[...Array(4)].map((_, i) => (
-                  <div key={i} className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded-md" />
+                  <div
+                    key={i}
+                    className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded-md"
+                  />
                 ))}
               </div>
             </div>
           ) : hasData ? (
             <div className="flex justify-between items-center py-2 mb-[10px] gap-3 flex-wrap">
-
               {/* LEFT — page size */}
               <div className="relative">
                 <select
@@ -794,7 +922,11 @@ const Template: React.FC = () => {
                     const size = Number(e.target.value);
                     setPerPage(size);
                     setPage(1);
-                    fetchGridData({ ...dateRange, pageOverride: 1, perPageOverride: size });
+                    fetchGridData({
+                      ...dateRange,
+                      pageOverride: 1,
+                      perPageOverride: size,
+                    });
                   }}
                   className="h-8 w-[120px] px-3 pr-7 text-xs font-semibold
                     text-gray-600 dark:text-gray-300
@@ -808,13 +940,14 @@ const Template: React.FC = () => {
                   <option value="100">100 / page</option>
                 </select>
                 <span className="absolute inset-y-0 right-2 flex items-center pointer-events-none">
-                  <i className="material-symbols-outlined text-[18px] text-gray-500">expand_more</i>
+                  <i className="material-symbols-outlined text-[18px] text-gray-500">
+                    expand_more
+                  </i>
                 </span>
               </div>
 
               {/* RIGHT — bulk actions + export */}
               <div className="flex items-center gap-2 flex-wrap">
-
                 {/* ✅ BULK APPROVE */}
                 <button
                   disabled={selectedRows.length === 0}
@@ -823,7 +956,9 @@ const Template: React.FC = () => {
                     bg-green-600 hover:bg-green-700 text-white
                     rounded-md transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <i className="material-symbols-outlined text-[16px]">check_circle</i>
+                  <i className="material-symbols-outlined text-[16px]">
+                    check_circle
+                  </i>
                   Approve Selected
                 </button>
 
@@ -835,13 +970,19 @@ const Template: React.FC = () => {
                     bg-red-600 hover:bg-red-700 text-white
                     rounded-md transition-all disabled:opacity-40 disabled:cursor-not-allowed"
                 >
-                  <i className="material-symbols-outlined text-[16px]">cancel</i>
+                  <i className="material-symbols-outlined text-[16px]">
+                    cancel
+                  </i>
                   Reject Selected
                 </button>
 
                 {/* EXPORT */}
                 <PermissionAwareTooltip allowed={canExport}>
-                  <div className={!canExport ? "pointer-events-none opacity-50" : ""}>
+                  <div
+                    className={
+                      !canExport ? "pointer-events-none opacity-50" : ""
+                    }
+                  >
                     <ExportButtons
                       title="Request Fund Report"
                       columns={exportColumns}
@@ -859,9 +1000,12 @@ const Template: React.FC = () => {
             <DataTable
               // ✅ selectable rows — only Pending rows, not total row
               selectableRows
-              selectableRowDisabled={(row) => row.__isTotal || row.Status !== "Pending"}
-              onSelectedRowsChange={({ selectedRows }) => setSelectedRows(selectedRows)}
-
+              selectableRowDisabled={(row) =>
+                row.__isTotal || row.Status !== "Pending"
+              }
+              onSelectedRowsChange={({ selectedRows }) =>
+                setSelectedRows(selectedRows)
+              }
               title=""
               columns={columns}
               data={tableData}
@@ -870,23 +1014,36 @@ const Template: React.FC = () => {
               paginationServer
               paginationTotalRows={totalRows}
               paginationComponent={(props) => (
-                <CustomPagination {...props} currentPage={page} rowsPerPage={perPage} />
+                <CustomPagination
+                  {...props}
+                  currentPage={page}
+                  rowsPerPage={perPage}
+                />
               )}
               onChangePage={handlePageChange}
               onChangeRowsPerPage={handlePerRowsChange}
               onSort={handleSort}
               sortServer
               progressPending={tableLoading}
-              progressComponent={<TableSkeleton rows={perPage} columns={columns.length || 8} />}
+              progressComponent={
+                <TableSkeleton rows={perPage} columns={columns.length || 8} />
+              }
               conditionalRowStyles={[
                 {
                   when: (row) => row.__isTotal,
-                  style: { fontWeight: 700, backgroundColor: "var(--color-primary-table-bg)" },
-                  classNames: ["hide-checkbox"],   // hides checkbox on total row
+                  style: {
+                    fontWeight: 700,
+                    backgroundColor: "var(--color-primary-table-bg)",
+                  },
+                  classNames: ["hide-checkbox"], // hides checkbox on total row
                 },
                 {
                   when: (row) => row.isRemoving,
-                  style: { opacity: 0, transform: "translateX(80px)", transition: "all 0.3s ease" },
+                  style: {
+                    opacity: 0,
+                    transform: "translateX(80px)",
+                    transition: "all 0.3s ease",
+                  },
                 },
               ]}
               noDataComponent={!tableLoading && <OopsNoData />}
@@ -902,13 +1059,15 @@ const Template: React.FC = () => {
           <div className="fixed inset-0 bg-black/30 backdrop-blur-[0.5px]" />
           <div className="fixed inset-0 flex items-center justify-center p-4 overflow-y-auto">
             <div className="w-full max-w-[700px] max-h-[90vh] bg-white dark:bg-[#0c1427] rounded-lg shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col">
-
               {/* Modal header */}
               <div className="flex items-center justify-between bg-gray-50 dark:bg-[#15203c] px-6 py-4 border-b border-gray-200 dark:border-gray-700">
                 <h5 className="text-lg font-semibold text-black dark:text-white">
                   Fund Request Details
                 </h5>
-                <button onClick={() => setShowModal(false)} className="text-[22px] text-gray-500 hover:text-red-500 transition">
+                <button
+                  onClick={() => setShowModal(false)}
+                  className="text-[22px] text-gray-500 hover:text-red-500 transition"
+                >
                   ✕
                 </button>
               </div>
@@ -918,15 +1077,21 @@ const Template: React.FC = () => {
                 <div className="grid grid-cols-3 gap-3 text-sm">
                   <div>
                     <p className="text-xs !mb-0 text-gray-400">User</p>
-                    <p className="font-semibold !mb-0">{selectedRow.UserName}</p>
+                    <p className="font-semibold !mb-0">
+                      {selectedRow.UserName}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs !mb-0 text-gray-400">Name</p>
-                    <p className="font-semibold !mb-0">{selectedRow.MemberName}</p>
+                    <p className="font-semibold !mb-0">
+                      {selectedRow.MemberName}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs !mb-0 text-gray-400">Amount</p>
-                    <p className="font-bold !mb-0 text-green-600 text-base">₹{selectedRow.Amount}</p>
+                    <p className="font-bold !mb-0 text-green-600 text-base">
+                      ₹{selectedRow.Amount}
+                    </p>
                   </div>
                   <div>
                     <p className="text-xs !mb-0 text-gray-400">USDT</p>
@@ -934,18 +1099,28 @@ const Template: React.FC = () => {
                   </div>
                   <div>
                     <p className="text-xs !mb-0 text-gray-400">Payment Mode</p>
-                    <p className="font-bold !mb-0 text-green-600 text-base">{selectedRow.PaymentMode}</p>
+                    <p className="font-bold !mb-0 text-green-600 text-base">
+                      {selectedRow.PaymentMode}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs !mb-0 text-gray-400">Transaction No</p>
+                    <p className="text-xs !mb-0 text-gray-400">
+                      Transaction No
+                    </p>
                     <p>{selectedRow.TransactionReference || "-"}</p>
                   </div>
                   <div>
                     <p className="text-xs !mb-0 text-gray-400">Status</p>
-                    <span className={`inline-block px-3 py-1 text-xs rounded-full font-medium
-                      ${selectedRow.Status === "Pending"  ? "bg-yellow-100 text-yellow-700"
-                      : selectedRow.Status === "Approved" ? "bg-green-100 text-green-700"
-                      : "bg-red-100 text-red-600"}`}>
+                    <span
+                      className={`inline-block px-3 py-1 text-xs rounded-full font-medium
+                      ${
+                        selectedRow.Status === "Pending"
+                          ? "bg-yellow-100 text-yellow-700"
+                          : selectedRow.Status === "Approved"
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-600"
+                      }`}
+                    >
                       {selectedRow.Status}
                     </span>
                   </div>
@@ -959,7 +1134,9 @@ const Template: React.FC = () => {
                 {selectedRow.PaymentMode !== "UPI" && (
                   <div className="grid grid-cols-2 gap-3 mb-2 text-sm border-t pt-3 border-gray-200 dark:border-gray-700">
                     <div>
-                      <p className="text-xs !mb-0 text-gray-400">Account Name</p>
+                      <p className="text-xs !mb-0 text-gray-400">
+                        Account Name
+                      </p>
                       <p>{selectedRow.AccountName}</p>
                     </div>
                     <div>
@@ -991,12 +1168,22 @@ const Template: React.FC = () => {
                     <p className="text-xs !mb-0 text-gray-400 mb-2">Receipt</p>
                     <div
                       className="flex items-center gap-3 p-2 border rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition"
-                      onClick={() => window.open(selectedRow.ReceiptUrl, "_blank")}
+                      onClick={() =>
+                        window.open(selectedRow.ReceiptUrl, "_blank")
+                      }
                     >
-                      <img src={selectedRow.ReceiptUrl} alt="receipt" className="w-16 h-16 object-cover rounded-md border" />
+                      <img
+                        src={selectedRow.ReceiptUrl}
+                        alt="receipt"
+                        className="w-16 h-16 object-cover rounded-md border"
+                      />
                       <div>
-                        <p className="text-sm !mb-0 font-medium text-blue-600">View Receipt</p>
-                        <p className="text-xs text-gray-400">Click to open full image</p>
+                        <p className="text-sm !mb-0 font-medium text-blue-600">
+                          View Receipt
+                        </p>
+                        <p className="text-xs text-gray-400">
+                          Click to open full image
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -1013,7 +1200,9 @@ const Template: React.FC = () => {
                         ${isActionAllowed ? "bg-white dark:bg-[#0f172a]" : "bg-gray-100 opacity-60 cursor-not-allowed"}
                         border-gray-300 dark:border-gray-600`}
                     >
-                      {isActionAllowed && <option value="">Select Action</option>}
+                      {isActionAllowed && (
+                        <option value="">Select Action</option>
+                      )}
                       <option value="Approved">Approved</option>
                       <option value="Rejected">Reject</option>
                     </select>
