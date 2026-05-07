@@ -430,7 +430,6 @@ function buildLines(node, allUsers, depth, maxDepth, refMap, containerRect) {
 const BinaryTree = ({
   allUsers          = [],
   rootUser,
-  centeredUserId,
   onLeafClick,
   imageBaseUrl      = "",
   maxDepth          = 3,
@@ -450,11 +449,6 @@ const BinaryTree = ({
   useEffect(() => { injectStyles(); }, []);
   useEffect(() => { setSelectedRoot(rootUser); }, [rootUser]);
 
-  useEffect(() => {
-    if (!centeredUserId) return;
-    const t = allUsers.find(u => u.id === centeredUserId);
-    if (t) setSelectedRoot(t);
-  }, [centeredUserId, allUsers]);
 
   const redrawLines = useCallback(() => {
     if (!containerRef.current || !selectedRoot) return;

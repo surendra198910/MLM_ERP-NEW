@@ -113,16 +113,26 @@ function buildTreeNodes(rows: any[]): TreeNode[] {
   }
 
   // Pass 2 – wire up left/right child pointers
+  // If the SP returns two nodes with the same parent + position (data inconsistency),
+  // the second one falls back to the opposite slot rather than being silently dropped.
   for (const node of nodeMap.values()) {
     if (node._position === 0) continue; // root — no parent
 
     const parent = nodeMap.get(node._parentId);
     if (!parent) continue;
 
-    if (node._position === 1 && parent.left_child_id === null) {
-      parent.left_child_id = node.id;
-    } else if (node._position === 2 && parent.right_child_id === null) {
-      parent.right_child_id = node.id;
+    if (node._position === 1) {
+      if (parent.left_child_id === null) {
+        parent.left_child_id = node.id;
+      } else if (parent.right_child_id === null) {
+        parent.right_child_id = node.id;
+      }
+    } else if (node._position === 2) {
+      if (parent.right_child_id === null) {
+        parent.right_child_id = node.id;
+      } else if (parent.left_child_id === null) {
+        parent.left_child_id = node.id;
+      }
     }
   }
 
