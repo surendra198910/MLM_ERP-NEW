@@ -177,7 +177,7 @@ const GenerationTreeContainer = () => {
   };
 
   const FetchData = async (username: string) => {
-    if (!username) return;
+    // if (!username) return;
     setLoading(true);
     setHasVisited(true);
     setData(null);
@@ -185,7 +185,7 @@ const GenerationTreeContainer = () => {
     try {
       const res = await doAjaxCall({
         procName: "OrgTree",
-        Para: JSON.stringify({ LoggedClientId: ClientID, SearchUsername: username }),
+        Para: JSON.stringify({ LoggedClientId: ClientID, SearchUsername: username, SearchBy:"admin" }),
       });
 
       if (res[0]?.StatusCode === "0") {
