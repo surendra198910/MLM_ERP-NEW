@@ -140,6 +140,21 @@ function buildTreeNodes(rows: any[]): TreeNode[] {
   return Array.from(nodeMap.values()).sort((a, b) => a.level - b.level);
 }
 
+// BFS depth of a node from the tree root (root = depth 1)
+function calcNodeDepth(targetId: number, nodes: TreeNode[], rootId: number): number {
+  const nodeMap = new Map(nodes.map((n) => [n.id, n]));
+  const queue: Array<{ id: number; depth: number }> = [{ id: rootId, depth: 1 }];
+  while (queue.length) {
+    const { id, depth } = queue.shift()!;
+    if (id === targetId) return depth;
+    const node = nodeMap.get(id);
+    if (!node) continue;
+    if (node.left_child_id != null) queue.push({ id: node.left_child_id, depth: depth + 1 });
+    if (node.right_child_id != null) queue.push({ id: node.right_child_id, depth: depth + 1 });
+  }
+  return 0;
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 const BinaryTreeComponent = () => {
   const { universalService } = ApiService();
@@ -148,8 +163,9 @@ const BinaryTreeComponent = () => {
   const [rootNode, setRootNode] = useState<TreeNode | null>(null);
   const [centeredUserId, setCenteredUserId] = useState<number | null>(null);
   const [treeLoading, setTreeLoading] = useState(false);
-  const [expandingId, setExpandingId] = useState<number | null>(null); // which node is loading
+  const [expandingId, setExpandingId] = useState<number | null>(null);
   const [treeError, setTreeError] = useState<string | null>(null);
+  const [maxDepth, setMaxDepth] = useState(3);
 
   // Logged-in username from localStorage
   const [LoggedUserName] = useState<string>(
@@ -188,6 +204,7 @@ const BinaryTreeComponent = () => {
     setAllNodes([]);
     setRootNode(null);
     setCenteredUserId(null);
+    setMaxDepth(3);
     fetchedUserNames.current.clear();
 
     try {
@@ -235,6 +252,9 @@ const BinaryTreeComponent = () => {
       return;
     }
 
+    // Depth of clicked node from the current root (root = depth 1)
+    const clickedDepth = rootNode ? calcNodeDepth(clickedId, allNodes, rootNode.id) : 0;
+
     setExpandingId(clickedId);
 
     try {
@@ -272,6 +292,9 @@ const BinaryTreeComponent = () => {
 
         return [...patched, ...toAdd];
       });
+
+      // Ensure the expanded node's children are within the visible depth
+      setMaxDepth((prev) => Math.max(prev, clickedDepth + 3));
 
       // Scroll the expanded node into view
       setCenteredUserId(null);
@@ -554,7 +577,7 @@ const BinaryTreeComponent = () => {
                 centeredUserId={centeredUserId}
                 onLeafClick={expandNode}
                 imageBaseUrl={imageBaseUrl}
-                maxDepth={3}
+                maxDepth={maxDepth}
               />
             </div>
           )}

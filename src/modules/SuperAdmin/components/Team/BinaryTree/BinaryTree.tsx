@@ -26,18 +26,51 @@ function injectStyles() {
   s.textContent = `
   .bt-root {
     width: 100%;
-    overflow-x: auto;
-    overflow-y: visible;
-    background: #fff;
-    padding: 40px 24px 56px;
     box-sizing: border-box;
     font-family: 'Segoe UI', Arial, sans-serif;
   }
 
-  .bt-tree-area {
+  /* ── pan/zoom viewport ── */
+  .bt-viewport {
+    width: 100%;
+    height: 600px;
+    overflow: hidden;
     position: relative;
+    cursor: grab;
+    user-select: none;
+    touch-action: none;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  .bt-viewport:active { cursor: grabbing; }
+
+  .bt-canvas {
+    position: absolute;
+    top: 0; left: 0;
+    transform-origin: 0 0;
+  }
+
+  .bt-inner {
+    padding: 40px 24px 56px;
     display: inline-block;
-    min-width: 100%;
+    position: relative;
+  }
+
+  /* ── zoom controls ── */
+  .bt-zoom-btn {
+    width: 28px; height: 28px;
+    border-radius: 6px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    cursor: pointer;
+    font-size: 18px; font-weight: bold;
+    color: #374151;
+    display: inline-flex; align-items: center; justify-content: center;
+    line-height: 1; padding: 0;
+  }
+  .bt-zoom-btn:hover { background: #f3f4f6; }
+  .bt-zoom-label {
+    font-size: 11px; color: #6b7280; font-weight: 600;
+    min-width: 38px; text-align: center; display: inline-block;
   }
 
   .bt-svg-overlay {
@@ -372,7 +405,9 @@ function BtLevel({ node, allUsers, depth, maxDepth, onExpand, imageBaseUrl, onRe
 // ─────────────────────────────────────────────────────────────────────────────
 // Build SVG path strings by measuring real DOM positions
 // ─────────────────────────────────────────────────────────────────────────────
-function buildLines(node, allUsers, depth, maxDepth, refMap, containerRect) {
+// zoom is needed to convert viewport-space getBoundingClientRect coords into
+// the canvas's local coordinate space (which is what the SVG path numbers must be in).
+function buildLines(node, allUsers, depth, maxDepth, refMap, containerRect, zoom = 1) {
   if (!node || depth >= maxDepth) return [];
   const lines = [];
 
@@ -380,8 +415,8 @@ function buildLines(node, allUsers, depth, maxDepth, refMap, containerRect) {
   if (!parentRef?.current) return lines;
 
   const pRect = parentRef.current.getBoundingClientRect();
-  const pCx   = pRect.left + pRect.width  / 2 - containerRect.left;
-  const pBot  = pRect.bottom - containerRect.top;
+  const pCx   = (pRect.left + pRect.width / 2 - containerRect.left) / zoom;
+  const pBot  = (pRect.bottom - containerRect.top) / zoom;
 
   const left  = node.left_child_id  ? allUsers.find(u => u.id === node.left_child_id)  : null;
   const right = node.right_child_id ? allUsers.find(u => u.id === node.right_child_id) : null;
@@ -390,7 +425,10 @@ function buildLines(node, allUsers, depth, maxDepth, refMap, containerRect) {
     const ref = childNode ? refMap.current[childNode.id] : refMap.current[blankKey];
     if (!ref?.current) return null;
     const r = ref.current.getBoundingClientRect();
-    return { cx: r.left + r.width / 2 - containerRect.left, top: r.top - containerRect.top };
+    return {
+      cx:  (r.left + r.width / 2 - containerRect.left) / zoom,
+      top: (r.top  - containerRect.top) / zoom,
+    };
   };
 
   const lPos = getPos(left,  `blank-left-${node.id}`);
@@ -418,8 +456,8 @@ function buildLines(node, allUsers, depth, maxDepth, refMap, containerRect) {
     lines.push(`M ${rPos.cx} ${midY} L ${rPos.cx} ${rPos.top}`);
   }
 
-  if (left)  lines.push(...buildLines(left,  allUsers, depth + 1, maxDepth, refMap, containerRect));
-  if (right) lines.push(...buildLines(right, allUsers, depth + 1, maxDepth, refMap, containerRect));
+  if (left)  lines.push(...buildLines(left,  allUsers, depth + 1, maxDepth, refMap, containerRect, zoom));
+  if (right) lines.push(...buildLines(right, allUsers, depth + 1, maxDepth, refMap, containerRect, zoom));
 
   return lines;
 }
@@ -438,9 +476,14 @@ const BinaryTree = ({
   const [selectedRoot, setSelectedRoot] = useState(rootUser);
   const [svgPaths, setSvgPaths]         = useState([]);
   const [svgSize, setSvgSize]           = useState({ w: 0, h: 0 });
+  const [zoom, setZoom]                 = useState(1);
+  const [pan, setPan]                   = useState({ x: 40, y: 40 });
 
+  const viewportRef  = useRef(null);
   const containerRef = useRef(null);
   const refMap       = useRef({});
+  const isDragging   = useRef(false);
+  const dragStart    = useRef({ x: 0, y: 0, panX: 0, panY: 0 });
 
   const registerRef = useCallback((id, ref) => {
     refMap.current[id] = ref;
@@ -449,16 +492,17 @@ const BinaryTree = ({
   useEffect(() => { injectStyles(); }, []);
   useEffect(() => { setSelectedRoot(rootUser); }, [rootUser]);
 
-
   const redrawLines = useCallback(() => {
     if (!containerRef.current || !selectedRoot) return;
     requestAnimationFrame(() => {
       if (!containerRef.current) return;
       const rect = containerRef.current.getBoundingClientRect();
-      setSvgSize({ w: rect.width, h: rect.height });
-      setSvgPaths(buildLines(selectedRoot, allUsers, 1, maxDepth, refMap, rect));
+      // Divide by zoom: getBoundingClientRect is in viewport px (scaled),
+      // but SVG path coordinates must be in the canvas's local px.
+      setSvgSize({ w: rect.width / zoom, h: rect.height / zoom });
+      setSvgPaths(buildLines(selectedRoot, allUsers, 1, maxDepth, refMap, rect, zoom));
     });
-  }, [selectedRoot, allUsers, maxDepth]);
+  }, [selectedRoot, allUsers, maxDepth, zoom]);
 
   useLayoutEffect(() => { redrawLines(); }, [redrawLines]);
 
@@ -468,56 +512,124 @@ const BinaryTree = ({
     return () => ro.disconnect();
   }, [redrawLines]);
 
+  // ── Wheel: zoom toward cursor ─────────────────────────────────────────────
+  const handleWheel = useCallback((e) => {
+    e.preventDefault();
+    const vp = viewportRef.current;
+    if (!vp) return;
+    const { left, top } = vp.getBoundingClientRect();
+    const mx = e.clientX - left;
+    const my = e.clientY - top;
+    const factor = e.deltaY < 0 ? 1.1 : 0.9;
+    setZoom((prev) => {
+      const next = Math.min(2.5, Math.max(0.15, prev * factor));
+      setPan((p) => ({
+        x: mx - (mx - p.x) * (next / prev),
+        y: my - (my - p.y) * (next / prev),
+      }));
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const el = viewportRef.current;
+    if (!el) return;
+    el.addEventListener("wheel", handleWheel, { passive: false });
+    return () => el.removeEventListener("wheel", handleWheel);
+  }, [handleWheel]);
+
+  // ── Mouse drag: pan ───────────────────────────────────────────────────────
+  const onMouseDown = useCallback((e) => {
+    if (e.button !== 0) return;
+    isDragging.current = true;
+    dragStart.current = { x: e.clientX, y: e.clientY, panX: pan.x, panY: pan.y };
+  }, [pan]);
+
+  const onMouseMove = useCallback((e) => {
+    if (!isDragging.current) return;
+    setPan({
+      x: dragStart.current.panX + (e.clientX - dragStart.current.x),
+      y: dragStart.current.panY + (e.clientY - dragStart.current.y),
+    });
+  }, []);
+
+  const onMouseUp = useCallback(() => { isDragging.current = false; }, []);
+
   if (!selectedRoot) return null;
 
-  const goToTop = () => setSelectedRoot(rootUser);
-  const goUp    = () => {
+  const goToTop  = () => setSelectedRoot(rootUser);
+  const goUp     = () => {
     const parent = allUsers.find(
       u => u.left_child_id === selectedRoot.id || u.right_child_id === selectedRoot.id
     );
     if (parent) setSelectedRoot(parent);
   };
+  const resetView   = () => { setZoom(1); setPan({ x: 40, y: 40 }); };
+  const adjustZoom  = (f) => setZoom((z) => Math.min(2.5, Math.max(0.15, +(z * f).toFixed(3))));
 
   return (
     <div className="bt-root">
-      <div className="bt-tree-area" ref={containerRef}>
-        <svg
-          className="bt-svg-overlay"
-          width={svgSize.w}
-          height={svgSize.h}
-          style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none", zIndex: 1 }}
+      {/* ── Pannable / zoomable viewport ── */}
+      <div
+        ref={viewportRef}
+        className="bt-viewport"
+        onMouseDown={onMouseDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseUp}
+      >
+        {/* Canvas — gets the CSS transform applied */}
+        <div
+          ref={containerRef}
+          className="bt-canvas"
+          style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})` }}
         >
-          {svgPaths.map((d, i) => (
-            <path key={i} d={d} stroke="#c7c7c7" strokeWidth="2" fill="none" />
-          ))}
-        </svg>
+          <svg
+            width={svgSize.w}
+            height={svgSize.h}
+            style={{ position: "absolute", top: 0, left: 0, pointerEvents: "none", zIndex: 1, overflow: "visible" }}
+          >
+            {svgPaths.map((d, i) => (
+              <path key={i} d={d} stroke="#c7c7c7" strokeWidth="2" fill="none" />
+            ))}
+          </svg>
 
-        <div className="bt-level-row">
-          <BtLevel
-            node={selectedRoot}
-            allUsers={allUsers}
-            depth={1}
-            maxDepth={maxDepth}
-            onExpand={onLeafClick}
-            imageBaseUrl={imageBaseUrl}
-            onRegisterRef={registerRef}
-            isRoot={true}
-          />
+          <div className="bt-inner">
+            <div className="bt-level-row">
+              <BtLevel
+                node={selectedRoot}
+                allUsers={allUsers}
+                depth={1}
+                maxDepth={maxDepth}
+                onExpand={onLeafClick}
+                imageBaseUrl={imageBaseUrl}
+                onRegisterRef={registerRef}
+                isRoot={true}
+              />
+            </div>
+          </div>
         </div>
       </div>
 
-      {!disableNavigation && (
-        <div className="bt-nav">
-          <button className="bt-nav-btn" onClick={goToTop}
-            disabled={selectedRoot?.id === rootUser?.id}>
-            ↑ Back to Top
-          </button>
-          <button className="bt-nav-btn" onClick={goUp}
-            disabled={selectedRoot?.id === rootUser?.id}>
-            ↑ Go Up
-          </button>
-        </div>
-      )}
+      {/* ── Controls bar ── */}
+      <div className="bt-nav">
+        {!disableNavigation && (
+          <>
+            <button className="bt-nav-btn" onClick={goToTop}
+              disabled={selectedRoot?.id === rootUser?.id}>
+              ↑ Back to Top
+            </button>
+            <button className="bt-nav-btn" onClick={goUp}
+              disabled={selectedRoot?.id === rootUser?.id}>
+              ↑ Go Up
+            </button>
+          </>
+        )}
+        <button className="bt-zoom-btn" title="Zoom in"  onClick={() => adjustZoom(1.2)}>+</button>
+        <span  className="bt-zoom-label">{Math.round(zoom * 100)}%</span>
+        <button className="bt-zoom-btn" title="Zoom out" onClick={() => adjustZoom(1 / 1.2)}>−</button>
+        <button className="bt-nav-btn"  onClick={resetView}>⊡ Reset View</button>
+      </div>
     </div>
   );
 };
