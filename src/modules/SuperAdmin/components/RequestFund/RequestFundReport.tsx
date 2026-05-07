@@ -311,11 +311,12 @@ const Template: React.FC = () => {
 
             if (row.Status == "Pending") {
               return (
-                <button
+               <button
                   onClick={() => handleGetDetails(row.Id)}
                   className="text-primary-button-bg hover:underline text-xs font-medium"
                 >
-                  Take Action
+                  {/* eye icon */}
+                  <FaEye style={{ fontSize: "20px" }} title="View Details" />
                 </button>
               );
             } else {
@@ -537,92 +538,13 @@ const Template: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    if (!actionStatus) {
-      Swal.fire({
-        icon: "warning",
-        title: "Action Required",
-        text: "Please select action before submitting",
-        confirmButtonColor: "#3085d6",
-      });
-      return;
-    }
-
-    const confirmResult = await Swal.fire({
-      title: "Are you sure?",
-      text: `You are about to ${actionStatus} this request`,
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonText: "Yes, proceed",
-      cancelButtonText: "Cancel",
-      confirmButtonColor: "#28a745",
-      cancelButtonColor: "#d33",
-    });
-
-    if (!confirmResult.isConfirmed) return;
-
-    try {
-      Swal.fire({
-        title: "Processing...",
-        text: "Please wait",
-        allowOutsideClick: false,
-        didOpen: () => {
-          Swal.showLoading();
-        },
-      });
-
-      const payload = {
-        procName: "ApproveRejectFundRequest",
-        Para: JSON.stringify({
-          ActionMode: "Update",
-          RequestId: selectedRow.Id,
-          Status: actionStatus,
-          UserRemarks: remarks,
-          EmployeeID: JSON.parse(
-            localStorage.getItem("EmployeeDetails") || "{}",
-          ).EmployeeId,
-        }),
-      };
-
-      const res = await universalService(payload);
-      const result = res?.data ?? res;
-
-      Swal.close(); // close loader
-
-      if (result[0]?.StatusCode === 1) {
-        await Swal.fire({
-          icon: "success",
-          title: "Success",
-          text: result[0].msg,
-          confirmButtonColor: "#28a745",
-        });
-
-        setShowModal(false);
-        fetchGridData();
-      } else {
-        Swal.fire({
-          icon: "error",
-          title: "Failed",
-          text: result[0]?.msg || "Something went wrong",
-          confirmButtonColor: "#d33",
-        });
-      }
-    } catch (err) {
-      Swal.close();
-
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "Server error. Try again.",
-        confirmButtonColor: "#d33",
-      });
-
-      console.error(err);
-    }
+    return
+  
   };
 
   //////////////////////////////
   const hasData = data.length > 0;
-  const isActionAllowed = selectedRow?.Status === "Pending";
+  const isActionAllowed = false///selectedRow?.Status === "Pending";
 
   useEffect(() => {
     if (!selectedRow) return;
@@ -1177,6 +1099,7 @@ const Template: React.FC = () => {
                       {isActionAllowed && (
                         <option value="">Select Action</option>
                       )}
+                      <option value="Pending">Pending</option>
                       <option value="Approved">Approved</option>
                       <option value="Rejected">Reject</option>
                     </select>
