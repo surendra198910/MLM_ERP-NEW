@@ -225,7 +225,7 @@ const Template: React.FC = () => {
   const handleEdit = (row: any) => {
     if (!row?.ReportId) return;
 
-    navigate(`/superadmin/mlm-setting/add-report/${row.ReportId}`);
+    navigate(`/superadmin/superadmin-tools/reports/add-report/${row.ReportId}`);
   };
   const exportColumns = columns
     .filter(c => c.columnKey)

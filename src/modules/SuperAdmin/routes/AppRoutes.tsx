@@ -123,6 +123,7 @@ import ProtectedRoute from "../../../utils/ProtectedRoutes.js";
 import ApproveRejectRequestFund from "../components/RequestFund/ApproveRejectRequestFund.js";
 import RequestFundReport from "../components/RequestFund/RequestFundReport.js";
 import BinaryTreeComponent from "../components/Team/BinaryTree/GenealogyBinaryTree.js";
+import ManageLoginType from "../components/AdministrativeTools/AddReport/ManageLoginType.js";
 
 const AppRoutes = () => {
   const [active, setActive] = useState(false);
@@ -152,10 +153,10 @@ const AppRoutes = () => {
               <Route path="/superadmin/customers" element={<CRMCustomers />} />
               <Route path="/superadmin/leads" element={<Leads />} />
               <Route
-                path="/superadmin/forms/form-categories"
+                path="/superadmin/superadmin-tools/manage-forms/form-categories"
                 element={<FormCategory />}
               />
-              <Route path="/superadmin/forms/forms" element={<Forms />} />
+              <Route path="/superadmin/superadmin-tools/manage-forms/forms" element={<Forms />} />
               <Route
                 path="/superadmin/employee/add-employee"
                 element={<AddEditEmployee />}
@@ -172,19 +173,19 @@ const AppRoutes = () => {
               <Route path="/superadmin/common/state" element={<State />} />
               <Route path="/superadmin/common/city" element={<City />} />
               <Route
-                path="/superadmin/kyc-documents-master/company-documents"
+                path="/superadmin/superadmin-tools/kyc-documents-master/company-documents"
                 element={<CompanyDocument />}
               />
               <Route
-                path="/superadmin/kyc-documents-master/employee-documents"
+                path="/superadmin/superadmin-tools/kyc-documents-master/employee-documents"
                 element={<EmployeeDocument />}
               />
               <Route
-                path="/superadmin/kyc-documents-master/vendor-documents"
+                path="/superadmin/superadmin-tools/kyc-documents-master/vendor-documents"
                 element={<VendorDocument />}
               />
               <Route
-                path="/superadmin/kyc-documents-master/client-documents"
+                path="/superadmin/superadmin-tools/kyc-documents-master/client-documents"
                 element={<CustomerDocument />}
               />
               <Route
@@ -212,11 +213,11 @@ const AppRoutes = () => {
                 element={<TaskType />}
               />
               <Route
-                path="/superadmin/employee-setting/employee-type"
+                path="/superadmin/superadmin-tools/employee-setting/employee-type"
                 element={<EmployeeType />}
               />
               <Route
-                path="/superadmin/employee-setting/login-type"
+                path="/superadmin/superadmin-tools/employee-setting/login-type"
                 element={<LoginType />}
               />
               <Route
@@ -260,11 +261,11 @@ const AppRoutes = () => {
                 element={<ManageCompany />}
               />
               <Route
-                path="/superadmin/company-setting/currency-master"
+                path="/superadmin/superadmin-tools/company-setting/currency-master"
                 element={<CurrencyMaster />}
               />
               <Route
-                path="/superadmin/company-setting/financial-year-setting"
+                path="/superadmin/superadmin-tools/company-setting/financial-year-setting"
                 element={<FinancialYearSetting />}
               />
               <Route
@@ -276,11 +277,11 @@ const AppRoutes = () => {
                 element={<TaxSetting />}
               />
               <Route
-                path="/superadmin/theme/theme-setting"
+                path="/superadmin/superadmin-tools/theme/theme-setting"
                 element={<PanelSetting />}
               />
               <Route
-                path="/superadmin/theme/theme-management"
+                path="/superadmin/superadmin-tools/theme/theme-management"
                 element={<PanelSettingHarsh />}
               />
               <Route
@@ -317,15 +318,15 @@ const AppRoutes = () => {
               />
               //Admin Tools
               <Route
-                path="/superadmin/admin-tools/global-setting"
+                path="/superadmin/superadmin-tools/other-tools/global-setting"
                 element={<GlobalSetting />}
               />
               <Route
-                path="/superadmin/admin-tools/income-setting"
+                path="/superadmin/superadmin-tools/other-tools/income-setting"
                 element={<IncomeSetting />}
               />
               <Route
-                path="/superadmin/admin-tools/api-manager"
+                path="/superadmin/superadmin-tools/other-tools/api-manager"
                 element={<APIManager />}
               />
               //Client
@@ -385,11 +386,11 @@ const AppRoutes = () => {
                 element={<RequestFundReport />}
               />
               <Route
-                path="/superadmin/mlm-setting/add-report/:id?"
+                path="/superadmin/superadmin-tools/reports/add-report/:id?"
                 element={<AddReport />}
               />
               <Route
-                path="/superadmin/mlm-setting/manage-report"
+                path="/superadmin/superadmin-tools/reports/manage-report"
                 element={<ManageReports />}
               />
               <Route
@@ -398,11 +399,11 @@ const AppRoutes = () => {
               />
               //Forms
               <Route
-                path="/superadmin/forms/member-forms"
+                path="/superadmin/superadmin-tools/manage-forms/member-forms"
                 element={<MemberFroms />}
               />
               <Route
-                path="/superadmin/forms/member-form-categories"
+                path="/superadmin/superadmin-tools/manage-forms/member-form-categories"
                 element={<MemberFromCategory />}
               />
               //Website Management
@@ -427,7 +428,7 @@ const AppRoutes = () => {
                 element={<NewsAndAnnoucement />}
               />
               <Route
-                path="/superadmin/templates/email-template"
+                path="/superadmin/superadmin-tools/templates/email-template"
                 element={<MailTemplateMaster />}
               />
               //Support
@@ -514,11 +515,11 @@ const AppRoutes = () => {
                 element={<SocialMediaPlatform />}
               />
               <Route
-                path="/superadmin/common/withdraw-method"
+                path="/superadmin/superadmin-tools/other-tools/withdraw-method"
                 element={<WithrawalBy />}
               />
               <Route
-                path="/superadmin/theme/member-panel-theme"
+                path="/superadmin/superadmin-tools/theme/member-panel-theme"
                 element={<MemberThemeManagement />}
               />
               //Manage Crypto wallet
@@ -527,8 +528,12 @@ const AppRoutes = () => {
                 element={<ManageCryptowallet />}
               />
               <Route
-                path="/superadmin/mlm-setting/WalletType-setting"
+                path="/superadmin/superadmin-tools/wallet-setting/wallettype-setting"
                 element={<ManageWalletType />}
+              />
+              <Route
+                path="/superadmin/superadmin-tools/role-permission/role-permission"
+                element={<ManageLoginType />}
               />
               <Route
                 path="/superadmin/mlm-setting/company-bank-account"
