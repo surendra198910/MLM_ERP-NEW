@@ -535,7 +535,7 @@ const Template: React.FC = () => {
     const actionMode = status === "Approved" ? "BulkApprove" : "BulkReject";
 
     const payload = {
-      procName: "FetchFundRequests",          // same SP, new ActionMode
+      procName: "ApproveRejectFundRequest",          // same SP, new ActionMode
       Para: JSON.stringify({
         ActionMode:    actionMode,
         Ids:           ids.join(","),          // comma-separated e.g. "1,2,3"
