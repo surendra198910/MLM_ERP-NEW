@@ -29,7 +29,7 @@ export default function CryptoWalletSetting() {
     "bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100";
 
   // -------------------------------------
-  // PERMISSIONS 
+  // PERMISSIONS
   // -------------------------------------
   const fetchFormPermissions = async () => {
     try {
@@ -58,7 +58,7 @@ export default function CryptoWalletSetting() {
       const pagePermission = data.find(
         (p) =>
           String(p.FormNameWithExt).trim().toLowerCase() ===
-          formName?.trim().toLowerCase()
+          formName?.trim().toLowerCase(),
       );
 
       if (!pagePermission || !pagePermission.Action) {
@@ -139,7 +139,7 @@ export default function CryptoWalletSetting() {
     try {
       setLoading(true);
 
-      // 🔥 Direct pass 
+      // 🔥 Direct pass
       const payload = {
         procName: "ManageCompanyCryptowallet",
         Para: JSON.stringify({
@@ -149,17 +149,16 @@ export default function CryptoWalletSetting() {
               Id: p.Id || 0,
               WalletTypeId: p.WalletTypeId,
               DepositAddress: p.Url,
-            }))
+            })),
           ),
         }),
       };
 
       const res = await universalService(payload);
-      const result = res///res?.data?.[0] || res?.data || res;
-           // debugger
+      const result = res; ///res?.data?.[0] || res?.data || res;
+      // debugger
 
       if (result[0].StatusCode == 1) {
-     
         Swal.fire("Success!", result[0]?.Msg, "success");
       } else {
         Swal.fire("Error", result[0]?.Msg || "Failed", "error");
@@ -192,54 +191,71 @@ export default function CryptoWalletSetting() {
   // -------------------------------------
   return (
     <div className="bg-white dark:bg-[#0c1427] rounded-lg shadow p-6 relative">
-
       {loading && (
         <div className="absolute inset-0 bg-white/60 dark:bg-black/40 flex items-center justify-center z-10 rounded-lg">
           <div className="animate-spin w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full" />
         </div>
       )}
 
-      <div className="flex justify-between items-center border-b pb-3 mb-3 px-[20px]">
-        <h5 className="font-bold text-xl">Manage Crypto Wallet</h5>
+      <div className="flex justify-between items-center border-b border-gray-200 pb-3 mb-3 -mx-[20px] md:-mx-[20px] px-[20px] md:px-[25px]">
+        <div>
+          <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
+            Manage Crypto Wallet
+          </h5>
+        </div>
 
-        <PermissionAwareTooltip
-          allowed={SmartActions.canUpdate(formName)}
-        >
-          <button
-            onClick={handleSubmit}
-            disabled={!SmartActions.canUpdate(formName)}
-            className="flex items-center gap-2 px-4 py-1.5 bg-primary-button-bg text-white rounded text-sm"
-          >
-            <FaSave /> Update
-          </button>
-        </PermissionAwareTooltip>
+        <div className="flex gap-2">
+          <PermissionAwareTooltip allowed={SmartActions.canUpdate(formName)}>
+            <button
+              onClick={handleSubmit}
+              disabled={!SmartActions.canUpdate(formName)}
+              className="flex items-center gap-2 px-4 py-1.5 
+                            bg-primary-button-bg hover:bg-primary-button-bg-hover 
+                            text-white rounded text-sm disabled:opacity-50"
+            >
+              <FaSave /> Update
+            </button>
+          </PermissionAwareTooltip>
+        </div>
       </div>
 
-      <div className="space-y-6">
-        {platforms.map((item, index) => (
-          <div key={item.WalletTypeId} className="flex flex-col md:flex-row py-5 border-b px-2">
-            
-            <div className="w-full md:w-1/3">
-              <label className="text-sm font-semibold">
-                {item.Label}
-              </label>
-              <p className="text-[11px] text-gray-500">
-                Wallet Address
-              </p>
-            </div>
+      <div className="space-y-6 animate-fadeIn">
+        <div className="border-t border-gray-100 dark:border-gray-800 mt-4">
+          {platforms.map((item, index) => (
+            <div
+              key={item.WalletTypeId}
+              className="flex flex-col md:flex-row md:items-center py-5 border-b border-gray-50 dark:border-[#15203c] last:border-0 transition-colors hover:bg-gray-50/50 dark:hover:bg-[#15203c]/30 px-2"
+            >
+              <div className="w-full md:w-1/3 mb-2 md:mb-0">
+                <label className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary-button-bg"></span>
+                  {item.Label}
+                </label>
+                <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-3.5 uppercase tracking-tighter">
+                  Wallet Address
+                </p>
+              </div>
 
-            <div className="w-full md:w-2/3">
-              <input
-                type="text"
-                value={item.Url}
-                onChange={(e) => handleChange(index, e.target.value)}
-                className={inputClass}
-                placeholder={`Enter ${item.Label} wallet address`}
-              />
+              <div className="w-full md:w-2/3">
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={item.Url}
+                    onChange={(e) => handleChange(index, e.target.value)}
+                    className={`${inputClass} !h-[48px] w-full bg-white dark:bg-[#0c1427] 
+              border-gray-200 dark:border-gray-700 
+              focus:border-primary-button-bg focus:ring-1 focus:ring-primary-button-bg/20 
+              rounded-md px-4 text-sm transition-all shadow-sm`}
+                    placeholder={`Enter ${item.Label} wallet address`}
+                  />
+                  <div
+                    className={`absolute bottom-0 left-0 h-0.5 bg-primary-button-bg transition-all duration-300 ${item.Url ? "w-full" : "w-0"}`}
+                  ></div>
+                </div>
+              </div>
             </div>
-
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       <ToastContainer />
