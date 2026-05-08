@@ -24,6 +24,66 @@ import { useSweetAlert } from "../../context/SweetAlertContext";
 import IconsPopUpPage from "../Icons/IconsPopUpPage";
 import ColorPickerPopup from "../Colors/ColorPickerPopup";
 
+// ─────────────────────────────────────────────────────────────────────────────
+// extractSvg
+// API returns icons as SVG wrapped in HTML comments:
+//   <!--begin::Svg Icon | path:...--> <svg>...</svg> <!--end::Svg Icon-->
+// This strips the comments and returns just the <svg>...</svg> string.
+// Returns null if no valid SVG found → fallback material icon shown.
+// ─────────────────────────────────────────────────────────────────────────────
+function extractSvg(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("<svg")) return trimmed;
+  const match = trimmed.match(/<svg[\s\S]*?<\/svg>/i);
+  return match ? match[0] : null;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IconCell
+// Renders the SVG icon from API response with proper colorization,
+// OR falls back to a material-symbols icon if SVG is invalid/missing.
+// ─────────────────────────────────────────────────────────────────────────────
+const IconCell: React.FC<{
+  iconRaw: string | null | undefined;
+  iconColor: string;
+  fallback?: string;
+  label: string;
+}> = ({ iconRaw, iconColor, fallback = "category", label }) => {
+  const svgString = extractSvg(iconRaw);
+
+  return (
+    <div className="flex items-center gap-2">
+      {svgString ? (
+        <span
+          className="flex-shrink-0"
+          style={{ width: 22, height: 22, display: "inline-flex", alignItems: "center" }}
+          dangerouslySetInnerHTML={{
+            __html: svgString
+              // Normalize size
+              .replace(/width="24px"/g,  'width="22"')
+              .replace(/height="24px"/g, 'height="22"')
+              .replace(/width="24"/g,    'width="22"')
+              .replace(/height="24"/g,   'height="22"')
+              // Colorize solid black fills with stored icon color
+              .replace(/fill="#000000"/g,   `fill="${iconColor}"`)
+              .replace(/fill="#000"/g,      `fill="${iconColor}"`)
+              // Keep opacity-based paths legible (they use opacity="0.3" etc.)
+          }}
+        />
+      ) : (
+        <span
+          className="material-symbols-outlined flex-shrink-0"
+          style={{ fontSize: 20, color: iconColor }}
+        >
+          {fallback}
+        </span>
+      )}
+      <span>{label}</span>
+    </div>
+  );
+};
+
 
 const Template: React.FC = () => {
   const formSchema = Yup.object().shape({
@@ -74,7 +134,6 @@ const Template: React.FC = () => {
   const [openIconPopup, setOpenIconPopup] = useState(false);
   const [openColorPopup, setOpenColorPopup] = useState(false);
 
-  // Formik refs for external access (popups)
   const formikRef = React.useRef<any>(null);
 
   const EmployeeIdLocalSTG = JSON.parse(
@@ -95,15 +154,10 @@ const Template: React.FC = () => {
       const response = await universalService(payload);
       const data = response?.data ?? response;
 
-      if (!Array.isArray(data)) {
-        setHasPageAccess(false);
-        return;
-      }
+      if (!Array.isArray(data)) { setHasPageAccess(false); return; }
 
       const pagePermission = data.find(
-        (p) =>
-          String(p.FormNameWithExt).trim().toLowerCase() ===
-          formName?.trim().toLowerCase(),
+        (p) => String(p.FormNameWithExt).trim().toLowerCase() === formName?.trim().toLowerCase(),
       );
 
       if (!pagePermission || !pagePermission.Action || pagePermission.Action.trim() === "") {
@@ -121,7 +175,6 @@ const Template: React.FC = () => {
     }
   };
 
-  // --- Fetch Lookups ---
   const fetchModules = async () => {
     try {
       const payload = {
@@ -142,17 +195,11 @@ const Template: React.FC = () => {
   };
 
   const fetchParentCategories = async (moduleId: string) => {
-    if (!moduleId) {
-      setParentCategories([]);
-      return;
-    }
+    if (!moduleId) { setParentCategories([]); return; }
     try {
       const payload = {
         procName: "Modules",
-        Para: JSON.stringify({
-          Action: "GetParentCategoryByModuleID",
-          ModuleID: moduleId,
-        }),
+        Para: JSON.stringify({ Action: "GetParentCategoryByModuleID", ModuleID: moduleId }),
       };
       const response = await universalService(payload);
       const res = response?.data ?? response;
@@ -170,19 +217,9 @@ const Template: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    if (hasPageAccess) {
-      fetchModules();
-    }
-  }, [hasPageAccess]);
+  useEffect(() => { if (hasPageAccess) fetchModules(); }, [hasPageAccess]);
+  useEffect(() => { if (selectedModule) fetchParentCategories(selectedModule); }, [selectedModule]);
 
-  useEffect(() => {
-    if (selectedModule) {
-      fetchParentCategories(selectedModule);
-    }
-  }, [selectedModule]);
-
-  // --- Grid Logic ---
   const handleSort = (column: any, direction: string) => {
     setSortColumnKey(column.columnKey);
     setSortDirection(direction.toUpperCase());
@@ -211,13 +248,12 @@ const Template: React.FC = () => {
 
       const res = await universalService(payload);
       const data = res?.data || res;
+
       if (Array.isArray(data)) {
         const visibleSorted = data
           .filter((c: any) => c.IsVisible)
           .sort((a: any, b: any) => a.ColumnOrder - b.ColumnOrder);
-
         const defaultSortCol = visibleSorted.find((c: any) => c.isSort);
-
         if (defaultSortCol) {
           setSortColumnKey(defaultSortCol.ColumnKey);
           setSortDirection((defaultSortCol.SortDir || "ASC").toUpperCase());
@@ -248,36 +284,33 @@ const Template: React.FC = () => {
                 return "";
               }
 
-              // Custom render for FormCategoryName to show Icon & Color
+              // ✅ FormCategoryName — render SVG icon from API
               if (c.ColumnKey === "FormCategoryName") {
                 return (
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[20px]" style={{ color: row.FormCategoryIconColor || "#1976d2" }}>
-                      {row.FormCategoryIcon || "category"}
-                    </span>
-                    <span>{row.FormCategoryName}</span>
-                  </div>
+                  <IconCell
+                    iconRaw={row.FormCategoryIcon}
+                    iconColor={row.FormCategoryIconColor || "#1976d2"}
+                    fallback="category"
+                    label={row.FormCategoryName || "-"}
+                  />
                 );
               }
 
-              // Custom render for ParentCategoryName to show Icon & Color
+              // ✅ ParentCategoryName — render SVG icon from API
               if (c.ColumnKey === "ParentCategoryName") {
-                return row.ParentCategoryName ? (
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[20px]" style={{ color: row.ParentCategoryIconColor || "#1976d2" }}>
-                      {row.ParentCategoryIcon || "folder"}
-                    </span>
-                    <span>{row.ParentCategoryName}</span>
-                  </div>
-                ) : (
-                  "-"
+                if (!row.ParentCategoryName) return "-";
+                return (
+                  <IconCell
+                    iconRaw={row.ParentCategoryIcon}
+                    iconColor={row.ParentCategoryIconColor || "#1976d2"}
+                    fallback="folder"
+                    label={row.ParentCategoryName}
+                  />
                 );
               }
 
               const value = row[c.ColumnKey];
-              if (c.IsCurrency && value != null) {
-                return `$${Number(value).toLocaleString()}`;
-              }
+              if (c.IsCurrency && value != null) return `$${Number(value).toLocaleString()}`;
               return value ?? "-";
             },
           }));
@@ -311,7 +344,7 @@ const Template: React.FC = () => {
         PageSize: 0,
         SortIndexColumn: sortColumnKey || "",
         SortDir: sortDirection,
-        ActionMode: "Export"
+        ActionMode: "Export",
       }),
     };
     const res = await universalService(payload);
@@ -413,19 +446,12 @@ const Template: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    fetchGridColumns();
-  }, [refreshGrid]);
+  useEffect(() => { fetchGridColumns(); }, [refreshGrid]);
 
   useEffect(() => {
     if (!showTable || !hasVisitedTable) return;
-    if (!sortColumnKey && initialSortReady) {
-      fetchGridData();
-      return;
-    }
-    if (sortColumnKey) {
-      fetchGridData();
-    }
+    if (!sortColumnKey && initialSortReady) { fetchGridData(); return; }
+    if (sortColumnKey) fetchGridData();
   }, [page, perPage, sortColumnKey, sortDirection, searchTrigger, initialSortReady]);
 
   const applySearch = () => {
@@ -438,9 +464,7 @@ const Template: React.FC = () => {
 
   const hasData = data.length > 0;
 
-  useEffect(() => {
-    fetchFormPermissions();
-  }, []);
+  useEffect(() => { fetchFormPermissions(); }, []);
 
   const pageTotals: any = {};
   columns.forEach((col: any) => {
@@ -452,23 +476,16 @@ const Template: React.FC = () => {
 
   const totalRow =
     Object.keys(pageTotals).length > 0
-      ? columns.reduce((acc: any, col: any, index: number) => {
-        if (!col.columnKey) {
-          acc.__label = "Page Total";
+      ? columns.reduce((acc: any, col: any) => {
+          if (!col.columnKey) { acc.__label = "Page Total"; return acc; }
+          if (col.isTotal) acc[col.columnKey] = pageTotals[col.columnKey];
+          else acc[col.columnKey] = "";
           return acc;
-        }
-        if (col.isTotal) {
-          acc[col.columnKey] = pageTotals[col.columnKey];
-        } else {
-          acc[col.columnKey] = "";
-        }
-        return acc;
-      }, {})
+        }, {})
       : null;
 
   const tableData = hasData && totalRow ? [...data, { ...totalRow, __isTotal: true }] : data;
 
-  // --- Add / Edit Handlers ---
   const handleAdd = () => {
     if (!SmartActions.canAdd(formName)) return;
     setIsEdit(false);
@@ -485,13 +502,12 @@ const Template: React.FC = () => {
     try {
       const payload = {
         procName: "MemberFormCategory",
-        Para: JSON.stringify({
-          ActionMode: "Select",
-          EditId: row.FormCategoryId,
-        }),
+        Para: JSON.stringify({ ActionMode: "Select", EditId: row.FormCategoryId }),
       };
       const response = await universalService(payload);
-      const data = Array.isArray(response?.data || response) ? (response?.data || response)[0] : (response?.data || response);
+      const data = Array.isArray(response?.data || response)
+        ? (response?.data || response)[0]
+        : (response?.data || response);
 
       setEditData(data || row);
       setSelectedModule(String(data?.ModuleId || row.ModuleId || ""));
@@ -504,23 +520,15 @@ const Template: React.FC = () => {
 
   useEffect(() => {
     if (!open) {
-      const t = setTimeout(() => {
-        setIsEdit(false);
-        setEditData(null);
-      }, 200);
+      const t = setTimeout(() => { setIsEdit(false); setEditData(null); }, 200);
       return () => clearTimeout(t);
     }
   }, [open]);
 
   const exportColumns = columns.filter(c => c.columnKey).map(c => ({ key: c.columnKey, label: c.name }));
 
-  if (permissionsLoading) {
-    return <Loader />;
-  }
-
-  if (!hasPageAccess) {
-    return <AccessRestricted />;
-  }
+  if (permissionsLoading) return <Loader />;
+  if (!hasPageAccess) return <AccessRestricted />;
 
   return (
     <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-md">
@@ -535,7 +543,6 @@ const Template: React.FC = () => {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:w-auto w-full">
           <div className="flex flex-col sm:flex-row items-center gap-3 flex-wrap justify-end">
 
-            {/* 1. Filter Dropdown */}
             <div className="relative w-full sm:w-[180px]">
               <PermissionAwareTooltip allowed={SmartActions.canAdvancedSearch(formName)} allowedText="Search By">
                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-500">
@@ -545,7 +552,7 @@ const Template: React.FC = () => {
                   value={filterColumn}
                   onChange={(e) => setFilterColumn(e.target.value)}
                   className={`w-full h-[34px] pl-8 pr-8 text-xs rounded-md appearance-none outline-none border transition-all
-                           ${SmartActions.canAdvancedSearch(formName)
+                    ${SmartActions.canAdvancedSearch(formName)
                       ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
                       : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
                     }`}
@@ -553,7 +560,6 @@ const Template: React.FC = () => {
                   <option value="">Select Filter Option</option>
                   <option value="FormCategoryName">Category Name</option>
                   <option value="ParentCategoryName">Parent Category Name</option>
-                 
                 </select>
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
                   <i className="material-symbols-outlined !text-[18px]">expand_more</i>
@@ -561,7 +567,6 @@ const Template: React.FC = () => {
               </PermissionAwareTooltip>
             </div>
 
-            {/* 2. Search Input */}
             <div className="relative">
               <PermissionAwareTooltip allowed={SmartActions.canSearch(formName)} allowedText="Enter Criteria">
                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-500">
@@ -575,7 +580,7 @@ const Template: React.FC = () => {
                   onChange={(e) => setSearchInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && applySearch()}
                   className={`h-[34px] w-full pl-8 pr-3 text-xs rounded-md outline-none border transition-all
-                           ${SmartActions.canSearch(formName)
+                    ${SmartActions.canSearch(formName)
                       ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
                       : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
                     }`}
@@ -583,7 +588,6 @@ const Template: React.FC = () => {
               </PermissionAwareTooltip>
             </div>
 
-            {/* 3. BUTTONS GROUP */}
             <div className="flex items-center gap-2">
               <PermissionAwareTooltip allowed={SmartActions.canSearch(formName)} allowedText="Search">
                 <button
@@ -620,13 +624,14 @@ const Template: React.FC = () => {
                   type="button"
                   disabled={!SmartActions.canSearch(formName)}
                   onClick={() => {
-                    setFilterColumn("");
-                    setSearchInput("");
-                    setPage(1);
+                    setFilterColumn(""); setSearchInput(""); setPage(1);
                     setSearchTrigger((p) => p + 1);
                   }}
                   className={`w-[34px] h-[34px] flex items-center justify-center rounded-md
-                    ${SmartActions.canSearch(formName) ? "border border-gray-400 text-gray-600 hover:bg-gray-200" : "border border-gray-300 text-gray-300 cursor-not-allowed"}`}
+                    ${SmartActions.canSearch(formName)
+                      ? "border border-gray-400 text-gray-600 hover:bg-gray-200"
+                      : "border border-gray-300 text-gray-300 cursor-not-allowed"
+                    }`}
                 >
                   <i className="material-symbols-outlined text-[20px]">refresh</i>
                 </button>
@@ -657,22 +662,17 @@ const Template: React.FC = () => {
             <div className="flex justify-between items-center py-2 animate-pulse">
               <div className="h-8 w-[120px] bg-gray-200 dark:bg-gray-700 rounded-md" />
               <div className="flex gap-2">
-                <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded-md" />
-                <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded-md" />
-                <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded-md" />
-                <div className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded-md" />
+                {[0,1,2,3].map(i => <div key={i} className="h-8 w-16 bg-gray-200 dark:bg-gray-700 rounded-md" />)}
               </div>
             </div>
           ) : hasData ? (
             <div className="flex justify-between items-center py-2 mb-[10px]">
-              {/* PAGE SIZE */}
               <div className="relative">
                 <select
                   value={perPage}
                   onChange={(e) => {
                     const size = Number(e.target.value);
-                    setPerPage(size);
-                    setPage(1);
+                    setPerPage(size); setPage(1);
                     fetchGridData({ pageOverride: 1, perPageOverride: size });
                   }}
                   className="h-8 w-[120px] px-3 pr-7 text-xs font-semibold text-gray-600 dark:text-gray-300 bg-transparent border border-gray-300 dark:border-gray-600 rounded-md cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-800 transition-all appearance-none"
@@ -687,7 +687,6 @@ const Template: React.FC = () => {
                 </span>
               </div>
 
-              {/* EXPORT */}
               <PermissionAwareTooltip allowed={canExport}>
                 <div className={!canExport ? "pointer-events-none opacity-50" : ""}>
                   <ExportButtons
@@ -701,7 +700,6 @@ const Template: React.FC = () => {
             </div>
           ) : null}
 
-          {/* --- CONTENT CONTAINER --- */}
           <div className="trezo-card-content bg-white dark:bg-[#0f172a] text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
             <DataTable
               columns={columns}
@@ -721,15 +719,10 @@ const Template: React.FC = () => {
               defaultSortAsc={sortDirection === "ASC"}
               progressPending={tableLoading}
               progressComponent={<TableSkeleton rows={perPage} columns={columns.length || 8} />}
-              conditionalRowStyles={[
-                {
-                  when: row => row.__isTotal,
-                  style: {
-                    fontWeight: 700,
-                    backgroundColor: "var(--color-primary-table-bg)",
-                  }
-                }
-              ]}
+              conditionalRowStyles={[{
+                when: row => row.__isTotal,
+                style: { fontWeight: 700, backgroundColor: "var(--color-primary-table-bg)" }
+              }]}
               noDataComponent={!tableLoading && <OopsNoData />}
             />
           </div>
@@ -742,7 +735,6 @@ const Template: React.FC = () => {
           transition
           className="fixed inset-0 bg-gray-500/75 transition-opacity data-[closed]:opacity-0"
         />
-
         <div className="fixed inset-0 z-60 w-screen overflow-y-auto">
           <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
             <DialogPanel
@@ -750,12 +742,7 @@ const Template: React.FC = () => {
               className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl sm:my-8 sm:w-full sm:max-w-[550px]"
             >
               <div className="trezo-card w-full bg-white dark:bg-[#0c1427] p-[20px] md:p-[25px] rounded-md">
-                {/* HEADER */}
-                <div
-                  className="trezo-card-header bg-gray-50 dark:bg-[#15203c] mb-[20px] md:mb-[25px]
-          flex items-center justify-between -mx-[20px] md:-mx-[25px] -mt-[20px] md:-mt-[25px]
-          p-[20px] md:p-[25px] rounded-t-md"
-                >
+                <div className="trezo-card-header bg-gray-50 dark:bg-[#15203c] mb-[20px] md:mb-[25px] flex items-center justify-between -mx-[20px] md:-mx-[25px] -mt-[20px] md:-mt-[25px] p-[20px] md:p-[25px] rounded-t-md">
                   <div className="trezo-card-title">
                     <h5 className="!mb-0">
                       {isEdit ? "Edit Member Form Category" : "Add Member Form Category"}
@@ -770,7 +757,6 @@ const Template: React.FC = () => {
                   </button>
                 </div>
 
-                {/* FORM START */}
                 <Formik
                   enableReinitialize
                   initialValues={{
@@ -800,20 +786,12 @@ const Template: React.FC = () => {
                           ...(isEdit && { EditId: editData?.FormCategoryId }),
                         }),
                       };
-
                       const response = await universalService(payload);
-                      const res = response?.data ?? response;
-
-                      ShowSuccessAlert(
-                        isEdit
-                          ? "Category updated successfully"
-                          : "Category added successfully",
-                      );
-                      await fetchTableData();
-
+                      ShowSuccessAlert(isEdit ? "Category updated successfully" : "Category added successfully");
                       setOpen(false);
                       setIsEdit(false);
                       setEditData(null);
+                      setSearchTrigger(p => p + 1);
                     } catch (error) {
                       console.error("Form insert/update error:", error);
                     } finally {
@@ -824,83 +802,41 @@ const Template: React.FC = () => {
                   {({ errors, touched, setFieldValue, values }) => (
                     <>
                       <Form className="space-y-5">
-
-
-                        {/* SELECT PARENT CATEGORY */}
                         <div>
-                          <label className="mb-[10px] font-medium block">
-                            Parent Category:
-                          </label>
-
-                          <Field
-                            as="select"
-                            name="parentCategory"
-                            className="h-[55px] rounded-md border px-[14px] w-full"
-                          >
+                          <label className="mb-[10px] font-medium block">Parent Category:</label>
+                          <Field as="select" name="parentCategory" className="h-[55px] rounded-md border px-[14px] w-full">
                             <option value="">Select Parent Category</option>
-
-                            {parentCategories.length === 0 && (
-                              <option disabled>No Parent Category Found</option>
-                            )}
-
+                            {parentCategories.length === 0 && <option disabled>No Parent Category Found</option>}
                             {parentCategories.map((p) => (
-                              <option key={p.id} value={p.id}>
-                                {p.name}
-                              </option>
+                              <option key={p.id} value={p.id}>{p.name}</option>
                             ))}
                           </Field>
                         </div>
 
-                        {/* FORM CATEGORY NAME */}
                         <div>
                           <label className="mb-[10px] font-medium block">
-                            Category Name:
-                            <span className="text-red-500">*</span>
+                            Category Name:<span className="text-red-500">*</span>
                           </label>
-                          <Field
-                            name="formCategoryName"
-                            className="h-[55px] rounded-md border px-[17px] w-full"
-                            placeholder="Enter category name"
-                          />
-                          {errors.formCategoryName &&
-                            touched.formCategoryName && (
-                              <p className="text-red-500 text-sm">
-                                {errors.formCategoryName}
-                              </p>
-                            )}
+                          <Field name="formCategoryName" className="h-[55px] rounded-md border px-[17px] w-full" placeholder="Enter category name" />
+                          {errors.formCategoryName && touched.formCategoryName && (
+                            <p className="text-red-500 text-sm">{errors.formCategoryName}</p>
+                          )}
                         </div>
-                        <div>
-                          <label className="mb-[10px] font-medium block">
-                            Form Name With Extension
-                          </label>
 
-                          <Field
-                            name="formNameWithExt"
-                            className="h-[55px] rounded-md border px-[17px] w-full"
-                            placeholder="/member/dashboard"
-                          />
-                        </div>
-                        {/* ICON AND COLOR */}
                         <div>
-                          <label className="mb-[10px] font-medium block">
-                            Icon & Color:
-                          </label>
+                          <label className="mb-[10px] font-medium block">Form Name With Extension</label>
+                          <Field name="formNameWithExt" className="h-[55px] rounded-md border px-[17px] w-full" placeholder="/member/dashboard" />
+                        </div>
+
+                        <div>
+                          <label className="mb-[10px] font-medium block">Icon & Color:</label>
                           <div className="flex items-center">
                             <div className="h-[55px] w-[55px] flex items-center justify-center bg-white border rounded-l-md">
-                              <span
-                                className="material-symbols-outlined text-primary-button-bg text-2xl"
-                                style={{ color: values.iconColor }}
-                              >
+                              <span className="material-symbols-outlined text-primary-button-bg text-2xl" style={{ color: values.iconColor }}>
                                 {values.iconName || "star"}
                               </span>
                             </div>
-
-                            <Field
-                              name="iconName"
-                              placeholder="Icon name"
-                              className="h-[55px] border px-[17px] w-full"
-                            />
-
+                            <Field name="iconName" placeholder="Icon name" className="h-[55px] border px-[17px] w-full" />
                             <button
                               type="button"
                               className="h-[55px] min-w-[130px] max-w-[250px] px-[15px] bg-primary-button-bg text-white rounded-r-md flex items-center justify-center whitespace-nowrap overflow-hidden text-ellipsis shrink-0"
@@ -912,19 +848,10 @@ const Template: React.FC = () => {
                         </div>
 
                         <div>
-                          <label className="mb-[10px] font-medium block">
-                            Icon Color:
-                          </label>
+                          <label className="mb-[10px] font-medium block">Icon Color:</label>
                           <div className="flex items-center">
-                            <div
-                              className="h-[55px] w-[55px] flex items-center justify-center bg-white border rounded-l-md"
-                              style={{ backgroundColor: values.iconColor }}
-                            ></div>
-                            <Field
-                              name="iconColor"
-                              placeholder="#1976d2"
-                              className="h-[55px] border px-[17px] w-full"
-                            />
+                            <div className="h-[55px] w-[55px] flex items-center justify-center bg-white border rounded-l-md" style={{ backgroundColor: values.iconColor }} />
+                            <Field name="iconColor" placeholder="#1976d2" className="h-[55px] border px-[17px] w-full" />
                             <button
                               type="button"
                               className="h-[55px] min-w-[130px] max-w-[250px] px-[15px] bg-primary-button-bg text-white rounded-r-md flex items-center justify-center whitespace-nowrap overflow-hidden text-ellipsis shrink-0"
@@ -935,7 +862,6 @@ const Template: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* FOOTER BUTTONS */}
                         <div className="mt-[20px] text-right">
                           <button
                             type="button"
@@ -944,32 +870,25 @@ const Template: React.FC = () => {
                           >
                             Cancel
                           </button>
-
                           <button
                             type="submit"
-                            className="px-[26.5px] py-[12px] bg-primary-button-bg hover:bg-primary-button-bg-hover text-white rounded-md "
+                            className="px-[26.5px] py-[12px] bg-primary-button-bg hover:bg-primary-button-bg-hover text-white rounded-md"
                           >
                             {isEdit ? "Update Category" : "Add Category"}
                           </button>
                         </div>
                       </Form>
-                      {/* ✅ ICON POPUP */}
+
                       <IconsPopUpPage
                         open={openIconPopup}
                         setOpen={setOpenIconPopup}
-                        onSelectIcon={(icon) => {
-                          setFieldValue("iconName", icon);
-                        }}
+                        onSelectIcon={(icon) => setFieldValue("iconName", icon)}
                       />
-
-                      {/* ✅ COLOR PICKER */}
                       <ColorPickerPopup
                         open={openColorPopup}
                         setOpen={setOpenColorPopup}
                         value={values.iconColor}
-                        onChange={(color) => {
-                          setFieldValue("iconColor", color);
-                        }}
+                        onChange={(color) => setFieldValue("iconColor", color)}
                       />
                     </>
                   )}

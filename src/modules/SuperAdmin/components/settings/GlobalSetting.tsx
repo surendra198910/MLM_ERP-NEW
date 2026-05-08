@@ -102,9 +102,9 @@ export default function GlobalSetting() {
     { label: "Registration Settings", icon: <FaUserPlus /> },
     { label: "Genealogy Settings", icon: <FaProjectDiagram /> },
     { label: "Notification Settings", icon: <FaBell /> },
-    { label: "Payout Wallet Settings", icon: <FaWallet /> },
-    { label: "Income Settings", icon: <FaChartLine /> },
     { label: "Withdrawal By", icon: <FaWallet /> },
+    // { label: "Payout Wallet Settings", icon: <FaWallet /> },
+    // { label: "Income Settings", icon: <FaChartLine /> },
   ];
 
   const fetchFormPermissions = async () => {
@@ -915,213 +915,7 @@ export default function GlobalSetting() {
               </table>
             </div>
           )}
-
           {tab === 3 && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-5 animate-fadeIn">
-              {/* Sponsor Income */}
-              <div>
-                <label className="text-sm mb-1 block">
-                  Sponsor Income (Wallet)<span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="SponsorIncomeWallet"
-                  value={values.SponsorIncomeWallet}
-                  onChange={handleChange}
-                  className={inputClass}
-                >
-                  <option value="">Select Wallet</option>
-                  {walletOptions.map((wallet) => (
-                    <option key={wallet.Id} value={wallet.Id}>
-                      {wallet.Name}
-                    </option>
-                  ))}
-                </select>
-                {errors.SponsorIncomeWallet && touched.SponsorIncomeWallet && (
-                  <p className="text-xs text-red-500">
-                    {errors.SponsorIncomeWallet}
-                  </p>
-                )}
-              </div>
-
-
-              {/* ROI */}
-              <div>
-                <label className="text-sm mb-1 block">
-                  ROI (Wallet)<span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="ROIWallet"
-                  value={values.ROIWallet}
-                  onChange={handleChange}
-                  className={inputClass}
-                >
-                  <option value="">Select Wallet</option>
-                  {walletOptions.map((wallet) => (
-                    <option key={wallet.Id} value={wallet.Id}>
-                      {wallet.Name}
-                    </option>
-                  ))}
-                </select>
-                {errors.ROIWallet && touched.ROIWallet && (
-                  <p className="text-xs text-red-500">
-                    {errors.ROIWallet}
-                  </p>
-                )}
-
-              </div>
-
-              {/* Level Income */}
-              <div>
-                <label className="text-sm mb-1 block">
-                  Level Income (Wallet)<span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="LevelIncomeWallet"
-                  value={values.LevelIncomeWallet}
-                  onChange={handleChange}
-                  className={inputClass}
-                >
-                  <option value="">Select Wallet</option>
-                  {walletOptions.map((wallet) => (
-                    <option key={wallet.Id} value={wallet.Id}>
-                      {wallet.Name}
-                    </option>
-                  ))}
-                </select>
-                {errors.LevelIncomeWallet && touched.LevelIncomeWallet && (
-                  <p className="text-xs text-red-500">
-                    {errors.LevelIncomeWallet}
-                  </p>
-                )}
-
-              </div>
-
-              {/* Binary Income */}
-              <div>
-                <label className="text-sm mb-1 block">
-                  Binary Income (Wallet)<span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="BinaryIncomeWallet"
-                  value={values.BinaryIncomeWallet}
-                  onChange={handleChange}
-                  className={inputClass}
-                >
-                  <option value="">Select Wallet</option>
-                  {walletOptions.map((wallet) => (
-                    <option key={wallet.Id} value={wallet.Id}>
-                      {wallet.Name}
-                    </option>
-                  ))}
-                </select>
-                {errors.BinaryIncomeWallet && touched.BinaryIncomeWallet && (
-                  <p className="text-xs text-red-500">
-                    {errors.BinaryIncomeWallet}
-                  </p>
-                )}
-
-              </div>
-
-            </div>
-          )}
-
-          {tab === 4 && (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-5 animate-fadeIn">
-
-              {/* ROI Income */}
-              <div>
-                <label className="text-sm mb-1 block">
-                  ROI Income Value Type<span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="ROIIncomeValueType"
-                  value={values.ROIIncomeValueType}
-                  onChange={handleChange}
-                  className={inputClass}
-                >
-
-                  <option value="Percentage">Percentage</option>
-                  <option value="Value">Value</option>
-                </select>
-                {errors.ROIIncomeValueType && touched.ROIIncomeValueType && (
-                  <p className="text-xs text-red-500">
-                    {errors.ROIIncomeValueType}
-                  </p>
-                )}
-              </div>
-
-
-              {/* ROI Level Income */}
-              <div>
-                <label className="text-sm mb-1 block">
-                  ROI Level Income Value Type<span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="ROILevelIncomeValueType"
-                  value={values.ROILevelIncomeValueType}
-                  onChange={handleChange}
-                  className={inputClass}
-                >
-
-                  <option value="Percentage">Percentage</option>
-                  <option value="Value">Value</option>
-                </select>
-                {errors.ROILevelIncomeValueType && touched.ROILevelIncomeValueType && (
-                  <p className="text-xs text-red-500">
-                    {errors.ROILevelIncomeValueType}
-                  </p>
-                )}
-              </div>
-
-
-              {/* Sponsor Income */}
-              <div>
-                <label className="text-sm mb-1 block">
-                  Sponsor Income Value Type<span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="SponsorIncomeValueType"
-                  value={values.SponsorIncomeValueType}
-                  onChange={handleChange}
-                  className={inputClass}
-                >
-
-                  <option value="Percentage">Percentage</option>
-                  <option value="Value">Value</option>
-                </select>
-                {errors.SponsorIncomeValueType && touched.SponsorIncomeValueType && (
-                  <p className="text-xs text-red-500">
-                    {errors.SponsorIncomeValueType}
-                  </p>
-                )}
-              </div>
-
-
-              {/* Binary Income */}
-              <div>
-                <label className="text-sm mb-1 block">
-                  Binary Income Value Type<span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="BinaryIncomeValueType"
-                  value={values.BinaryIncomeValueType}
-                  onChange={handleChange}
-                  className={inputClass}
-                >
-
-                  <option value="Percentage">Percentage</option>
-                  <option value="Value">Value</option>
-                </select>
-                {errors.BinaryIncomeValueType && touched.BinaryIncomeValueType && (
-                  <p className="text-xs text-red-500">
-                    {errors.BinaryIncomeValueType}
-                  </p>
-                )}
-              </div>
-
-            </div>
-          )}
-          {tab === 5 && (
             <div className="overflow-x-auto animate-fadeIn -mt-5.5 -mx-6">
               <table className="w-full border border-gray-200 dark:border-gray-700 overflow-hidden text-sm">
 
@@ -1234,6 +1028,212 @@ export default function GlobalSetting() {
               </table>
             </div>
           )}
+          {tab === 4 && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-5 animate-fadeIn">
+              {/* Sponsor Income */}
+              <div>
+                <label className="text-sm mb-1 block">
+                  Sponsor Income (Wallet)<span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="SponsorIncomeWallet"
+                  value={values.SponsorIncomeWallet}
+                  onChange={handleChange}
+                  className={inputClass}
+                >
+                  <option value="">Select Wallet</option>
+                  {walletOptions.map((wallet) => (
+                    <option key={wallet.Id} value={wallet.Id}>
+                      {wallet.Name}
+                    </option>
+                  ))}
+                </select>
+                {errors.SponsorIncomeWallet && touched.SponsorIncomeWallet && (
+                  <p className="text-xs text-red-500">
+                    {errors.SponsorIncomeWallet}
+                  </p>
+                )}
+              </div>
+
+
+              {/* ROI */}
+              <div>
+                <label className="text-sm mb-1 block">
+                  ROI (Wallet)<span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="ROIWallet"
+                  value={values.ROIWallet}
+                  onChange={handleChange}
+                  className={inputClass}
+                >
+                  <option value="">Select Wallet</option>
+                  {walletOptions.map((wallet) => (
+                    <option key={wallet.Id} value={wallet.Id}>
+                      {wallet.Name}
+                    </option>
+                  ))}
+                </select>
+                {errors.ROIWallet && touched.ROIWallet && (
+                  <p className="text-xs text-red-500">
+                    {errors.ROIWallet}
+                  </p>
+                )}
+
+              </div>
+
+              {/* Level Income */}
+              <div>
+                <label className="text-sm mb-1 block">
+                  Level Income (Wallet)<span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="LevelIncomeWallet"
+                  value={values.LevelIncomeWallet}
+                  onChange={handleChange}
+                  className={inputClass}
+                >
+                  <option value="">Select Wallet</option>
+                  {walletOptions.map((wallet) => (
+                    <option key={wallet.Id} value={wallet.Id}>
+                      {wallet.Name}
+                    </option>
+                  ))}
+                </select>
+                {errors.LevelIncomeWallet && touched.LevelIncomeWallet && (
+                  <p className="text-xs text-red-500">
+                    {errors.LevelIncomeWallet}
+                  </p>
+                )}
+
+              </div>
+
+              {/* Binary Income */}
+              <div>
+                <label className="text-sm mb-1 block">
+                  Binary Income (Wallet)<span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="BinaryIncomeWallet"
+                  value={values.BinaryIncomeWallet}
+                  onChange={handleChange}
+                  className={inputClass}
+                >
+                  <option value="">Select Wallet</option>
+                  {walletOptions.map((wallet) => (
+                    <option key={wallet.Id} value={wallet.Id}>
+                      {wallet.Name}
+                    </option>
+                  ))}
+                </select>
+                {errors.BinaryIncomeWallet && touched.BinaryIncomeWallet && (
+                  <p className="text-xs text-red-500">
+                    {errors.BinaryIncomeWallet}
+                  </p>
+                )}
+
+              </div>
+
+            </div>
+          )}
+
+          {tab === 5 && (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-5 animate-fadeIn">
+
+              {/* ROI Income */}
+              <div>
+                <label className="text-sm mb-1 block">
+                  ROI Income Value Type<span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="ROIIncomeValueType"
+                  value={values.ROIIncomeValueType}
+                  onChange={handleChange}
+                  className={inputClass}
+                >
+
+                  <option value="Percentage">Percentage</option>
+                  <option value="Value">Value</option>
+                </select>
+                {errors.ROIIncomeValueType && touched.ROIIncomeValueType && (
+                  <p className="text-xs text-red-500">
+                    {errors.ROIIncomeValueType}
+                  </p>
+                )}
+              </div>
+
+
+              {/* ROI Level Income */}
+              <div>
+                <label className="text-sm mb-1 block">
+                  ROI Level Income Value Type<span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="ROILevelIncomeValueType"
+                  value={values.ROILevelIncomeValueType}
+                  onChange={handleChange}
+                  className={inputClass}
+                >
+
+                  <option value="Percentage">Percentage</option>
+                  <option value="Value">Value</option>
+                </select>
+                {errors.ROILevelIncomeValueType && touched.ROILevelIncomeValueType && (
+                  <p className="text-xs text-red-500">
+                    {errors.ROILevelIncomeValueType}
+                  </p>
+                )}
+              </div>
+
+
+              {/* Sponsor Income */}
+              <div>
+                <label className="text-sm mb-1 block">
+                  Sponsor Income Value Type<span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="SponsorIncomeValueType"
+                  value={values.SponsorIncomeValueType}
+                  onChange={handleChange}
+                  className={inputClass}
+                >
+
+                  <option value="Percentage">Percentage</option>
+                  <option value="Value">Value</option>
+                </select>
+                {errors.SponsorIncomeValueType && touched.SponsorIncomeValueType && (
+                  <p className="text-xs text-red-500">
+                    {errors.SponsorIncomeValueType}
+                  </p>
+                )}
+              </div>
+
+
+              {/* Binary Income */}
+              <div>
+                <label className="text-sm mb-1 block">
+                  Binary Income Value Type<span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="BinaryIncomeValueType"
+                  value={values.BinaryIncomeValueType}
+                  onChange={handleChange}
+                  className={inputClass}
+                >
+
+                  <option value="Percentage">Percentage</option>
+                  <option value="Value">Value</option>
+                </select>
+                {errors.BinaryIncomeValueType && touched.BinaryIncomeValueType && (
+                  <p className="text-xs text-red-500">
+                    {errors.BinaryIncomeValueType}
+                  </p>
+                )}
+              </div>
+
+            </div>
+          )}
+
 
           <ToastContainer position="top-right" autoClose={3000} />
           <CropperModal
