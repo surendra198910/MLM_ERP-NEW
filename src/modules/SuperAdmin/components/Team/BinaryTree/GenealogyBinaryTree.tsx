@@ -508,7 +508,7 @@ const BinaryTreeComponent = () => {
         </div>
 
         {/* Hint */}
-        <div className="flex items-center gap-2 px-5 py-2 bg-indigo-50 dark:bg-[#0a1525] border-b border-indigo-100 dark:border-[#172036]">
+        {/* <div className="flex items-center gap-2 px-5 py-2 bg-indigo-50 dark:bg-[#0a1525] border-b border-indigo-100 dark:border-[#172036]">
           <i className="material-symbols-outlined text-[15px] text-indigo-500">
             info
           </i>
@@ -517,7 +517,7 @@ const BinaryTreeComponent = () => {
             details.&nbsp; Click <strong className="text-indigo-500">∨</strong>{" "}
             on bottom members to fetch their downline from the server.
           </span>
-        </div>
+        </div> */}
 
         {/* ── TREE CONTENT ── */}
         <div className="min-h-[520px] overflow-x-auto">
@@ -595,7 +595,7 @@ const BinaryTreeComponent = () => {
       </div>
 
       {/* ── ROOT INFO STRIP ── */}
-      {rootNode && !treeLoading && (
+      {/* {rootNode && !treeLoading && (
         <div className="mt-4 grid grid-cols-2 sm:grid-cols-4 gap-3">
           {[
             { lbl: "Sponsor", val: rootDetail?.Sponsor || "—" },
@@ -616,7 +616,7 @@ const BinaryTreeComponent = () => {
             </div>
           ))}
         </div>
-      )}
+      )} */}
     </div>
   );
 };
