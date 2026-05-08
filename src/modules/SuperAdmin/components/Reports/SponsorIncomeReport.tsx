@@ -239,7 +239,7 @@ const Template: React.FC = () => {
               const IMAGE_BASE_URL =
                 import.meta.env.VITE_IMAGE_PREVIEW_URL_2 + "ClientImages/";
 
-              if (c.ColumnKey === "FromMember") {
+              if (c.ColumnKey === "From Member") {
                 const profileUrl = `${IMAGE_BASE_URL}${row?.FromClientLogo}`;
                 return (
                   <div className="flex items-center gap-2">
@@ -250,14 +250,14 @@ const Template: React.FC = () => {
                     />
                     <div className="flex flex-col leading-tight">
                       <span className="font-medium text-sm">
-                        {row.FromMember}
+                        {row["From Member"]}
                       </span>
                     </div>
                   </div>
                 );
               }
 
-              if (c.ColumnKey === "ToMember") {
+              if (c.ColumnKey === "To Member") {
                 const profileUrl = `${IMAGE_BASE_URL}${row.ToClientLogo}`;
                 return (
                   <div className="flex items-center gap-2">
@@ -268,7 +268,7 @@ const Template: React.FC = () => {
                     />
                     <div className="flex flex-col leading-tight">
                       <span className="font-medium text-sm">
-                        {row.ToMember}
+                        {row["To Member"]}
                       </span>
                     </div>
                   </div>
