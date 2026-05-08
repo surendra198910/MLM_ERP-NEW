@@ -16,8 +16,8 @@ import { useLocation } from "react-router-dom";
 import Loader from "../../common/Loader";
 import AccessRestricted from "../../common/AccessRestricted";
 import ActionCell from "../../../../components/CommonFormElements/DataTableComponents/ActionCell";
-import { useCurrency } from "../../context/CurrencyContext";
 import LandingIllustration from "../../../../components/CommonFormElements/LandingIllustration/LandingIllustration";
+
 const Template: React.FC = () => {
   const [searchInput, setSearchInput] = useState("");
   const [filterColumn, setFilterColumn] = useState("");
@@ -40,13 +40,10 @@ const Template: React.FC = () => {
   const [permissionsLoading, setPermissionsLoading] = useState(true);
   const [hasPageAccess, setHasPageAccess] = useState(true);
   const [initialSortReady, setInitialSortReady] = useState(false);
-  const { currency } = useCurrency();
   const location = useLocation();
   const path = location.pathname;
   const formName = path.split("/").pop();
   const canExport = SmartActions.canExport(formName);
-
-  // DATE RANGE FILTER
   interface DateRange {
     from: string;
     to: string;
@@ -67,30 +64,35 @@ const Template: React.FC = () => {
     to: toStr,
   });
 
+  // centraliztion
+  const pageTitle = "Sponsor Income Report";
+  const title = "Sponsor Income";
+  const procedureName = "FetchSponsorIncome";
+
   const statsConfig = [
     {
-      key: "TotalTransfers",
-      title: "Total Transfers",
-      icon: "payment",
-      variant: "income",
-    },
-    {
-      key: "TotalAmount",
-      title: "Total Amount",
+      key: "TotalPackageAmount",
+      title: "Total Package Amount",
       icon: "payments",
-      variant: "income",
+      showCurrency: true,
     },
     {
-      key: "TotalFinalAmount",
-      title: "Total FinalAmount",
+      key: "TotalIncome",
+      title: "Total Income",
       icon: "history",
-      variant: "income",
+      showCurrency: true,
     },
     {
-      key: "TodayTransfer",
-      title: "Today Transfer",
+      key: "ThisMonthIncome",
+      title: "Last Month Income",
+      icon: "calendar_month",
+      showCurrency: true,
+    },
+    {
+      key: "TodayIncome",
+      title: "Today Income",
       icon: "today",
-      variant: "highlight",
+      showCurrency: true,
     },
   ];
   const fetchFormPermissions = async () => {
@@ -167,7 +169,7 @@ const Template: React.FC = () => {
         procName: "GetUserGridColumns",
         Para: JSON.stringify({
           UserId: employeeId,
-          GridName: "USP_AdminP2PReport",
+          GridName: "USP_" + procedureName,
         }),
       };
 
@@ -234,6 +236,45 @@ const Template: React.FC = () => {
               // ⭐ NORMAL ROW
               const value = row[c.ColumnKey];
 
+              const IMAGE_BASE_URL =
+                import.meta.env.VITE_IMAGE_PREVIEW_URL_2 + "ClientImages/";
+
+              if (c.ColumnKey === "FromMember") {
+                const profileUrl = `${IMAGE_BASE_URL}${row?.FromClientLogo}`;
+                return (
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={profileUrl}
+                      alt="user"
+                      className="w-9 h-9 rounded-full object-cover border"
+                    />
+                    <div className="flex flex-col leading-tight">
+                      <span className="font-medium text-sm">
+                        {row.FromMember}
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
+
+              if (c.ColumnKey === "ToMember") {
+                const profileUrl = `${IMAGE_BASE_URL}${row.ToClientLogo}`;
+                return (
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={profileUrl}
+                      alt="user"
+                      className="w-9 h-9 rounded-full object-cover border"
+                    />
+                    <div className="flex flex-col leading-tight">
+                      <span className="font-medium text-sm">
+                        {row.ToMember}
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
+
               if (c.IsCurrency && value != null) {
                 return `$${Number(value).toLocaleString()}`;
               }
@@ -241,6 +282,22 @@ const Template: React.FC = () => {
               return value ?? "-";
             },
           }));
+        const actionColumn = {
+          name: "Action",
+          cell: (row: any) => {
+            if (row.__isTotal) return null;
+
+            return (
+              <ActionCell
+                row={row}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            );
+          },
+          ignoreRowClick: true,
+          button: true,
+        };
 
         setColumns([...reactCols]);
       } else {
@@ -263,7 +320,7 @@ const Template: React.FC = () => {
     }));
   const fetchExportData = async () => {
     const payload = {
-      procName: "AdminP2PReport",
+      procName: procedureName,
       Para: JSON.stringify({
         SearchBy: filterColumn,
         Criteria: searchInput,
@@ -283,7 +340,7 @@ const Template: React.FC = () => {
   };
   const GetStats = async () => {
     const payload = {
-      procName: "AdminP2PReport",
+      procName: procedureName,
       Para: JSON.stringify({
         ActionMode: "GetStats",
       }),
@@ -314,7 +371,7 @@ const Template: React.FC = () => {
       setTableLoading(true);
 
       const payload = {
-        procName: "AdminP2PReport",
+        procName: procedureName,
         Para: JSON.stringify({
           SearchBy: options?.searchBy ?? filterColumn ?? "",
           Criteria: options?.criteria ?? searchInput ?? "",
@@ -331,7 +388,10 @@ const Template: React.FC = () => {
       const res = await universalService(payload);
       const result = res?.data || res;
 
-      if (Array.isArray(result)) {
+      if (result?.rows && Array.isArray(result.rows)) {
+        setData(result.rows);
+        setTotalRows(result[0]?.TotalRecords || 0);
+      } else if (Array.isArray(result)) {
         setData(result);
         setTotalRows(result[0]?.TotalRecords || 0);
       } else {
@@ -351,7 +411,7 @@ const Template: React.FC = () => {
       procName: "UniversalColumnSelector",
       Para: JSON.stringify({
         EmployeeId: employeeId,
-        USPName: "USP_FetchROIIncome",
+        USPName: "USP_" + procedureName,
         ActionMode: "List",
         Mode: "Get",
       }),
@@ -437,29 +497,12 @@ const Template: React.FC = () => {
       <div className="trezo-card-header mb-[10px] md:mb-[10px] sm:flex items-center justify-between pb-5 border-b border-gray-200 -mx-[20px] md:-mx-[25px] px-[20px] md:px-[25px]">
         <div className="trezo-card-title">
           <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
-            P2P Report
+            {pageTitle}
           </h5>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:w-auto w-full">
           <div className="flex flex-col sm:flex-row items-center gap-3 flex-wrap justify-end">
-            <div className="px-4">
-              <PermissionAwareTooltip
-                allowed={SmartActions.canDateFilter(formName)}
-                allowedText="Filter by Date"
-              >
-                <DateRangeFilter
-                  disabled={!SmartActions.canDateFilter(formName)}
-                  initialRange={{ start: oneYearAgo, end: today }}
-                  onChange={(range) => {
-                    setPendingRange({
-                      from: format(range.start, "yyyy-MM-dd"),
-                      to: format(range.end, "yyyy-MM-dd"),
-                    });
-                  }}
-                />
-              </PermissionAwareTooltip>
-            </div>
             {/* 1. Filter Dropdown (Exactly from your design) */}
             <div className="relative w-full sm:w-[180px]">
               <PermissionAwareTooltip
@@ -482,9 +525,7 @@ const Template: React.FC = () => {
                            }`}
                 >
                   <option value="">Select Filter Option</option>
-                  <option value="ToMember">To Member</option>
-                  <option value="FromMember">From Member</option>
-                  <option value="WalletType">Wallet Type</option>
+                  <option value="Username">Username</option>
                 </select>
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
                   <i className="material-symbols-outlined !text-[18px]">
@@ -509,7 +550,7 @@ const Template: React.FC = () => {
                   type="text"
                   value={searchInput}
                   placeholder="Enter Criteria..."
-                  // disabled={!SmartActions.canAdd(formName)}
+                  disabled={!SmartActions.canAdd(formName)}
                   onChange={(e) => setSearchInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && applySearch()}
                   className={`h-[34px] w-full pl-8 pr-3 text-xs rounded-md outline-none border transition-all
@@ -553,24 +594,12 @@ const Template: React.FC = () => {
                   }`}
                 >
                   <ColumnSelector
-                    procName="USP_AdminP2PReport"
+                    procName={`USP_${procedureName}`}
                     onApply={fetchVisibleColumns}
                   />
                 </div>
               </PermissionAwareTooltip>
-              {/* ADD BUTTON
-              <PermissionAwareTooltip
-                allowed={SmartActions.canAdd(formName)}
-                allowedText="Add New"
-              >
-                <button
-                  type="button"
-                  disabled={!SmartActions.canAdd(formName)}
-                  className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-primary-button-bg text-white bg-primary-button-bg hover:bg-white hover:border-primary-button-bg hover:text-primary-button-bg transition-all shadow-sm disabled:opacity-50"
-                >
-                  <i className="material-symbols-outlined text-[20px]">add</i>
-                </button>
-              </PermissionAwareTooltip> */}
+
               {/* REFRESH BUTTON (Visible when showTable is true) */}
             </div>
             {(filterColumn || searchInput) && (
@@ -605,12 +634,12 @@ const Template: React.FC = () => {
       </div>
       {!showTable && (
         <LandingIllustration
-          title="P2P Report"
+          title={pageTitle}
           formName={formName}
           addLabel="Add Income"
           description={
             <>
-              Search P2P Report using filters above.
+              Search {title} using filters above.
               <br />
               Manage records, export reports and analyse performance.
               <br />
@@ -681,7 +710,7 @@ const Template: React.FC = () => {
                   className={!canExport ? "pointer-events-none opacity-50" : ""}
                 >
                   <ExportButtons
-                    title="P2P Report"
+                    title={pageTitle}
                     columns={exportColumns}
                     fetchData={fetchExportData}
                     disabled={!canExport}

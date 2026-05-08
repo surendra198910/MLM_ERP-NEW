@@ -747,7 +747,6 @@ const Template: React.FC = () => {
                   <option value="">Select Filter Option</option>
                   <option value="Username">Username</option>
                   <option value="MemberName">Member Name</option>
-                  <option value="Status">Status</option>
                   <option value="PaymentMode">Payment Mode</option>
                 </select>
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
