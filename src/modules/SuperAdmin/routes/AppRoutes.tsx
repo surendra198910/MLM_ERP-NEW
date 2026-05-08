@@ -125,6 +125,8 @@ import RequestFundReport from "../components/RequestFund/RequestFundReport.js";
 import BinaryTreeComponent from "../components/Team/BinaryTree/GenealogyBinaryTree.js";
 import ManageLoginType from "../components/AdministrativeTools/AddReport/ManageLoginType.js";
 
+import IncomeSettings from "../components/AdminTools/IncomeSettings.js"
+
 const AppRoutes = () => {
   const [active, setActive] = useState(false);
 
@@ -352,19 +354,19 @@ const AppRoutes = () => {
                 element={<ManagePackage />}
               />
               <Route
-                path="/superadmin/mlm-setting/roi-setting"
+                path="/superadmin/admin-tools/roi-setting"
                 element={<ROISetting />}
               />
               <Route
-                path="/superadmin/mlm-setting/sponsor-setting"
+                path="/superadmin/admin-tools/sponsor-setting"
                 element={<SponsorSetting />}
               />
               <Route
-                path="/superadmin/mlm-setting/level-setting"
+                path="/superadmin/admin-tools/level-setting"
                 element={<LevelSetting />}
               />
               <Route
-                path="/superadmin/mlm-setting/binary-income-setting"
+                path="/superadmin/admin-tools/binary-income-setting"
                 element={<BinaryIncomeSetting />}
               />
               <Route
@@ -394,7 +396,7 @@ const AppRoutes = () => {
                 element={<ManageReports />}
               />
               <Route
-                path="/superadmin/mlm-setting/testing"
+                path="/superadmin/admin-tools/testing"
                 element={<ContactTypeV2 />}
               />
               //Forms
@@ -494,12 +496,12 @@ const AppRoutes = () => {
               />
               //Withdrawal
               <Route
-                path="/superadmin/mlm-setting/withdrawal-setting"
+                path="/superadmin/admin-tools/withdrawal-setting"
                 element={<WithdrawalSetting />}
               />
               //SocialMedia Setting
               <Route
-                path="/superadmin/mlm-setting/socialmedia-setting"
+                path="/superadmin/admin-tools/socialmedia-setting"
                 element={<SocialMediaSetting />}
               />
               <Route
@@ -524,7 +526,7 @@ const AppRoutes = () => {
               />
               //Manage Crypto wallet
               <Route
-                path="/superadmin/mlm-setting/CryptoWallet-setting"
+                path="/superadmin/admin-tools/CryptoWallet-setting"
                 element={<ManageCryptowallet />}
               />
               <Route
@@ -536,8 +538,14 @@ const AppRoutes = () => {
                 element={<ManageLoginType />}
               />
               <Route
-                path="/superadmin/mlm-setting/company-bank-account"
+                path="/superadmin/admin-tools/company-bank-account"
                 element={<CompanyBankAccount />}
+              />
+
+              //Admin Tools
+              <Route
+                path="/superadmin/admin-tools/income-settings"
+                element={<IncomeSettings />}
               />
             </Route>
           </Routes>

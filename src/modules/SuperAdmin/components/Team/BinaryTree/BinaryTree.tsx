@@ -612,7 +612,7 @@ const BinaryTree = ({
       </div>
 
       {/* ── Controls bar ── */}
-      <div className="bt-nav">
+      {/* <div className="bt-nav">
         {!disableNavigation && (
           <>
             <button className="bt-nav-btn" onClick={goToTop}
@@ -629,7 +629,7 @@ const BinaryTree = ({
         <span  className="bt-zoom-label">{Math.round(zoom * 100)}%</span>
         <button className="bt-zoom-btn" title="Zoom out" onClick={() => adjustZoom(1 / 1.2)}>−</button>
         <button className="bt-nav-btn"  onClick={resetView}>⊡ Reset View</button>
-      </div>
+      </div> */}
     </div>
   );
 };
