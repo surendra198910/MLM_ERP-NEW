@@ -443,14 +443,15 @@ const Template: React.FC = () => {
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:w-auto w-full">
           <div className="flex flex-col sm:flex-row items-center gap-3 flex-wrap justify-end">
+            {/* DATE RANGE */}
             <div className="px-4">
               <PermissionAwareTooltip
                 allowed={SmartActions.canDateFilter(formName)}
                 allowedText="Filter by Date"
               >
                 <DateRangeFilter
-                  disabled={!SmartActions.canDateFilter(formName)}
                   initialRange={{ start: oneYearAgo, end: today }}
+                  disabled={!SmartActions.canDateFilter(formName)}
                   onChange={(range) => {
                     setPendingRange({
                       from: format(range.start, "yyyy-MM-dd"),
@@ -460,6 +461,7 @@ const Template: React.FC = () => {
                 />
               </PermissionAwareTooltip>
             </div>
+
             {/* 1. Filter Dropdown (Exactly from your design) */}
             <div className="relative w-full sm:w-[180px]">
               <PermissionAwareTooltip
