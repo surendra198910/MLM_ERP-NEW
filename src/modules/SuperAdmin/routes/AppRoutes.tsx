@@ -93,8 +93,6 @@ import Withdraw from "../components/Withdraw/Withdraw.js";
 import TeamReport from "../components/Reports/TeamReport.js";
 import LevelWiseTeam from "../components/Team/LevelWiseTeamReport.js";
 
-
-
 //Support
 import CreateSupportTicket from "../components/Support/CreateSupportTicket.js";
 import MySupportTicket from "../components/Support/MySupportTicket.js";
@@ -102,7 +100,7 @@ import SearchTicketAll from "../components/Support/SearchTicketAll.js";
 import SupportDetailPage from "../components/Support/SupportDetailPage.js";
 //Withdrawal
 import WithdrawalSetting from "../components/WithdrawalSetting/WithdrawalSetting.js";
-import WithdrawReport from "../components/Withdraw/WIthdrawReport.js"
+import WithdrawReport from "../components/Withdraw/WIthdrawReport.js";
 //Social Media
 import SocialMediaSetting from "../components/SocialMediaSetting/SocialMediaSetting.js";
 
@@ -114,6 +112,7 @@ import MemberThemeManagement from "../components/ThemeManagement/MemberThemeMana
 import NewsAndAnnoucement from "../components/WebsiteManagement/NewsAndAnnouncement.js";
 
 import P2PReport from "../components/Reports/P2PReport.js";
+import SponsorIncomeReport from "../components/Reports/SponsorIncomeReport.js";
 
 // Crypto wallet setting
 import ManageCryptowallet from "../components/settings/ManageCryptoWallet.js";
@@ -125,7 +124,7 @@ import RequestFundReport from "../components/RequestFund/RequestFundReport.js";
 import BinaryTreeComponent from "../components/Team/BinaryTree/GenealogyBinaryTree.js";
 import ManageLoginType from "../components/AdministrativeTools/AddReport/ManageLoginType.js";
 
-import IncomeSettings from "../components/AdminTools/IncomeSettings.js"
+import IncomeSettings from "../components/AdminTools/IncomeSettings.js";
 
 const AppRoutes = () => {
   const [active, setActive] = useState(false);
@@ -158,7 +157,10 @@ const AppRoutes = () => {
                 path="/superadmin/superadmin-tools/manage-forms/form-categories"
                 element={<FormCategory />}
               />
-              <Route path="/superadmin/superadmin-tools/manage-forms/forms" element={<Forms />} />
+              <Route
+                path="/superadmin/superadmin-tools/manage-forms/forms"
+                element={<Forms />}
+              />
               <Route
                 path="/superadmin/employee/add-employee"
                 element={<AddEditEmployee />}
@@ -310,7 +312,7 @@ const AppRoutes = () => {
                 path="/superadmin/team/binary-tree"
                 element={<Geneaology />}
               />
-               <Route
+              <Route
                 path="/superadmin/team/new-binary-tree"
                 element={<BinaryTreeComponent />}
               />
@@ -377,13 +379,11 @@ const AppRoutes = () => {
                 path="/superadmin/commission/roi-income-report"
                 element={<ROIIncomeReport />}
               />
-
-               <Route
+              <Route
                 path="/superadmin/request-fund/approve-reject-requestfund"
                 element={<ApproveRejectRequestFund />}
               />
-
-                <Route
+              <Route
                 path="/superadmin/request-fund/request-fund-report"
                 element={<RequestFundReport />}
               />
@@ -484,15 +484,17 @@ const AppRoutes = () => {
                 path="/superadmin/reports/team-report"
                 element={<TeamReport />}
               />
-
-                <Route
+              <Route
                 path="/superadmin/team/level-wise-team"
                 element={<LevelWiseTeam />}
               />
-
               <Route
                 path="/superadmin/reports/p2p-report"
                 element={<P2PReport />}
+              />
+              <Route
+                path="/superadmin/reports/sponsor-income-report"
+                element={<SponsorIncomeReport />}
               />
               //Withdrawal
               <Route
@@ -541,7 +543,6 @@ const AppRoutes = () => {
                 path="/superadmin/admin-tools/company-bank-account"
                 element={<CompanyBankAccount />}
               />
-
               //Admin Tools
               <Route
                 path="/superadmin/admin-tools/income-settings"

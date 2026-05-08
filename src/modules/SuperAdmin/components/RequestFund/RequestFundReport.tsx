@@ -20,11 +20,6 @@ import LandingIllustration from "../../../../components/CommonFormElements/Landi
 import Swal from "sweetalert2";
 import { FaEye } from "react-icons/fa";
 
-interface DateRange {
-  from: string;
-  to: string;
-}
-
 const Template: React.FC = () => {
   const [searchInput, setSearchInput] = useState("");
   const [filterColumn, setFilterColumn] = useState("");
@@ -52,6 +47,12 @@ const Template: React.FC = () => {
   const path = location.pathname;
   const formName = path.split("/").pop();
   const canExport = SmartActions.canExport(formName);
+
+  // DATE RANGE FILTER
+  interface DateRange {
+    from: string;
+    to: string;
+  }
   const today = new Date();
 
   const oneYearAgo = new Date(today);
@@ -66,7 +67,6 @@ const Template: React.FC = () => {
   const [dateRange, setDateRange] = useState({
     from: fromStr,
     to: toStr,
-    preset: "thisMonth",
   });
 
   const statsConfig = [
@@ -311,7 +311,7 @@ const Template: React.FC = () => {
 
             if (row.Status == "Pending") {
               return (
-               <button
+                <button
                   onClick={() => handleGetDetails(row.Id)}
                   className="text-primary-button-bg hover:underline text-xs font-medium"
                 >
@@ -538,13 +538,12 @@ const Template: React.FC = () => {
   };
 
   const handleSubmit = async () => {
-    return
-  
+    return;
   };
 
   //////////////////////////////
   const hasData = data.length > 0;
-  const isActionAllowed = false///selectedRow?.Status === "Pending";
+  const isActionAllowed = false; ///selectedRow?.Status === "Pending";
 
   useEffect(() => {
     if (!selectedRow) return;
@@ -645,7 +644,7 @@ const Template: React.FC = () => {
                            }`}
                 >
                   <option value="">Select Filter Option</option>
-                  <option value="Status">Status</option>
+                  <option value="UserName">UserName</option>
                 </select>
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
                   <i className="material-symbols-outlined !text-[18px]">
