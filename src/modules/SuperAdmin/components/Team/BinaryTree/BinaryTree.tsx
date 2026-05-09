@@ -32,6 +32,7 @@ function injectStyles() {
     width:100%; height:600px; overflow:hidden; position:relative;
     cursor:grab; user-select:none; touch-action:none;
     border-bottom:1px solid #e5e7eb;
+    background:#f0f1f3;
   }
   .bt-viewport:active { cursor:grabbing; }
   .bt-canvas { position:absolute; top:0; left:0; transform-origin:0 0; }
@@ -68,11 +69,13 @@ function injectStyles() {
     margin-top:8px; background:#6366f1; color:#fff;
     font-size:10px; font-weight:700; letter-spacing:.9px;
     padding:4px 14px; border-radius:4px; text-align:center;
-    max-width:110px; overflow:hidden; text-overflow:ellipsis;
+    max-width:140px; overflow:hidden; text-overflow:ellipsis;
     white-space:nowrap; text-transform:uppercase; user-select:none;
     position:relative; z-index:2;
   }
   .bt-label.empty-label { background:#9ca3af; }
+  .bt-label.paid   { background:#22c55e; border:none;}
+  .bt-label.unpaid { background:#ef4444; border:none;}
 
   /* ── Paid/UnPaid badge ── */
   .bt-paid-badge {
@@ -354,9 +357,9 @@ const MemberPopup = ({ node, anchorRect, onClose }) => {
 // ─────────────────────────────────────────────────────────────────────────────
 // BtNode — single real or blank node
 // ─────────────────────────────────────────────────────────────────────────────
-const BtNode = React.forwardRef(function BtNode(
-  { node, isLeaf, onExpand, imageBaseUrl = "", isRoot = false, onShowPopup },
-  avatarRef
+const BtNode = React.forwardRef<any, { node: any; onExpand: (id: number) => void; imageBaseUrl?: string; isRoot?: boolean; onShowPopup: (node: any, rect: DOMRect) => void; expandedUserNames?: Set<string> }>(function BtNode(
+  { node, onExpand, imageBaseUrl = "", isRoot = false, onShowPopup, expandedUserNames = new Set<string>() },
+  avatarRef: any
 ) {
   const isEmpty = !node || !node.id;
 
@@ -399,17 +402,17 @@ const BtNode = React.forwardRef(function BtNode(
       </div>
 
       {/* Name pill */}
-      <div className="bt-label">{name}</div>
+      <div className={`bt-label ${paid ? "paid" : "unpaid"}`}>{name}</div>
 
       {/* Paid/UnPaid badge */}
       {/* <div className={`bt-paid-badge ${paid ? "paid" : "unpaid"}`}>
         {paid ? "Paid" : "UnPaid"}
       </div> */}
 
-      {/* Chevron for expand */}
-      {isLeaf && (
+      {/* Chevron — only when node has children AND downline not yet opened */}
+      {node.hasChildren && !expandedUserNames.has(node.rawUserName) && (
         <button className="bt-chevron"
-          title={`Expand downline of ${name}`}
+          title={`View downline of ${name}`}
           onClick={(e) => { e.stopPropagation(); onExpand(node.id); }}>
           <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9" /></svg>
         </button>
@@ -421,7 +424,7 @@ const BtNode = React.forwardRef(function BtNode(
 // ─────────────────────────────────────────────────────────────────────────────
 // BtLevel — recursive renderer
 // ─────────────────────────────────────────────────────────────────────────────
-function BtLevel({ node, allUsers, depth, maxDepth, onExpand, imageBaseUrl, onRegisterRef, isRoot, onShowPopup }) {
+function BtLevel({ node, allUsers, depth, maxDepth, onExpand, imageBaseUrl, onRegisterRef, isRoot, onShowPopup, expandedUserNames = new Set<string>() }) {
   if (!node) return null;
 
   const avatarRef     = useRef(null);
@@ -431,9 +434,7 @@ function BtLevel({ node, allUsers, depth, maxDepth, onExpand, imageBaseUrl, onRe
   const left  = node.left_child_id  ? (allUsers.find((u) => u.id === node.left_child_id)  || null) : null;
   const right = node.right_child_id ? (allUsers.find((u) => u.id === node.right_child_id) || null) : null;
 
-  const hasAnyChild = !!(left || right);
-  const isLeaf      = depth >= maxDepth || !hasAnyChild;
-  const renderKids  = depth < maxDepth;
+  const renderKids = depth < maxDepth;
 
   useEffect(() => {
     if (onRegisterRef && node?.id) onRegisterRef(node.id, avatarRef);
@@ -450,11 +451,11 @@ function BtLevel({ node, allUsers, depth, maxDepth, onExpand, imageBaseUrl, onRe
       <BtNode
         ref={avatarRef}
         node={node}
-        isLeaf={isLeaf}
         onExpand={onExpand}
         imageBaseUrl={imageBaseUrl}
         isRoot={isRoot}
         onShowPopup={onShowPopup}
+        expandedUserNames={expandedUserNames}
       />
       {renderKids && (
         <div style={{ display: "flex", width: "100%" }}>
@@ -462,18 +463,20 @@ function BtLevel({ node, allUsers, depth, maxDepth, onExpand, imageBaseUrl, onRe
             {left
               ? <BtLevel node={left} allUsers={allUsers} depth={depth + 1} maxDepth={maxDepth}
                   onExpand={onExpand} imageBaseUrl={imageBaseUrl} onRegisterRef={onRegisterRef}
-                  isRoot={false} onShowPopup={onShowPopup} />
-              : <BtNode ref={leftBlankRef} node={null} isLeaf={false}
-                  onExpand={onExpand} imageBaseUrl={imageBaseUrl} onShowPopup={onShowPopup} />
+                  isRoot={false} onShowPopup={onShowPopup} expandedUserNames={expandedUserNames} />
+              : <BtNode ref={leftBlankRef} node={null}
+                  onExpand={onExpand} imageBaseUrl={imageBaseUrl} onShowPopup={onShowPopup}
+                  expandedUserNames={expandedUserNames} />
             }
           </div>
           <div className="bt-col">
             {right
               ? <BtLevel node={right} allUsers={allUsers} depth={depth + 1} maxDepth={maxDepth}
                   onExpand={onExpand} imageBaseUrl={imageBaseUrl} onRegisterRef={onRegisterRef}
-                  isRoot={false} onShowPopup={onShowPopup} />
-              : <BtNode ref={rightBlankRef} node={null} isLeaf={false}
-                  onExpand={onExpand} imageBaseUrl={imageBaseUrl} onShowPopup={onShowPopup} />
+                  isRoot={false} onShowPopup={onShowPopup} expandedUserNames={expandedUserNames} />
+              : <BtNode ref={rightBlankRef} node={null}
+                  onExpand={onExpand} imageBaseUrl={imageBaseUrl} onShowPopup={onShowPopup}
+                  expandedUserNames={expandedUserNames} />
             }
           </div>
         </div>
@@ -542,7 +545,13 @@ function buildLines(node, allUsers, depth, maxDepth, refMap, containerRect, zoom
 const BinaryTree = ({
   allUsers = [], rootUser, onLeafClick,
   imageBaseUrl = "", maxDepth = 3, disableNavigation = false,
+  centeredUserId = null as number | null, expandedUserNames = new Set<string>(),
+}: {
+  allUsers?: object[]; rootUser: object; onLeafClick: (id: number) => void;
+  imageBaseUrl?: string; maxDepth?: number; disableNavigation?: boolean;
+  centeredUserId?: number | null; expandedUserNames?: Set<string>;
 }) => {
+  void centeredUserId; // acknowledged — used by parent for scroll logic
   const [selectedRoot, setSelectedRoot] = useState(rootUser);
   const [svgPaths, setSvgPaths]         = useState([]);
   const [svgSize, setSvgSize]           = useState({ w: 0, h: 0 });
@@ -647,6 +656,7 @@ const BinaryTree = ({
                 onExpand={onLeafClick} imageBaseUrl={imageBaseUrl}
                 onRegisterRef={registerRef} isRoot={true}
                 onShowPopup={handleShowPopup}
+                expandedUserNames={expandedUserNames}
               />
             </div>
           </div>

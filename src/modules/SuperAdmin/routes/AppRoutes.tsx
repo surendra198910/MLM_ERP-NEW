@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState,useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 import Header from "../layout/Header/index";
@@ -125,8 +125,18 @@ import BinaryTreeComponent from "../components/Team/BinaryTree/GenealogyBinaryTr
 import ManageLoginType from "../components/AdministrativeTools/AddReport/ManageLoginType.js";
 
 import IncomeSettings from "../components/AdminTools/IncomeSettings.js";
+import ROILevelIncomeReport from "../components/Commission/ROILevelIncomeReport.js"
 
 const AppRoutes = () => {
+  useEffect(() => {
+    const s = document.createElement("script");
+
+    s.src = "https://api.erppilot.io/widget/sysfo-mlm-erp.js?v=1";
+
+    document.body.appendChild(s);
+
+    return () => void document.body.removeChild(s);
+  }, []);
   const [active, setActive] = useState(false);
 
   const toggleActive = () => {
@@ -374,6 +384,10 @@ const AppRoutes = () => {
               <Route
                 path="/superadmin/commission/process-roi-income"
                 element={<ProcessROIIncome />}
+              />
+               <Route
+                path="/superadmin/commission/roi-level-income-report"
+                element={<ROILevelIncomeReport />}
               />
               <Route
                 path="/superadmin/commission/roi-income-report"

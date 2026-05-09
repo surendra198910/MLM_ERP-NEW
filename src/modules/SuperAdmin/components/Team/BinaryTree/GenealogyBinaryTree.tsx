@@ -4,6 +4,8 @@ import { ApiService } from "../../../../../services/ApiService";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 interface MemberDetail {
+  "Total Left Business":number;
+  "Total Right Business":number;
   "Left Business": number;
   "Right Business": number;
   "Left Carry Forward Business": number;
@@ -17,6 +19,7 @@ interface TreeNode {
   username: string;
   rawUserName: string;
   paidstatus: "Paid" | "UnPaid";
+  hasChildren: boolean;
   description: {
     userName: string;
     Reg_Date: string;
@@ -49,6 +52,8 @@ function generateTreeNodes(rows: any[]): TreeNode[] {
     if (nodeMap.has(memberId)) continue;
 
     let detail: MemberDetail = {
+      "Total Left Business":0,
+  "Total Right Business":0,
       "Left Business": 0,
       "Right Business": 0,
       "Left Carry Forward Business": 0,
@@ -67,20 +72,21 @@ function generateTreeNodes(rows: any[]): TreeNode[] {
       rawUserName: row.UserName ?? "",
       // ✅ Reference se: ROUND(ISNULL(JoiningAmount,0),2)>0 = Paid
       paidstatus: row.PaidStatus === "Paid" ? "Paid" : "UnPaid",
+      hasChildren: row.HasChildren === 1 || row.HasChildren === true,
       description: {
-        userName: row.MemberName ?? "-",
+        userName:`${row.MemberName ?? "-"} [${row.UserName ?? ""}]`,
         Reg_Date: row.RegDate ?? "",
         Bot_Status: row.Status ?? "",
         Bot_Activation_Date: row.PaidDate ?? "-",
         totalInvestmentAmount: row.BusinessPoint ?? 0,
         Sponsor: row.Sponsor ?? "-",
         MemberJoiningDetail: row.MemberJoiningDetail ?? "",
-        totalleftTeamCount: detail["Left Business"] ?? 0,
-        totalRightTeamCount: detail["Right Business"] ?? 0,
-        leftTeamCount: detail["Left Carry Forward Business"] ?? 0,
-        rightTeamCount: detail["Right Carry Forward Business"] ?? 0,
-        leftRemainingTeamCount: 0,
-        rightRemaining: 0,
+        totalleftTeamCount: detail["Total Left Business"] ?? 0,
+        totalRightTeamCount: detail["Total Right Business"] ?? 0,
+        leftTeamCount: detail["Left Business"] ?? 0,
+        rightTeamCount: detail["Right Business"] ?? 0,
+        leftRemainingTeamCount: detail["Left Carry Forward Business"] ?? 0,
+        rightRemaining: detail["Right Carry Forward Business"] ?? 0,
       },
       image: row.NodeImg ?? row.ProfilePic ?? "",
       level: row.Level ?? 0,
@@ -107,20 +113,6 @@ function generateTreeNodes(rows: any[]): TreeNode[] {
   return Array.from(nodeMap.values()).sort((a, b) => a.level - b.level);
 }
 
-// BFS depth helper
-function calcNodeDepth(targetId: number, nodes: TreeNode[], rootId: number): number {
-  const nodeMap = new Map(nodes.map((n) => [n.id, n]));
-  const queue: Array<{ id: number; depth: number }> = [{ id: rootId, depth: 1 }];
-  while (queue.length) {
-    const { id, depth } = queue.shift()!;
-    if (id === targetId) return depth;
-    const node = nodeMap.get(id);
-    if (!node) continue;
-    if (node.left_child_id != null) queue.push({ id: node.left_child_id, depth: depth + 1 });
-    if (node.right_child_id != null) queue.push({ id: node.right_child_id, depth: depth + 1 });
-  }
-  return 0;
-}
 
 // ── Component ─────────────────────────────────────────────────────────────────
 const BinaryTreeComponent = () => {
@@ -133,6 +125,7 @@ const BinaryTreeComponent = () => {
   const [treeError, setTreeError]       = useState<string | null>(null);
   const [maxDepth, setMaxDepth]         = useState(3);
   const [centeredUserId, setCenteredUserId] = useState<number | null>(null);
+  const [expandedUserNames, setExpandedUserNames] = useState<Set<string>>(new Set());
 
   const [LoggedUserName] = useState<string>(() => localStorage.getItem("UserName") || "");
   const [searchText, setSearchText]       = useState("");
@@ -160,6 +153,7 @@ const BinaryTreeComponent = () => {
     setCenteredUserId(null);
     setMaxDepth(3);
     fetchedUserNames.current.clear();
+    setExpandedUserNames(new Set());
 
     try {
       const rows = await callSP(LoggedUserName, searchUserName);
@@ -167,8 +161,11 @@ const BinaryTreeComponent = () => {
         setTreeError(rows[0]?.msg || "No records found.");
         return;
       }
-      const rootRow = rows.find((r: any) => r.Level === 0);
-      if (rootRow?.UserName) fetchedUserNames.current.add(rootRow.UserName);
+      const rootRow = rows.find((r: { Level: number; UserName?: string }) => r.Level === 0);
+      if (rootRow?.UserName) {
+        fetchedUserNames.current.add(rootRow.UserName);
+        setExpandedUserNames(new Set([rootRow.UserName]));
+      }
 
       const nodes = generateTreeNodes(rows);
       setFirstNode(nodes[0] ?? null);
@@ -181,20 +178,18 @@ const BinaryTreeComponent = () => {
     }
   };
 
-  // ── Expand leaf ────────────────────────────────────────────────────────────
+  // ── Expand node — merge children into existing tree (root stays at top) ────
   const expandNode = async (clickedId: number) => {
     if (!clickedId) return;
     const clickedNode = treeData.find((n) => n.id === clickedId);
     if (!clickedNode?.rawUserName) return;
 
+    // Already fetched — just scroll to it
     if (fetchedUserNames.current.has(clickedNode.rawUserName)) {
       setCenteredUserId(null);
       setTimeout(() => setCenteredUserId(clickedId), 0);
       return;
     }
-
-    const rootNode = treeData.find((n) => n.level === 0);
-    const clickedDepth = rootNode ? calcNodeDepth(clickedId, treeData, rootNode.id) : 0;
 
     setExpandingId(clickedId);
     try {
@@ -202,19 +197,33 @@ const BinaryTreeComponent = () => {
       if (!rows.length || rows[0]?.StatusCode === "0") return;
 
       fetchedUserNames.current.add(clickedNode.rawUserName);
+      setExpandedUserNames((prev) => new Set([...prev, clickedNode.rawUserName]));
       const newNodes = generateTreeNodes(rows);
 
       setTreeData((prev) => {
         const existingIds = new Set(prev.map((n) => n.id));
+        // Patch existing nodes with fresh child pointers + hasChildren
         const patched = prev.map((n) => {
           const fresh = newNodes.find((nn) => nn.id === n.id);
           if (!fresh) return n;
-          return { ...n, left_child_id: fresh.left_child_id ?? n.left_child_id, right_child_id: fresh.right_child_id ?? n.right_child_id };
+          return {
+            ...n,
+            left_child_id:  fresh.left_child_id  ?? n.left_child_id,
+            right_child_id: fresh.right_child_id ?? n.right_child_id,
+            hasChildren: fresh.hasChildren,
+          };
         });
-        return [...patched, ...newNodes.filter((n) => !existingIds.has(n.id))];
+        // New nodes: remap their level to be absolute (relative to original root)
+        const baseLevel = clickedNode.level;
+        const incoming = newNodes
+          .filter((n) => !existingIds.has(n.id))
+          .map((n) => ({ ...n, level: baseLevel + n.level }));
+        return [...patched, ...incoming];
       });
 
-      setMaxDepth((prev) => Math.max(prev, clickedDepth + 3));
+      // Show enough depth to reveal the newly loaded children
+      const clickedAbsoluteDepth = clickedNode.level + 1;
+      setMaxDepth((prev) => Math.max(prev, clickedAbsoluteDepth + 3));
       setCenteredUserId(null);
       setTimeout(() => setCenteredUserId(clickedId), 50);
     } catch (err) {
@@ -280,6 +289,24 @@ const BinaryTreeComponent = () => {
               </div>
             ))}
           </div>
+
+          {firstNode && (
+            <div className="hidden md:flex items-center gap-1.5 pl-4 border-l border-gray-200 dark:border-[#172036] flex-wrap">
+              {[
+                { lbl: "Tot. Left",  val: firstNode.description.totalleftTeamCount,     bg: "bg-blue-50 dark:bg-blue-900/20",    num: "text-blue-600 dark:text-blue-400"    },
+                { lbl: "Tot. Right", val: firstNode.description.totalRightTeamCount,    bg: "bg-purple-50 dark:bg-purple-900/20",num: "text-purple-600 dark:text-purple-400"},
+                { lbl: "Left Biz",   val: firstNode.description.leftTeamCount,          bg: "bg-emerald-50 dark:bg-emerald-900/20",num:"text-emerald-600 dark:text-emerald-400"},
+                { lbl: "Right Biz",  val: firstNode.description.rightTeamCount,         bg: "bg-rose-50 dark:bg-rose-900/20",    num: "text-rose-600 dark:text-rose-400"    },
+                { lbl: "Left CF",    val: firstNode.description.leftRemainingTeamCount, bg: "bg-amber-50 dark:bg-amber-900/20",  num: "text-amber-600 dark:text-amber-400"  },
+                { lbl: "Right CF",   val: firstNode.description.rightRemaining,         bg: "bg-cyan-50 dark:bg-cyan-900/20",    num: "text-cyan-600 dark:text-cyan-400"    },
+              ].map(({ lbl, val, bg, num }) => (
+                <div key={lbl} className={`flex flex-col items-center px-2.5 py-1.5 rounded-lg ${bg} min-w-[52px]`}>
+                  <span className={`text-sm font-extrabold leading-none ${num}`}>{val ?? 0}</span>
+                  <span className="text-[8px] uppercase tracking-wide text-gray-400 dark:text-gray-500 mt-1 whitespace-nowrap">{lbl}</span>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Search */}
@@ -320,7 +347,8 @@ const BinaryTreeComponent = () => {
           </button>
 
           <button onClick={() => { setSearchText(""); setSearchResults([]); loadRoot(); }}
-            className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-gray-300 dark:border-[#172036] text-gray-500 hover:bg-gray-100 dark:hover:bg-[#172036] transition-all">
+            className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-gray-300 dark:border-[#172036] text-gray-500 hover:bg-gray-100 dark:hover:bg-[#172036] transition-all"
+            title="Reset to root">
             <i className="material-symbols-outlined text-[20px]">refresh</i>
           </button>
         </div>
@@ -394,6 +422,7 @@ const BinaryTreeComponent = () => {
                 onLeafClick={expandNode}
                 imageBaseUrl={imageBaseUrl}
                 maxDepth={maxDepth}
+                expandedUserNames={expandedUserNames}
               />
             </div>
           )}

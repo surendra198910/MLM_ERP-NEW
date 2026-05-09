@@ -151,8 +151,8 @@ const ThemeSettings = () => {
   };
 
   const saveTheme = async (values, { setFieldError }) => {
-    console.log(values.ThemeName);
-    if (values.ThemeName || values.ThemeName.trim() === "") {
+    
+    if (values.ThemeName == "" || values.ThemeName.trim() == "") {
       setFieldError("ThemeName", "Theme Name is required");
       return;
     }
@@ -720,10 +720,10 @@ p-[20px] md:p-[25px] rounded-t-md"
                                 <div className="flex items-center justify-between border-1 border-gray-200 p-3 bg-gray-50 dark:bg-gray-900/50 rounded-xl border dark:border-gray-700 mt-2">
                                   <div className="flex flex-col">
                                     <span className="text-[10px] text-gray-600 dark:text-gray-300  tracking-tighter">
-                                      Interface Style
+                                      Logo Config
                                     </span>
                                     <span className="text-[8px] text-gray-400 ">
-                                      Dark Mode Default
+                                      Dark Mode
                                     </span>
                                   </div>
                                   <Switch
