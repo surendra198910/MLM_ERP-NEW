@@ -67,9 +67,9 @@ const Template: React.FC = () => {
   });
 
   // centraliztion
-  const pageTitle = "Sponsor Income Report";
-  const title = "Sponsor Income";
-  const procedureName = "FetchSponsorIncome";
+  const pageTitle = "ROI Level Income Report";
+  const title = "ROI Level Income";
+  const procedureName = "FetchROILevelIncome";
 
   const statsConfig = [
     {
@@ -241,7 +241,7 @@ const Template: React.FC = () => {
               const IMAGE_BASE_URL =
                 import.meta.env.VITE_IMAGE_PREVIEW_URL_2 + "ClientImages/";
 
-              if (c.ColumnKey === "From Member") {
+              if (c.ColumnKey === "FromMember") {
                 const profileUrl = `${IMAGE_BASE_URL}${row?.FromClientLogo}`;
                 return (
                   <div className="flex items-center gap-2">
@@ -252,14 +252,14 @@ const Template: React.FC = () => {
                     />
                     <div className="flex flex-col leading-tight">
                       <span className="font-medium text-sm">
-                        {row["From Member"]}
+                        {row["FromMember"]}
                       </span>
                     </div>
                   </div>
                 );
               }
 
-              if (c.ColumnKey === "To Member") {
+              if (c.ColumnKey === "ToMember") {
                 const profileUrl = `${IMAGE_BASE_URL}${row.ToClientLogo}`;
                 return (
                   <div className="flex items-center gap-2">
@@ -270,7 +270,7 @@ const Template: React.FC = () => {
                     />
                     <div className="flex flex-col leading-tight">
                       <span className="font-medium text-sm">
-                        {row["To Member"]}
+                        {row["ToMember"]}
                       </span>
                     </div>
                   </div>

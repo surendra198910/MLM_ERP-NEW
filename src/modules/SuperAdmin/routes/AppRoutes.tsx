@@ -493,7 +493,7 @@ const AppRoutes = () => {
                 element={<P2PReport />}
               />
               <Route
-                path="/superadmin/reports/sponsor-income-report"
+                path="/superadmin/commission/sponsor-income-report"
                 element={<SponsorIncomeReport />}
               />
               //Withdrawal
