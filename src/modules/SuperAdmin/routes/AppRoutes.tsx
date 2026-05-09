@@ -70,7 +70,6 @@ import BinaryIncomeSetting from "../components/settings/BinaryIncomeSetting.js";
 // import ProcessROIIncome from "../components/Commission/ProcessROIIncome.js";
 import IncomeSetting from "../components/settings/IncomeSetting.js";
 import ROIIncomeReport from "../components/Commission/ROIIncomeReport.js";
-import ROILevelIncomeReport from "../components/Commission/ROILevelIncomeReport.js";
 
 import AddReport from "../components/AdministrativeTools/AddReport/AddReport.js";
 import ManageReports from "../components/AdministrativeTools/AddReport/ManageReport.js";
@@ -361,7 +360,7 @@ const AppRoutes = () => {
                 element={<ROISetting />}
               />
               <Route
-                path="/superadmin/commission/sponsor-setting"
+                path="/superadmin/admin-tools/sponsor-setting"
                 element={<SponsorSetting />}
               />
               <Route
@@ -379,10 +378,6 @@ const AppRoutes = () => {
               <Route
                 path="/superadmin/commission/roi-income-report"
                 element={<ROIIncomeReport />}
-              />
-              <Route
-                path="/superadmin/commission/roi-level-income-report"
-                element={<ROILevelIncomeReport />}
               />
               <Route
                 path="/superadmin/request-fund/approve-reject-requestfund"
@@ -498,7 +493,7 @@ const AppRoutes = () => {
                 element={<P2PReport />}
               />
               <Route
-                path="/superadmin/reports/sponsor-income-report"
+                path="/superadmin/commission/sponsor-income-report"
                 element={<SponsorIncomeReport />}
               />
               //Withdrawal
