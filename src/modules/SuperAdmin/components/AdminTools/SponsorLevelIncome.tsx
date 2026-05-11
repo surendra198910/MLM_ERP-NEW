@@ -51,7 +51,7 @@ export default function LevelSettingsManager({ }: Props) {
     const [tableLoading, setTableLoading] = useState(true);
     const [permissionLoading, setPermissionLoading] = useState(true);
     const [hasPageAccess, setHasPageAccess] = useState(true);
-    const [incomeType, setIncomeType] = useState("ROILevel");
+    const [incomeType, setIncomeType] = useState("SponsorLevel");
 
     const path = location.pathname;
     const formName = path.split("/").pop();
@@ -366,7 +366,7 @@ export default function LevelSettingsManager({ }: Props) {
     pb-4 mb-0 -mx-7 px-6">
 
                 <h5 className="font-bold text-xl text-black dark:text-white">
-                    ROI Level Settings
+                    Sponsor Level Settings
                 </h5>
 
                 {/* <PermissionAwareTooltip

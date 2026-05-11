@@ -86,7 +86,7 @@ const incomeSchema = Yup.object().shape({
             originalValue === "" ? undefined : Number(originalValue)
         )
         .required("Max Level is required")
-        .min(1, "Max Level must be at least 1"),
+        .min(0, "Max Level cannot be negative"),
 });
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -419,7 +419,12 @@ const Template: React.FC = () => {
                     TriggerValueTypeId: Number(values.TriggerValueType),
                     WalletId: Number(values.WalletId),
                     IncomeType: values.IncomeType,
-                    MaxLevel: values.MaxLevel ? Number(values.MaxLevel) : null,
+                    MaxLevel:
+                        values.MaxLevel === "" ||
+                            values.MaxLevel === null ||
+                            values.MaxLevel === undefined
+                            ? null
+                            : Number(values.MaxLevel),
                     EntryBy: getEmployeeId(),
                 }),
             };
@@ -865,7 +870,11 @@ const Template: React.FC = () => {
                                             TriggerValueType: editingIncome?.TriggerValueTypeId || "",
                                             WalletId: editingIncome?.WalletId || "",
                                             IncomeType: editingIncome?.IncomeType || "",
-                                            MaxLevel: editingIncome?.MaxLevel || "",
+                                            MaxLevel:
+                                                editingIncome?.MaxLevel !== null &&
+                                                    editingIncome?.MaxLevel !== undefined
+                                                    ? editingIncome.MaxLevel
+                                                    : "",
                                             IsCapping: editingIncome?.IsIncludedInCapping ?? true,
                                             Status: editingIncome?.Status ?? true,
                                         }}

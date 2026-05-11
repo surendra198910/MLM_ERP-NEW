@@ -223,13 +223,16 @@ const Template: React.FC = () => {
         const actionColumn = {
           name: "Action",
           cell: (row: any) => {
-            if (row.__isTotal) return null;   // ⭐ hide buttons on total row
+            if (row.__isTotal) return null;
+
+            const isSuperAdmin = String(row.LoginType ?? "").trim().toLowerCase() === "superadmin";
 
             return (
               <ActionCell
                 row={row}
                 onEdit={handleEdit}
                 onDelete={handleDelete}
+                disabled={isSuperAdmin}
               />
             );
           },
