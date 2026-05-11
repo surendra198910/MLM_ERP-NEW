@@ -511,7 +511,7 @@ const Template: React.FC = () => {
                   type="text"
                   value={searchInput}
                   placeholder="Enter Criteria..."
-                  // disabled={!SmartActions.canAdd(formName)}
+                  disabled={!SmartActions.canSearch(formName)}
                   onChange={(e) => setSearchInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && applySearch()}
                   className={`h-[34px] w-full pl-8 pr-3 text-xs rounded-md outline-none border transition-all

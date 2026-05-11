@@ -70,28 +70,28 @@ const Template: React.FC = () => {
       title: "UnProcessed ROI",
       icon: "payments",
       variant: "income",
-      showCurrency: true
+      showCurrency: true,
     },
     {
       key: "TotalIncome",
       title: "Total Income",
       icon: "calendar_month",
       variant: "income",
-      showCurrency: true
+      showCurrency: true,
     },
     {
       key: "ThisMonthIncome",
       title: "This Month Income",
       icon: "history",
       variant: "income",
-      showCurrency: true
+      showCurrency: true,
     },
     {
       key: "LastMonthIncome",
       title: "Last Month Income",
       icon: "today",
       variant: "highlight",
-      showCurrency: true
+      showCurrency: true,
     },
   ];
   const fetchFormPermissions = async () => {
@@ -556,7 +556,7 @@ const Template: React.FC = () => {
                   type="text"
                   value={searchInput}
                   placeholder="Enter Criteria..."
-                  disabled={!SmartActions.canAdd(formName)}
+                  disabled={!SmartActions.canSearch(formName)}
                   onChange={(e) => setSearchInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && applySearch()}
                   className={`h-[34px] w-full pl-8 pr-3 text-xs rounded-md outline-none border transition-all
