@@ -1,5 +1,5 @@
 import React, { useState,useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route, useParams } from "react-router-dom";
 
 import Header from "../layout/Header/index";
 import SidebarMenu from "../layout/Sidebar/index";
@@ -66,6 +66,7 @@ import ManagePackage from "../components/settings/ManagePackage.js";
 import SponsorSetting from "../components/settings/SponsorSetting.js";
 import APIManager from "../components/settings/APIManager.js";
 import LevelSetting from "../components/settings/LevelSetting.js";
+import SponsorLevelIncome from "../components/AdminTools/SponsorLevelIncome.js"
 import BinaryIncomeSetting from "../components/settings/BinaryIncomeSetting.js";
 // import ProcessROIIncome from "../components/Commission/ProcessROIIncome.js";
 import IncomeSetting from "../components/settings/IncomeSetting.js";
@@ -119,6 +120,20 @@ import ManageCryptowallet from "../components/settings/ManageCryptoWallet.js";
 import ManageWalletType from "../components/settings/ManageWalletType.js";
 import CompanyBankAccount from "../../SuperAdmin/components/settings/ManagebankAccount.js";
 import ProtectedRoute from "../../../utils/ProtectedRoutes.js";
+import AccessRestricted from "../common/AccessRestricted";
+
+// Blocks access to any route where :id / :employeeId === "1" for non-SuperAdmin users
+const SuperAdminIdGuard: React.FC<{ paramKey: string; children: React.ReactNode }> = ({ paramKey, children }) => {
+  const params = useParams<Record<string, string>>();
+  const id = params[paramKey];
+  const saved = localStorage.getItem("EmployeeDetails");
+  const loggedInId = saved ? String(JSON.parse(saved).EmployeeId) : null;
+
+  if (id && String(id) === "1" && loggedInId !== "1") {
+    return <AccessRestricted />;
+  }
+  return <>{children}</>;
+};
 import ApproveRejectRequestFund from "../components/RequestFund/ApproveRejectRequestFund.js";
 import RequestFundReport from "../components/RequestFund/RequestFundReport.js";
 import BinaryTreeComponent from "../components/Team/BinaryTree/GenealogyBinaryTree.js";
@@ -177,7 +192,11 @@ const AppRoutes = () => {
               />
               <Route
                 path="superadmin/employee/add-employee/:id?"
-                element={<AddEditEmployee key={location.pathname} />}
+                element={
+                  <SuperAdminIdGuard paramKey="id">
+                    <AddEditEmployee key={location.pathname} />
+                  </SuperAdminIdGuard>
+                }
               />
               <Route
                 path="/superadmin/employee/manage-employee"
@@ -304,7 +323,11 @@ const AppRoutes = () => {
               />
               <Route
                 path="/superadmin/employee/:employeeId/permissions"
-                element={<ManageUserPermission />}
+                element={
+                  <SuperAdminIdGuard paramKey="employeeId">
+                    <ManageUserPermission />
+                  </SuperAdminIdGuard>
+                }
               />
               {/* <Route path="/superadmin/employee/addedit-employee" element={<AddEditEmployee />} />
                         <Route path="/superadmin/employee/addedit-employee/:id" element={<AddEditEmployee  key={location.pathname}  />} /> */}
@@ -376,6 +399,10 @@ const AppRoutes = () => {
               <Route
                 path="/superadmin/admin-tools/level-setting"
                 element={<LevelSetting />}
+              />
+               <Route
+                path="/superadmin/admin-tools/sponsor-level-income"
+                element={<SponsorLevelIncome />}
               />
               <Route
                 path="/superadmin/admin-tools/binary-income-setting"

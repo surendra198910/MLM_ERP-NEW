@@ -2630,7 +2630,7 @@ export default function AddEmployee() {
                     <SelectField
                       label="Login Type*"
                       name="loginType"
-                      options={loginTypes}
+                      options={loginTypes.filter((opt) => opt.label?.trim().toLowerCase() !== "superadmin")}
                       values={values}
                       errors={errors}
                       touched={touched}

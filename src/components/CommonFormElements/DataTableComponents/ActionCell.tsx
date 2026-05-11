@@ -7,15 +7,16 @@ type Props = {
   row: any;
   onEdit?: (row: any) => void;
   onDelete?: (row: any) => void;
+  disabled?: boolean;
 };
 
-const ActionCell: React.FC<Props> = ({ row, onEdit, onDelete }) => {
+const ActionCell: React.FC<Props> = ({ row, onEdit, onDelete, disabled = false }) => {
   const location = useLocation();
   const formName = location.pathname.split("/").pop();
   const navigate = useNavigate();
   const isEmployeePage = location.pathname.toLowerCase().includes("/employee");
-  const canEdit = SmartActions.canEdit(formName);
-  const canDelete = SmartActions.canDelete(formName);
+  const canEdit = !disabled && SmartActions.canEdit(formName);
+  const canDelete = !disabled && SmartActions.canDelete(formName);
 
   return (
     <div className="flex gap-2">
@@ -36,7 +37,7 @@ const ActionCell: React.FC<Props> = ({ row, onEdit, onDelete }) => {
       </PermissionAwareTooltip>
       {/* ⚙ PERMISSION (ONLY EMPLOYEE PAGE) */}
       {isEmployeePage && row?.EmployeeId && (
-        <PermissionAwareTooltip allowed={canEdit} allowedText="Manage Permissions">
+        <PermissionAwareTooltip allowed={canEdit} allowedText={disabled ? "SuperAdmin cannot be modified" : "Manage Permissions"}>
           <button
             disabled={!canEdit}
             className={
