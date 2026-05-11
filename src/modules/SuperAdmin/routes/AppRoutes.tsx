@@ -1,5 +1,10 @@
-import React, { useState,useEffect } from "react";
-import { BrowserRouter as Router, Routes, Route, useParams } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useParams,
+} from "react-router-dom";
 
 import Header from "../layout/Header/index";
 import SidebarMenu from "../layout/Sidebar/index";
@@ -66,7 +71,7 @@ import ManagePackage from "../components/settings/ManagePackage.js";
 import SponsorSetting from "../components/settings/SponsorSetting.js";
 import APIManager from "../components/settings/APIManager.js";
 import LevelSetting from "../components/settings/LevelSetting.js";
-import SponsorLevelIncome from "../components/AdminTools/SponsorLevelIncome.js"
+import SponsorLevelIncome from "../components/AdminTools/SponsorLevelIncome.js";
 import BinaryIncomeSetting from "../components/settings/BinaryIncomeSetting.js";
 // import ProcessROIIncome from "../components/Commission/ProcessROIIncome.js";
 import IncomeSetting from "../components/settings/IncomeSetting.js";
@@ -123,7 +128,10 @@ import ProtectedRoute from "../../../utils/ProtectedRoutes.js";
 import AccessRestricted from "../common/AccessRestricted";
 
 // Blocks access to any route where :id / :employeeId === "1" for non-SuperAdmin users
-const SuperAdminIdGuard: React.FC<{ paramKey: string; children: React.ReactNode }> = ({ paramKey, children }) => {
+const SuperAdminIdGuard: React.FC<{
+  paramKey: string;
+  children: React.ReactNode;
+}> = ({ paramKey, children }) => {
   const params = useParams<Record<string, string>>();
   const id = params[paramKey];
   const saved = localStorage.getItem("EmployeeDetails");
@@ -140,7 +148,8 @@ import BinaryTreeComponent from "../components/Team/BinaryTree/GenealogyBinaryTr
 import ManageLoginType from "../components/AdministrativeTools/AddReport/ManageLoginType.js";
 
 import IncomeSettings from "../components/AdminTools/IncomeSettings.js";
-import ROILevelIncomeReport from "../components/Commission/ROILevelIncomeReport.js"
+import ROILevelIncomeReport from "../components/Commission/ROILevelIncomeReport.js";
+import BinaryIncomeReport from "../components/Commission/BinaryIncomeReport.js";
 
 const AppRoutes = () => {
   useEffect(() => {
@@ -400,7 +409,7 @@ const AppRoutes = () => {
                 path="/superadmin/admin-tools/level-setting"
                 element={<LevelSetting />}
               />
-               <Route
+              <Route
                 path="/superadmin/admin-tools/sponsor-level-income"
                 element={<SponsorLevelIncome />}
               />
@@ -412,9 +421,13 @@ const AppRoutes = () => {
                 path="/superadmin/commission/process-roi-income"
                 element={<ProcessROIIncome />}
               />
-               <Route
+              <Route
                 path="/superadmin/commission/roi-level-income-report"
                 element={<ROILevelIncomeReport />}
+              />
+              <Route
+                path="/superadmin/commission/binary-income-report"
+                element={<BinaryIncomeReport />}
               />
               <Route
                 path="/superadmin/commission/roi-income-report"
