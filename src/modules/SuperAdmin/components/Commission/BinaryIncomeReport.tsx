@@ -67,9 +67,9 @@ const Template: React.FC = () => {
   });
 
   // centraliztion
-  const pageTitle = "ROI Level Income Report";
-  const title = "ROI Level Income";
-  const procedureName = "FetchROILevelIncome";
+  const pageTitle = "Binary Income Report";
+  const title = "Binary Income";
+  const procedureName = "FetchBinaryIncome";
 
   const statsConfig = [
     {
@@ -241,8 +241,8 @@ const Template: React.FC = () => {
               const IMAGE_BASE_URL =
                 import.meta.env.VITE_IMAGE_PREVIEW_URL_2 + "ClientImages/";
 
-              if (c.ColumnKey === "FromMember") {
-                const profileUrl = `${IMAGE_BASE_URL}${row?.FromClientLogo}`;
+              if (c.ColumnKey === "MemberName") {
+                const profileUrl = `${IMAGE_BASE_URL}${row?.ClientLogo}`;
                 return (
                   <div className="flex items-center gap-2">
                     <img
@@ -252,25 +252,7 @@ const Template: React.FC = () => {
                     />
                     <div className="flex flex-col leading-tight">
                       <span className="font-medium text-sm">
-                        {row["FromMember"]}
-                      </span>
-                    </div>
-                  </div>
-                );
-              }
-
-              if (c.ColumnKey === "ToMember") {
-                const profileUrl = `${IMAGE_BASE_URL}${row.ToClientLogo}`;
-                return (
-                  <div className="flex items-center gap-2">
-                    <img
-                      src={profileUrl}
-                      alt="user"
-                      className="w-9 h-9 rounded-full object-cover border"
-                    />
-                    <div className="flex flex-col leading-tight">
-                      <span className="font-medium text-sm">
-                        {row["ToMember"]}
+                        {row["MemberName"]}
                       </span>
                     </div>
                   </div>

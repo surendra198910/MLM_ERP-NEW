@@ -70,7 +70,6 @@ const Template: React.FC = () => {
 
   // Load on page load
 
-
   const roiCappingSchema = Yup.object().shape({
     InvestorCap: Yup.number()
       .typeError("Investor ROI Multiplier must be a number")
@@ -111,7 +110,7 @@ const Template: React.FC = () => {
       const pagePermission = data.find(
         (p) =>
           String(p.FormNameWithExt).trim().toLowerCase() ===
-          formName?.trim().toLowerCase()
+          formName?.trim().toLowerCase(),
       );
 
       if (!pagePermission || !pagePermission.Action?.trim()) {
@@ -121,7 +120,6 @@ const Template: React.FC = () => {
 
       SmartActions.load(data);
       setHasPageAccess(true);
-
     } catch (err) {
       console.error("Permission fetch failed", err);
       setHasPageAccess(false);
@@ -140,10 +138,7 @@ const Template: React.FC = () => {
         Para: JSON.stringify({ ActionMode: "GetROICapping" }),
       });
 
-      const existing =
-        getResponse?.data?.[0] ||
-        getResponse?.[0] ||
-        {};
+      const existing = getResponse?.data?.[0] || getResponse?.[0] || {};
 
       setInvestorCap(existing?.ROICappingMultiplierInvestor ?? "");
       setLeaderCap(existing?.ROICappingMultiplierLeader ?? "");
@@ -154,7 +149,6 @@ const Template: React.FC = () => {
       Swal.fire("Error", "Failed to load ROI Capping", "error");
     }
   };
-
 
   const getIPLocation = async () => {
     try {
@@ -235,9 +229,7 @@ const Template: React.FC = () => {
         }),
       });
 
-      const res = Array.isArray(response)
-        ? response[0]
-        : response?.data?.[0];
+      const res = Array.isArray(response) ? response[0] : response?.data?.[0];
 
       if (res?.StatusCode == "1") {
         Swal.fire("Success!", res?.Msg, "success");
@@ -250,28 +242,23 @@ const Template: React.FC = () => {
     }
   };
 
-
-
   const imageBaseUrl = import.meta.env.VITE_IMAGE_PREVIEW_URL;
-  
+
   if (permissionLoading) {
-  return (
-    <div className="flex items-center justify-center min-h-[400px] bg-white dark:bg-[#0c1427] rounded-md">
-      <div className="flex flex-col items-center gap-3">
-        <div className="theme-loader"></div>
-        {/* <p className="text-sm text-gray-500">
+    return (
+      <div className="flex items-center justify-center min-h-[400px] bg-white dark:bg-[#0c1427] rounded-md">
+        <div className="flex flex-col items-center gap-3">
+          <div className="theme-loader"></div>
+          {/* <p className="text-sm text-gray-500">
           Loading permissions...
         </p> */}
-        
+        </div>
       </div>
-    </div>
-  );
-}
-if (!hasPageAccess) {
-  return (
-   <AccessRestricted />
-  );
-}
+    );
+  }
+  if (!hasPageAccess) {
+    return <AccessRestricted />;
+  }
 
   return (
     <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-md">
@@ -325,7 +312,6 @@ if (!hasPageAccess) {
                   Save Setting
                 </button>
               </PermissionAwareTooltip>
-
             </div>
           </div>
         </div>
@@ -334,15 +320,19 @@ if (!hasPageAccess) {
       {/* --- CONTENT CONTAINER --- */}
       <div className="relative min-h-[500px]">
         {loading && (
-          <div className="absolute inset-0 
+          <div
+            className="absolute inset-0 
                   bg-white/60 dark:bg-black/40 
                   backdrop-blur-sm
                   flex items-center justify-center 
-                  z-20 rounded-lg">
-            <div className="animate-spin w-10 h-10 
+                  z-20 rounded-lg"
+          >
+            <div
+              className="animate-spin w-10 h-10 
                     border-4 border-primary-button-bg 
                     border-t-transparent 
-                    rounded-full" />
+                    rounded-full"
+            />
           </div>
         )}
 
@@ -378,7 +368,6 @@ if (!hasPageAccess) {
                     {pkg.PackageName}
                   </div>
 
-
                   {/* Image */}
                   <div className="mt-6 flex justify-center">
                     <div className="w-28 h-28 rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-[#111827] dark:to-[#020617] p-[2px] shadow-lg">
@@ -400,15 +389,14 @@ if (!hasPageAccess) {
                     <p className="text-3xl font-bold bg-gradient-to-r from-primary-button-bg to-primary-button-bg bg-clip-text text-transparent">
                       {pkg.PackageAmount?.includes("-")
                         ? pkg.PackageAmount.split("-").map((amt, index) => (
-                          <React.Fragment key={index}>
-                            {index > 0 && " - "}
-                            {currency.symbol}
-                            {amt.trim()}
-                          </React.Fragment>
-                        ))
+                            <React.Fragment key={index}>
+                              {index > 0 && " - "}
+                              {currency.symbol}
+                              {amt.trim()}
+                            </React.Fragment>
+                          ))
                         : `${currency.symbol}${pkg.PackageAmount}`}
                     </p>
-
                   </div>
 
                   {/* Details Card */}
@@ -450,14 +438,9 @@ if (!hasPageAccess) {
                   </p>
                 </div>
               ))}
-
             </div>
-
           </div>
-
         </div>
-
-
       </div>
       <Dialog
         open={openROICap}
@@ -476,7 +459,6 @@ if (!hasPageAccess) {
 
         <div className="fixed inset-0 z-60 w-screen overflow-y-auto">
           <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-
             <DialogPanel
               transition
               className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all
@@ -487,7 +469,6 @@ if (!hasPageAccess) {
         data-[closed]:sm:translate-y-0 data-[closed]:sm:scale-95"
             >
               <div className="trezo-card w-full bg-white dark:bg-[#0c1427] p-[20px] md:p-[25px] rounded-md">
-
                 {/* Header */}
                 <div
                   className="trezo-card-header bg-gray-50 dark:bg-[#15203c] 
@@ -548,9 +529,7 @@ if (!hasPageAccess) {
                       });
 
                       const res =
-                        response?.data?.[0] ||
-                        response?.[0] ||
-                        response;
+                        response?.data?.[0] || response?.[0] || response;
 
                       if (res?.Status === "SUCCESS") {
                         Swal.fire("Success!", res?.Message, "success");
@@ -558,24 +537,64 @@ if (!hasPageAccess) {
                       } else {
                         Swal.fire("Error", res?.Message || "Failed", "error");
                       }
-
                     } catch (error) {
                       Swal.fire("Error", "Server error occurred", "error");
                     } finally {
                       setRoiCapSaving(false);
                     }
                   }}
-
                 >
                   {({ handleSubmit }) => (
                     <Form onSubmit={handleSubmit} className="space-y-6">
-
                       {/* Investor */}
                       <div>
                         <label className="mb-[10px] text-black dark:text-white font-medium block">
                           Investor ROI Multiplier
                           <span className="text-red-500">*</span>
                         </label>
+
+                        <details className="my-3 group cursor-pointer">
+                          <summary className="flex items-center gap-2 list-none font-semibold text-sm bg-yellow-100 border border-yellow-200 p-3 rounded-t-md hover:bg-yellow-200 transition-colors">
+                            {/* Animated Info Icon */}
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-yellow-500 text-white text-xs">
+                              i
+                            </span>
+                            Important Note: ROI Multipliers & Capping
+                            {/* Arrow Indicator */}
+                            <span className="ml-auto transition-transform group-open:rotate-180">
+                              ▼
+                            </span>
+                          </summary>
+
+                          <div className="bg-yellow-50 border-x border-b border-yellow-200 p-4 rounded-b-md text-sm leading-relaxed text-slate-800">
+                            <div className="mb-3">
+                              <strong className="text-yellow-800 block mb-1">
+                                Investor ROI Multiplier = 2x
+                              </strong>
+                              <p className="text-slate-600">
+                                Example: If an investor deposits <b>$100</b>,
+                                the maximum total ROI earnings will be{" "}
+                                <b>$200</b>.
+                              </p>
+                            </div>
+
+                            <div className="mb-3 border-t border-yellow-200 pt-3">
+                              <strong className="text-yellow-800 block mb-1">
+                                Leader ROI Multiplier = 3x
+                              </strong>
+                              <p className="text-slate-600">
+                                Example: If a leader deposits <b>$100</b>, the
+                                maximum total ROI earnings will be <b>$300</b>.
+                              </p>
+                            </div>
+
+                            <div className="mt-2 text-xs italic font-medium text-amber-700 bg-amber-100/50 p-2 rounded">
+                              Note: Once the capping limit is reached, no
+                              further ROI income will be credited for that
+                              investment.
+                            </div>
+                          </div>
+                        </details>
 
                         <Field
                           type="number"
@@ -590,7 +609,6 @@ if (!hasPageAccess) {
   [&::-webkit-outer-spin-button]:appearance-none
   focus:border-primary-button-bg"
                         />
-
 
                         <ErrorMessage
                           name="InvestorCap"
@@ -619,7 +637,6 @@ if (!hasPageAccess) {
   focus:border-primary-button-bg"
                         />
 
-
                         <ErrorMessage
                           name="LeaderCap"
                           component="p"
@@ -631,7 +648,6 @@ if (!hasPageAccess) {
 
                       {/* Footer */}
                       <div className="text-right">
-
                         <button
                           type="button"
                           className="mr-[15px] px-[26.5px] py-[12px] rounded-md 
@@ -657,21 +673,15 @@ if (!hasPageAccess) {
                             "Save ROI Capping"
                           )}
                         </button>
-
                       </div>
-
                     </Form>
                   )}
                 </Formik>
-
-
               </div>
             </DialogPanel>
-
           </div>
         </div>
       </Dialog>
-
     </div>
   );
 };
