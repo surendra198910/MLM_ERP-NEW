@@ -1,24 +1,28 @@
 import React, { useState, useEffect } from "react";
-import { ApiService } from "../../../../../services/ApiService";
+import { format } from "date-fns";
+import { ApiService } from "../../../../services/ApiService";
 import DataTable from "react-data-table-component";
-import ColumnSelector from "../../ColumnSelector/ColumnSelector";
-import CustomPagination from "../../../../../components/CommonFormElements/Pagination/CustomPagination";
-import ExportButtons from "../../../../../components/CommonFormElements/ExportButtons/ExportButtons";
-import OopsNoData from "../../../../../components/CommonFormElements/DataNotFound/OopsNoData";
-import TableSkeleton from "../../Forms/TableSkeleton";
-import customStyles from "../../../../../components/CommonFormElements/DataTableComponents/CustomStyles";
-import PermissionAwareTooltip from "../../Tooltip/PermissionAwareTooltip";
-import { SmartActions } from "../../Security/SmartActionWithFormName";
-import { useLocation, useNavigate } from "react-router-dom";
-import Loader from "../../../common/Loader";
-import AccessRestricted from "../../../common/AccessRestricted";
-import ActionCell from "../../../../../components/CommonFormElements/DataTableComponents/ActionCell";
-import LandingIllustration from "../../../../../components/CommonFormElements/LandingIllustration/LandingIllustration";
+import { Dialog, DialogBackdrop, DialogPanel } from "@headlessui/react";
+import ColumnSelector from "../ColumnSelector/ColumnSelector";
+import CustomPagination from "../../../../components/CommonFormElements/Pagination/CustomPagination";
+import ExportButtons from "../../../../components/CommonFormElements/ExportButtons/ExportButtons";
+import StatsCards from "../../../../components/CommonFormElements/StatsCard/StatsCards";
+import OopsNoData from "../../../../components/CommonFormElements/DataNotFound/OopsNoData";
+import TableSkeleton from "../Forms/TableSkeleton";
+import customStyles from "../../../../components/CommonFormElements/DataTableComponents/CustomStyles";
+import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
+import { SmartActions } from "../Security/SmartActionWithFormName";
+import { useLocation } from "react-router-dom";
+import Loader from "../../common/Loader";
+import AccessRestricted from "../../common/AccessRestricted";
+import ActionCell from "../../../../components/CommonFormElements/DataTableComponents/ActionCell";
+import { useCurrency } from "../../context/CurrencyContext";
+import LandingIllustration from "../../../../components/CommonFormElements/LandingIllustration/LandingIllustration";
+import { Formik, Form, Field, ErrorMessage } from "formik";
+import { PlayCircle } from "lucide-react";
+import * as Yup from "yup";
 import Swal from "sweetalert2";
 const Template: React.FC = () => {
-
-
-  
   const [searchInput, setSearchInput] = useState("");
   const [filterColumn, setFilterColumn] = useState("");
   const [showTable, setShowTable] = useState(false); // Toggle to show 'Oops' or 'Welcome'
@@ -30,25 +34,68 @@ const Template: React.FC = () => {
   const [totalRows, setTotalRows] = useState(0);
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState(10);
-  const [sortColumnKey, setSortColumnKey] = useState<string>("");
-  const [editLoading, setEditLoading] = useState(false);
+  const [sortIndex, setSortIndex] = useState("");
   const [sortDirection, setSortDirection] = useState("ASC");
   const [visibleColumns, setVisibleColumns] = useState<any[]>([]);
+  const [stats, setStats] = useState({});
   const [columnsReady, setColumnsReady] = useState(false);
   const [tableLoading, setTableLoading] = useState(true);
   const [refreshGrid, setRefreshGrid] = useState(0);
   const [permissionsLoading, setPermissionsLoading] = useState(true);
   const [hasPageAccess, setHasPageAccess] = useState(true);
   const [initialSortReady, setInitialSortReady] = useState(false);
+  const { currency } = useCurrency();
   const location = useLocation();
   const path = location.pathname;
   const formName = path.split("/").pop();
   const canExport = SmartActions.canExport(formName);
-  const [open, setOpen] = useState(false);
-  const [isEdit, setIsEdit] = useState(false);
-  const [editData, setEditData] = useState<any>(null);
-  
-  const navigate = useNavigate();
+  const today = new Date();
+  const firstDayOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const fromStr = format(firstDayOfMonth, "yyyy-MM-dd");
+  const toStr = format(today, "yyyy-MM-dd");
+  const [openBinary, setOpenBinary] = useState(false);
+  const [processingBinary, setProcessingBinary] = useState(false);
+  const todayDate = new Date().toISOString().split("T")[0];
+  const [dateRange, setDateRange] = useState({
+    from: fromStr,
+    to: toStr,
+    preset: "thisMonth",
+  });
+  const BinarySchema = Yup.object().shape({
+    Date: Yup.string().required("Date is required"),
+  });
+  const statsConfig = [
+   {
+    key: "UnprocessedIncome",
+    title: "Unprocessed Income",
+    icon: "today",
+    variant: "highlight",
+    showCurrency: true
+  },
+     {
+    key: "TotalIncome",
+    title: "Total Income",
+    icon: "account_balance_wallet",
+    variant: "income",
+    showCurrency: true
+  },
+ 
+  {
+    key: "ThisMonthIncome",
+    title: "This Month Income",
+    icon: "calendar_month",
+    variant: "income",
+    showCurrency: true
+  },
+  {
+    key: "LastMonthIncome",
+    title: "Last Month Income",
+    icon: "history",
+    variant: "income",
+    showCurrency: true
+  },
+
+  ];
   const fetchFormPermissions = async () => {
     try {
       setPermissionsLoading(true);
@@ -68,19 +115,16 @@ const Template: React.FC = () => {
       const response = await universalService(payload);
       const data = response?.data ?? response;
 
-
       if (!Array.isArray(data)) {
         setHasPageAccess(false);
         return;
       }
-
 
       const pagePermission = data.find(
         (p) =>
           String(p.FormNameWithExt).trim().toLowerCase() ===
           formName?.trim().toLowerCase(),
       );
-
 
       if (
         !pagePermission ||
@@ -91,7 +135,7 @@ const Template: React.FC = () => {
         return;
       }
 
-
+      // ✅ Permission allowed → load SmartActions
       SmartActions.load(data);
       setHasPageAccess(true);
     } catch (error) {
@@ -102,14 +146,15 @@ const Template: React.FC = () => {
     }
   };
   const handleSort = (column: any, direction: string) => {
-    setSortColumnKey(column.columnKey);   // ⭐ send column name
+    if (!column?.columnKey) return;
+    setSortIndex(column.columnKey);
     setSortDirection(direction.toUpperCase());
-    setInitialSortReady(true);
   };
   const handlePageChange = (p) => {
     setPage(p);
 
     fetchGridData({
+      ...dateRange,
       pageOverride: p,
     });
   };
@@ -125,14 +170,13 @@ const Template: React.FC = () => {
         procName: "GetUserGridColumns",
         Para: JSON.stringify({
           UserId: employeeId,
-          GridName: "USP_SystemReport",
+          GridName: "USP_ProcessBinaryIncome",
         }),
       };
 
       const res = await universalService(payload);
       const data = res?.data || res;
       if (Array.isArray(data)) {
-
         const visibleSorted = data
           .filter((c: any) => c.IsVisible)
           .sort((a: any, b: any) => a.ColumnOrder - b.ColumnOrder);
@@ -140,11 +184,16 @@ const Template: React.FC = () => {
         const defaultSortCol = visibleSorted.find((c: any) => c.isSort);
 
         if (defaultSortCol) {
-          setSortColumnKey(defaultSortCol.ColumnKey);
+          const index =
+            visibleSorted.findIndex(
+              (c: any) => c.ColumnKey === defaultSortCol.ColumnKey,
+            ) + 1;
+
+          setSortIndex("");
           setSortDirection(
             (defaultSortCol.SortDir || "ASC").toUpperCase() === "DESC"
               ? "DESC"
-              : "ASC"
+              : "ASC",
           );
         }
 
@@ -157,24 +206,22 @@ const Template: React.FC = () => {
         const reactCols = data
           .filter((c: any) => c.IsVisible === true)
           .sort((a: any, b: any) => a.ColumnOrder - b.ColumnOrder)
-          .map((c: any, colIndex: number) => ({
-            id: c.ColumnOrder,
+          .map((c: any, index: number) => ({
+            id: index + 1,
             name: c.DisplayName,
             sortable: true,
             columnKey: c.ColumnKey,
-            columnIndex: c.ColumnOrder,
+            columnIndex: c.ColumnKey,
             isCurrency: c.IsCurrency,
             isTotal: c.IsTotal,
 
             selector: (row: any) => row[c.ColumnKey],
 
             cell: (row: any) => {
-
               // ⭐ TOTAL ROW
               if (row.__isTotal) {
-
-                // 👉 show TOTAL label in first visible column
-                if (colIndex === 0) return "Total";
+                // 👉 show TOTAL text in first column
+                if (index === 0) return "Total";
 
                 if (c.IsTotal) {
                   const value = row[c.ColumnKey] || 0;
@@ -195,25 +242,10 @@ const Template: React.FC = () => {
               }
 
               return value ?? "-";
-            }
-          }))
-        const actionColumn = {
-          name: "Action",
-          cell: (row: any) => {
-            if (row.__isTotal) return null;   // ⭐ hide buttons on total row
+            },
+          }));
 
-            return (
-              <ActionCell
-                row={row}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
-            );
-          },
-          ignoreRowClick: true,
-          button: true,
-        };
-        setColumns([...reactCols, actionColumn]);
+        setColumns([...reactCols]);
       } else {
         setColumns([]);
       }
@@ -222,95 +254,51 @@ const Template: React.FC = () => {
       setColumns([]);
     }
   };
-  const handleEdit = (row: any) => {
-    if (!row?.ReportId) return;
-
-    navigate(`/superadmin/superadmin-tools/reports/add-report/${row.ReportId}`);
-  };
   const exportColumns = columns
-    .filter(c => c.columnKey)
-    .map(c => ({
+    .filter((c) => c.columnKey)
+    .map((c) => ({
       key: c.columnKey,
-      label: c.name
+      label: c.name,
     }));
   const fetchExportData = async () => {
     const payload = {
-      procName: "SystemReport",
+      procName: "ProcessBinaryIncome",
       Para: JSON.stringify({
         SearchBy: filterColumn,
         Criteria: searchInput,
         Page: page,
         PageSize: 0,
-        SortIndexColumn: sortColumnKey || "",
+        SortIndexColumn: sortIndex,
         SortDir: sortDirection,
+
+        /* ⭐ DATE FILTER */
+        FromDate: dateRange.from || null,
+        ToDate: dateRange.to || null,
       }),
     };
 
     const res = await universalService(payload);
     return res?.data ?? res ?? [];
   };
+  const GetStats = async () => {
+    const payload = {
+      procName: "ProcessBinaryIncome",
+      Para: JSON.stringify({
+        ActionMode: "GetStats",
+      }),
+    };
 
-  const handleDelete = async (row: any) => {
-    if (!row?.ReportId) return;
+    const res = await universalService(payload);
 
-    const result = await Swal.fire({
-      title: "Delete Report?",
-      text: `Are you sure you want to delete "${row.ReportName}"?`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#6b7280",
-      confirmButtonText: "Yes, delete",
-      cancelButtonText: "Cancel",
-    });
+    const result = res?.data ?? res ?? [];
 
-    if (!result.isConfirmed) return;
+    setStats(result[0] || {});
 
-    try {
-      Swal.fire({
-        title: "Deleting...",
-        allowOutsideClick: false,
-        didOpen: () => Swal.showLoading(),
-      });
-
-      const payload = {
-        procName: "SystemReport",
-        Para: JSON.stringify({
-          ActionMode: "Delete",
-          ReportId: Number(row.ReportId),
-          
-        }),
-      };
-
-      const response = await universalService(payload);
-      const res = Array.isArray(response) ? response[0] : response;
-
-      Swal.close();
-
-      if (res?.Status === 1 || res?.Status === "1") {
-        await Swal.fire({
-          icon: "success",
-          title: "Report Deleted",
-          text: res?.Msg || "Report deleted successfully",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-
-        // 🔁 refresh grid
-        setPage(1);
-        setSearchTrigger((p) => p + 1);
-        setRefreshGrid((p) => p + 1);
-
-      } else {
-        Swal.fire("Error", res?.Msg || "Delete failed", "error");
-      }
-    } catch (err) {
-      console.error(err);
-      Swal.fire("Error", "Server error", "error");
-    }
+    return result;
   };
 
   const fetchGridData = async (options?: any) => {
+    const range = options || dateRange;
 
     const pageToUse = options?.pageOverride ?? page;
     const perPageToUse = options?.perPageOverride ?? perPage;
@@ -319,15 +307,17 @@ const Template: React.FC = () => {
       setTableLoading(true);
 
       const payload = {
-        procName: "SystemReport",
+        procName: "ProcessBinaryIncome",
         Para: JSON.stringify({
-          ActionMode: "GetReport",
           SearchBy: options?.searchBy ?? filterColumn ?? "",
           Criteria: options?.criteria ?? searchInput ?? "",
           Page: pageToUse,
           PageSize: perPageToUse,
-          SortIndexColumn: sortColumnKey || "",
+          SortIndexColumn: sortIndex,
           SortDir: sortDirection,
+
+          FromDate: range.from || null,
+          ToDate: range.to || null,
         }),
       };
 
@@ -357,7 +347,7 @@ const Template: React.FC = () => {
       procName: "UniversalColumnSelector",
       Para: JSON.stringify({
         EmployeeId: employeeId,
-        USPName: "USP_SystemReport",
+        USPName: "USP_ProcessBinaryIncome",
         ActionMode: "List",
         Mode: "Get",
       }),
@@ -382,36 +372,19 @@ const Template: React.FC = () => {
   };
   useEffect(() => {
     fetchGridColumns();
-
+    GetStats();
   }, [refreshGrid]);
   useEffect(() => {
     if (!showTable || !hasVisitedTable) return;
 
-    // wait until default sort is ready
-    if (!sortColumnKey && initialSortReady) {
-      fetchGridData();
-      return;
-    }
-
-    if (sortColumnKey) {
-      fetchGridData();
-    }
-
-  }, [
-    page,
-    perPage,
-    sortColumnKey,
-    sortDirection,
-    searchTrigger,
-    initialSortReady
-  ]);
+    fetchGridData();
+  }, [page, perPage, sortIndex, sortDirection, searchTrigger, dateRange]);
   const applySearch = () => {
     if (!SmartActions.canSearch(formName)) return;
 
     setShowTable(true);
     setHasVisitedTable(true);
     setPage(1);
-
     setSearchTrigger((p) => p + 1);
   };
 
@@ -431,34 +404,22 @@ const Template: React.FC = () => {
   const totalRow =
     Object.keys(pageTotals).length > 0
       ? columns.reduce((acc: any, col: any, index: number) => {
-        if (!col.columnKey) {
-          acc.__label = "Page Total";
+          if (!col.columnKey) {
+            acc.__label = "Page Total";
+            return acc;
+          }
+
+          if (col.isTotal) {
+            acc[col.columnKey] = pageTotals[col.columnKey];
+          } else {
+            acc[col.columnKey] = "";
+          }
+
           return acc;
-        }
-
-        if (col.isTotal) {
-          acc[col.columnKey] = pageTotals[col.columnKey];
-        } else {
-          acc[col.columnKey] = "";
-        }
-
-        return acc;
-      }, {})
+        }, {})
       : null;
   const tableData =
-    hasData && totalRow
-      ? [...data, { ...totalRow, __isTotal: true }]
-      : data;
-  useEffect(() => {
-    if (!open) {
-      const t = setTimeout(() => {
-        setIsEdit(false);
-        setEditData(null);
-      }, 200); // match HeadlessUI animation
-
-      return () => clearTimeout(t);
-    }
-  }, [open]);
+    hasData && totalRow ? [...data, { ...totalRow, __isTotal: true }] : data;
   if (permissionsLoading) {
     return <Loader />;
   }
@@ -466,19 +427,92 @@ const Template: React.FC = () => {
   if (!hasPageAccess) {
     return <AccessRestricted />;
   }
+  const formatToDDMMMYYYY = (dateString: string) => {
+    if (!dateString) return "";
+
+    const date = new Date(dateString);
+    const day = String(date.getDate()).padStart(2, "0");
+    const month = date.toLocaleString("default", { month: "short" });
+    const year = date.getFullYear();
+
+    return `${day}-${month}-${year}`;
+  };
+  const handleProcessBinary = async (date: string) => {
+    try {
+     const formattedDate = formatToDDMMMYYYY(date);
+
+      const confirmResult = await Swal.fire({
+        title: "Process Binary Income?",
+        html: `
+                  <div style="font-size:14px;">
+                      Do you want to process Binary Income of
+                      <b style="color:#3085d6;">${formattedDate}</b> ?
+                  </div>
+              `,
+        icon: "question",
+        showCancelButton: true,
+        confirmButtonColor: "#3085d6",
+        cancelButtonColor: "#d33",
+        confirmButtonText: "Yes, Process it!",
+      });
+
+      if (!confirmResult.isConfirmed) return;
+
+      setProcessingBinary(true);
+
+      const payload = {
+        procName: "ProcessBinaryIncome",
+        Para: JSON.stringify({
+          ProcessBy: localStorage.getItem("CompanyId"),
+          ACtionmode: 'ProcessIncome',
+          FromDate: date,
+        }),
+      };
+
+      const response = await universalService(payload);
+      const res = Array.isArray(response) ? response[0] : response;
+
+      if (res?.StatusCode === 1) {
+        await Swal.fire({
+          title: "Success!",
+          html: `Binary Income processed successfully for <b>${formattedDate}</b>`,
+          icon: "success",
+          confirmButtonColor: "#3085d6",
+        });
+
+        fetchGridData();
+        setOpenBinary(false);
+      } else {
+        Swal.fire({
+          title: "Error",
+          text: res?.Msg || "Something went wrong",
+          icon: "error",
+        });
+      }
+    } catch (error) {
+      console.error("Process Binary Error:", error);
+
+      Swal.fire({
+        title: "Error",
+        text: "Server error while processing Binary.",
+        icon: "error",
+      });
+    } finally {
+      setProcessingBinary(false);
+    }
+  };
   return (
     <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-md">
       {/* --- HEADER & SEARCH SECTION --- */}
       <div className="trezo-card-header mb-[10px] md:mb-[10px] sm:flex items-center justify-between pb-5 border-b border-gray-200 -mx-[20px] md:-mx-[25px] px-[20px] md:px-[25px]">
         <div className="trezo-card-title">
           <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
-            Manage Reports
+            Process Binary Income
           </h5>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-end gap-3 sm:w-auto w-full">
           <div className="flex flex-col sm:flex-row items-center gap-3 flex-wrap justify-end">
-
             {/* 1. Filter Dropdown (Exactly from your design) */}
             <div className="relative w-full sm:w-[180px]">
               <PermissionAwareTooltip
@@ -494,14 +528,14 @@ const Template: React.FC = () => {
                   value={filterColumn}
                   onChange={(e) => setFilterColumn(e.target.value)}
                   className={`w-full h-[34px] pl-8 pr-8 text-xs rounded-md appearance-none outline-none border transition-all
-                           ${SmartActions.canAdvancedSearch(formName)
-                      ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
-                      : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                    }`}
+                           ${
+                             SmartActions.canAdvancedSearch(formName)
+                               ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
+                               : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                           }`}
                 >
                   <option value="">Select Filter Option</option>
-                  <option value="ReportName">Report Name</option>
-                  <option value="Description">Description</option>
+                  <option value="Username">Username</option>
                 </select>
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
                   <i className="material-symbols-outlined !text-[18px]">
@@ -510,7 +544,6 @@ const Template: React.FC = () => {
                 </span>
               </PermissionAwareTooltip>
             </div>
-
             {/* 2. Search Input (Exactly from your design) */}
             <div className="relative">
               <PermissionAwareTooltip
@@ -518,24 +551,26 @@ const Template: React.FC = () => {
                 allowedText="Enter Criteria"
               >
                 <span className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-500">
-                  <i className="material-symbols-outlined !text-[18px]">search</i>
+                  <i className="material-symbols-outlined !text-[18px]">
+                    search
+                  </i>
                 </span>
                 <input
                   type="text"
                   value={searchInput}
                   placeholder="Enter Criteria..."
-                  disabled={!SmartActions.canSearch(formName)}
+                  disabled={!SmartActions.canAdd(formName)}
                   onChange={(e) => setSearchInput(e.target.value)}
                   onKeyDown={(e) => e.key === "Enter" && applySearch()}
                   className={`h-[34px] w-full pl-8 pr-3 text-xs rounded-md outline-none border transition-all
-                           ${SmartActions.canSearch(formName)
-                      ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
-                      : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
-                    }`}
+                           ${
+                             SmartActions.canSearch(formName)
+                               ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
+                               : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                           }`}
                 />
               </PermissionAwareTooltip>
             </div>
-
             {/* 3. BUTTONS GROUP (Exactly from your design) */}
             <div className="flex items-center gap-2">
               {/* SEARCH BUTTON */}
@@ -549,7 +584,9 @@ const Template: React.FC = () => {
                   disabled={!SmartActions.canSearch(formName)}
                   className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-primary-button-bg text-primary-button-bg hover:bg-primary-button-bg hover:text-white transition-all shadow-sm disabled:opacity-50"
                 >
-                  <i className="material-symbols-outlined text-[20px]">search</i>
+                  <i className="material-symbols-outlined text-[20px]">
+                    search
+                  </i>
                 </button>
               </PermissionAwareTooltip>
               {/* COLUMN SELECTOR BUTTON */}
@@ -558,35 +595,18 @@ const Template: React.FC = () => {
                 allowedText="Manage Columns"
               >
                 <div
-                  className={`h-[34px] flex items-center ${!SmartActions.canManageColumns(formName)
-                    ? "pointer-events-none opacity-50"
-                    : ""
-                    }`}
+                  className={`h-[34px] flex items-center ${
+                    !SmartActions.canManageColumns(formName)
+                      ? "pointer-events-none opacity-50"
+                      : ""
+                  }`}
                 >
                   <ColumnSelector
-                    procName="USP_SystemReport"
+                    procName="USP_ProcessBinaryIncome"
                     onApply={fetchVisibleColumns}
                   />
                 </div>
               </PermissionAwareTooltip>
-              {/* ADD BUTTON */}
-              <PermissionAwareTooltip
-                allowed={SmartActions.canAdd(formName)}
-                allowedText="Add New"
-              >
-                <button
-                  type="button"
-                  disabled={!SmartActions.canAdd(formName)}
-                  onClick={() => {
-                    navigate(`/superadmin/superadmin-tools/reports/add-report`);
-                  }}
-                  className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-primary-button-bg text-white bg-primary-button-bg hover:bg-white hover:border-primary-button-bg hover:text-primary-button-bg transition-all shadow-sm disabled:opacity-50"
-                >
-                  <i className="material-symbols-outlined text-[20px]">add</i>
-                </button>
-              </PermissionAwareTooltip>
-              {/* REFRESH BUTTON (Visible when showTable is true) */}
-
             </div>
             {(filterColumn || searchInput) && (
               <PermissionAwareTooltip
@@ -603,10 +623,11 @@ const Template: React.FC = () => {
                     setSearchTrigger((p) => p + 1);
                   }}
                   className={`w-[34px] h-[34px] flex items-center justify-center rounded-md
-        ${SmartActions.canSearch(formName)
-                      ? "border border-gray-400 text-gray-600 hover:bg-gray-200"
-                      : "border border-gray-300 text-gray-300 cursor-not-allowed"
-                    }`}
+        ${
+          SmartActions.canSearch(formName)
+            ? "border border-gray-400 text-gray-600 hover:bg-gray-200"
+            : "border border-gray-300 text-gray-300 cursor-not-allowed"
+        }`}
                 >
                   <i className="material-symbols-outlined text-[20px]">
                     refresh
@@ -614,26 +635,62 @@ const Template: React.FC = () => {
                 </button>
               </PermissionAwareTooltip>
             )}
+            <div className="relative">
+              <PermissionAwareTooltip
+                allowed={SmartActions.canAdd(formName)}
+                allowedText="Process Binary"
+              >
+                <button
+                  type="button"
+                  onClick={() => setOpenBinary(true)}
+                  disabled={!SmartActions.canAdd(formName)}
+                  className="
+        inline-flex items-center gap-2
+        px-5 py-2.5
+        rounded-xl
+        bg-primary-button-bg
+        text-white text-sm font-semibold
+        shadow-sm
+        hover:bg-white hover:text-primary-button-bg
+        border border-primary-button-bg
+        hover:border-primary-button-bg
+        transition-all duration-200 ease-in-out
+        focus:outline-none focus:ring-2 focus:ring-primary-button-bg/30
+        disabled:opacity-50 disabled:cursor-not-allowed
+      "
+                >
+                  <PlayCircle className="w-4 h-4" />
+                  <span>Process Binary</span>
+                </button>
+              </PermissionAwareTooltip>
+            </div>
           </div>
         </div>
       </div>
       {!showTable && (
         <LandingIllustration
-          title="Manage Reports"
-          addLabel="Add Report"
+          title="Process Binary Income"
           formName={formName}
+          addLabel="Add Income"
           description={
             <>
-              Search reports using filters above.<br />
-              Manage reports, export data and configure columns.<br />
-              <span className="font-medium">OR</span><br />
-              Click on Add button to create a new report.
+              Search Binary income using filters above.
+              <br />
+              Manage records, export reports and analyse performance.
+              <br />
+              {/* <span className="font-medium">OR</span><br />
+              Click below to create a new income entry. */}
             </>
           }
         />
       )}
       {showTable && (
         <div>
+          <StatsCards
+            stats={stats}
+            config={statsConfig}
+            loading={tableLoading}
+          />
 
           {tableLoading ? (
             <div className="flex justify-between items-center py-2 animate-pulse">
@@ -647,7 +704,6 @@ const Template: React.FC = () => {
             </div>
           ) : hasData ? (
             <div className="flex justify-between items-center py-2 mb-[10px]">
-
               {/* PAGE SIZE */}
               <div className="relative">
                 <select
@@ -659,6 +715,7 @@ const Template: React.FC = () => {
                     setPage(1);
 
                     fetchGridData({
+                      ...dateRange,
                       pageOverride: 1,
                       perPageOverride: size,
                     });
@@ -684,9 +741,11 @@ const Template: React.FC = () => {
 
               {/* EXPORT */}
               <PermissionAwareTooltip allowed={canExport}>
-                <div className={!canExport ? "pointer-events-none opacity-50" : ""}>
+                <div
+                  className={!canExport ? "pointer-events-none opacity-50" : ""}
+                >
                   <ExportButtons
-                    title="Report"
+                    title="Binary Income Report"
                     columns={exportColumns}
                     fetchData={fetchExportData}
                     disabled={!canExport}
@@ -696,12 +755,15 @@ const Template: React.FC = () => {
             </div>
           ) : null}
           {/* --- CONTENT CONTAINER --- */}
-          <div className="trezo-card-content 
+          <div
+            className="trezo-card-content 
   bg-white dark:bg-[#0f172a]
   text-gray-800 dark:text-gray-200
   border border-gray-200 dark:border-gray-700
-  rounded-lg overflow-hidden">
+  rounded-lg overflow-hidden"
+          >
             <DataTable
+              title=""
               columns={columns}
               data={tableData}
               customStyles={customStyles}
@@ -719,32 +781,147 @@ const Template: React.FC = () => {
               onChangeRowsPerPage={handlePerRowsChange}
               onSort={handleSort}
               sortServer
-              defaultSortFieldId={
-                columns.find(col => col.columnKey === sortColumnKey)?.id
-              }
-              defaultSortAsc={sortDirection === "ASC"}
               progressPending={tableLoading}
               progressComponent={
-                <TableSkeleton
-                  rows={perPage}
-                  columns={columns.length || 8}
-                />
+                <TableSkeleton rows={perPage} columns={columns.length || 8} />
               }
               conditionalRowStyles={[
                 {
-                  when: row => row.__isTotal,
+                  when: (row) => row.__isTotal,
                   style: {
                     fontWeight: 700,
                     backgroundColor: "var(--color-primary-table-bg)",
-                  }
-                }
+                  },
+                },
               ]}
               noDataComponent={!tableLoading && <OopsNoData />}
+              defaultSortFieldId={sortIndex}
             />
           </div>
         </div>
       )}
-    
+      <Dialog
+        open={openBinary}
+        onClose={() => setOpenBinary(false)}
+        className="relative z-60"
+      >
+        <DialogBackdrop className="fixed inset-0 bg-gray-500/75 transition-opacity" />
+
+        <div className="fixed inset-0 z-60 w-screen overflow-y-auto">
+          <div className="flex min-h-full items-center justify-center p-4 sm:p-0">
+            <DialogPanel
+              className="relative transform overflow-hidden rounded-lg bg-white dark:bg-[#0c1427]
+                      text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-[450px]"
+            >
+              <div className="trezo-card w-full p-[20px] md:p-[25px]">
+                {/* Header */}
+                <div
+                  className="trezo-card-header bg-gray-50 dark:bg-[#15203c]
+                              mb-[20px] flex items-center justify-between
+                              -mx-[20px] md:-mx-[25px] -mt-[20px] md:-mt-[25px]
+                              p-[20px] md:p-[25px] rounded-t-md"
+                >
+                  <h5 className="!mb-0">Process Binary Income</h5>
+
+                  <button
+                    type="button"
+                    className="text-[23px] hover:text-primary-button-bg"
+                    onClick={() => setOpenBinary(false)}
+                  >
+                    <i className="ri-close-fill"></i>
+                  </button>
+                </div>
+
+                <Formik
+                  initialValues={{
+                    Date: todayDate,
+                  }}
+                  validationSchema={BinarySchema}
+                  onSubmit={(values) => {
+                    handleProcessBinary(values.Date);
+                  }}
+                >
+                  <Form className="space-y-5">
+                    {/* Date */}
+                    <div>
+                      <label className="mb-[10px] font-medium block">
+                        Select Date <span className="text-red-500">*</span>
+                      </label>
+
+                      <Field name="Date">
+                        {({ field, form }: any) => (
+                          <input
+                            type="text"
+                            value={formatToDDMMMYYYY(field.value)}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              const parsed = new Date(raw);
+                              if (!isNaN(parsed.getTime())) {
+                                form.setFieldValue(
+                                  "Date",
+                                  parsed.toISOString().split("T")[0],
+                                );
+                              }
+                            }}
+                            onFocus={(e) => {
+                              e.target.type = "date";
+                              e.target.value = field.value;
+                            }}
+                            onBlur={(e) => {
+                              e.target.type = "text";
+                              e.target.value = formatToDDMMMYYYY(field.value);
+                            }}
+                            className="h-[55px] rounded-md border border-gray-200
+            dark:border-[#172036] bg-white dark:bg-[#0c1427]
+            px-[17px] block w-full focus:border-primary-button-bg"
+                          />
+                        )}
+                      </Field>
+
+                      <ErrorMessage
+                        name="Date"
+                        component="p"
+                        className="text-red-500 text-sm"
+                      />
+                    </div>
+
+                    <hr className="border-t border-gray-200 dark:border-gray-700 -mx-7" />
+
+                    {/* Footer */}
+                    <div className="text-right">
+                      <button
+                        type="button"
+                        className="mr-[15px] px-[26px] py-[12px]
+                                          rounded-md bg-danger-500 text-white hover:bg-danger-400"
+                        onClick={() => setOpenBinary(false)}
+                      >
+                        Cancel
+                      </button>
+
+                      <button
+                        type="submit"
+                        disabled={processingBinary}
+                        className="px-[26px] py-[12px]
+                                          rounded-md bg-primary-button-bg text-white
+                                          hover:bg-primary-button-bg-hover"
+                      >
+                        {processingBinary ? (
+                          <div className="flex items-center gap-2">
+                            <div className="theme-loader"></div>
+                            <span>Processing...</span>
+                          </div>
+                        ) : (
+                          "Process Binary"
+                        )}
+                      </button>
+                    </div>
+                  </Form>
+                </Formik>
+              </div>
+            </DialogPanel>
+          </div>
+        </div>
+      </Dialog>
     </div>
   );
 };

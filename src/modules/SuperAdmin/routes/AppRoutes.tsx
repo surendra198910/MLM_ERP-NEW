@@ -61,6 +61,7 @@ import Template from "../../../components/CommonFormElements/Template.js";
 import MemberWallet from "../components/Client/MemberWallet.js";
 // import DummyTabForm from "../BindedComponent/DummyTabForm.js";
 import ProcessROIIncome from "../components/Commission/ProcessROI.js";
+import ProcessBinaryIncome from "../components/Commission/ProcessBinaryIncome.js";
 
 import GlobalSetting from "../components/settings/GlobalSetting";
 import ManageClient from "../components/Client/ManageClient";
@@ -420,6 +421,11 @@ const AppRoutes = () => {
               <Route
                 path="/superadmin/commission/process-roi-income"
                 element={<ProcessROIIncome />}
+              />
+
+               <Route 
+                path="/superadmin/commission/process-binary-income"
+                element={<ProcessBinaryIncome />}
               />
               <Route
                 path="/superadmin/commission/roi-level-income-report"
