@@ -4,6 +4,7 @@ import { useAuth } from "../../../context/AuthContext";
 import CropperModal from "../components/Cropper/Croppermodel";
 import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import { useLocation, useNavigate } from "react-router-dom";
 
 const IMAGE_PREVIEW_URL = import.meta.env.VITE_IMAGE_PREVIEW_URL;
 
@@ -53,29 +54,29 @@ interface ProfileData {
   AssetDetails: string | null;
 }
 
-interface LoginDetail { 
-  LoginType: string; 
-  LastLogin_Failed: string; 
-  LastLogin_Successful: string; 
+interface LoginDetail {
+  LoginType: string;
+  LastLogin_Failed: string;
+  LastLogin_Successful: string;
 }
 
-interface EmpDocument {  
-  DocumentName: string; 
-  DocumentNumber: string; 
-  Attachment: string; 
+interface EmpDocument {
+  DocumentName: string;
+  DocumentNumber: string;
+  Attachment: string;
 }
 
-interface SalaryItem {   
-  SalaryType: string; 
-  SalaryName: string; 
-  Value: string; 
+interface SalaryItem {
+  SalaryType: string;
+  SalaryName: string;
+  Value: string;
 }
 
-interface CompanyItem {  
-  CompanyId: number; 
-  CompanyName: string; 
-  CompanyLogo: string; 
-  CompanyType: string; 
+interface CompanyItem {
+  CompanyId: number;
+  CompanyName: string;
+  CompanyLogo: string;
+  CompanyType: string;
 }
 
 interface AssetItem {
@@ -86,50 +87,50 @@ interface AssetItem {
 }
 
 const TABS = [
-  { label: "Overview",   icon: "person"      },
-  { label: "Work Info",  icon: "badge"       },
-  { label: "Documents",  icon: "description" },
-  { label: "Salary",     icon: "payments"    },
-  { label: "Assets",     icon: "devices"     },
+  { label: "Overview", icon: "person" },
+  { label: "Work Info", icon: "badge" },
+  { label: "Documents", icon: "description" },
+  { label: "Salary", icon: "payments" },
+  { label: "Assets", icon: "devices" },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function parseJson<T>(raw: string | null | undefined, fallback: T): T {
-  try { 
-    return raw && raw !== "NoRecord" ? JSON.parse(raw) : fallback; 
+  try {
+    return raw && raw !== "NoRecord" ? JSON.parse(raw) : fallback;
   }
-  catch { 
-    return fallback; 
+  catch {
+    return fallback;
   }
 }
 
 const fmtDate = (s?: string | null) => {
   if (!s) return "—";
-  try { 
-    return new Date(s).toLocaleDateString("en-IN", { 
-      day: "2-digit", 
-      month: "short", 
-      year: "numeric" 
-    }); 
+  try {
+    return new Date(s).toLocaleDateString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric"
+    });
   }
-  catch { 
-    return s; 
+  catch {
+    return s;
   }
 };
 
 const fmtDateTime = (s?: string | null) => {
   if (!s) return "—";
-  try { 
-    return new Date(s).toLocaleString("en-IN", { 
-      day: "2-digit", 
-      month: "short", 
-      year: "numeric", 
-      hour: "2-digit", 
-      minute: "2-digit" 
-    }); 
+  try {
+    return new Date(s).toLocaleString("en-IN", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit"
+    });
   }
-  catch { 
-    return s; 
+  catch {
+    return s;
   }
 };
 
@@ -185,26 +186,26 @@ const PasswordModal: React.FC<{
   const mismatch = !!form.confirm && !!form.new && form.confirm !== form.new;
 
   const handle = async () => {
-    if (!form.old || !form.new || !form.confirm) { 
-      toast.error("Please fill all fields"); 
-      return; 
+    if (!form.old || !form.new || !form.confirm) {
+      toast.error("Please fill all fields");
+      return;
     }
-    if (mismatch) { 
-      toast.error("Passwords do not match"); 
-      return; 
+    if (mismatch) {
+      toast.error("Passwords do not match");
+      return;
     }
     await onSubmit(form.old, form.new);
   };
 
   const FIELDS: { key: "old" | "new" | "confirm"; label: string; placeholder: string }[] = [
-    { key: "old",     label: "Current password",     placeholder: "Enter current password"  },
-    { key: "new",     label: "New password",          placeholder: "Enter new password"      },
-    { key: "confirm", label: "Confirm new password",  placeholder: "Re-enter new password"   },
+    { key: "old", label: "Current password", placeholder: "Enter current password" },
+    { key: "new", label: "New password", placeholder: "Enter new password" },
+    { key: "confirm", label: "Confirm new password", placeholder: "Re-enter new password" },
   ];
 
   return (
-    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/50" 
-         onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/50"
+      onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="bg-white dark:bg-[#0c1427] rounded-md shadow-2xl w-full max-w-[420px] overflow-hidden border border-gray-200 dark:border-[#172036]">
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-[#172036] bg-gray-50 dark:bg-[#0a1020]">
           <div className="flex items-center gap-3">
@@ -231,13 +232,12 @@ const PasswordModal: React.FC<{
                   placeholder={placeholder}
                   value={form[key]}
                   onChange={(e) => setForm((p) => ({ ...p, [key]: e.target.value }))}
-                  className={`w-full px-3 py-[10px] pr-10 text-sm rounded-md border bg-gray-50 dark:bg-[#172036] text-black dark:text-white placeholder-gray-400 focus:outline-none focus:border-[#605DFF] transition-colors ${
-                    key === "confirm" && mismatch
-                      ? "border-red-400 dark:border-red-500"
-                      : "border-gray-200 dark:border-[#172036]"
-                  }`}
+                  className={`w-full px-3 py-[10px] pr-10 text-sm rounded-md border bg-gray-50 dark:bg-[#172036] text-black dark:text-white placeholder-gray-400 focus:outline-none focus:border-[#605DFF] transition-colors ${key === "confirm" && mismatch
+                    ? "border-red-400 dark:border-red-500"
+                    : "border-gray-200 dark:border-[#172036]"
+                    }`}
                 />
-                <button type="button" 
+                <button type="button"
                   onClick={() => setShow((p) => ({ ...p, [key]: !p[key] }))}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
                   <i className="material-symbols-outlined !text-[17px]">{show[key] ? "visibility_off" : "visibility"}</i>
@@ -253,7 +253,7 @@ const PasswordModal: React.FC<{
         </div>
 
         <div className="flex gap-[10px] px-5 py-4 border-t border-gray-100 dark:border-[#172036] bg-gray-50 dark:bg-[#0a1020]">
-          <button onClick={onClose} 
+          <button onClick={onClose}
             className="flex-1 py-[9px] text-sm font-medium border border-gray-200 dark:border-[#172036] text-gray-600 dark:text-gray-400 rounded-md hover:bg-gray-100 dark:hover:bg-[#172036] transition-colors">
             Cancel
           </button>
@@ -273,31 +273,40 @@ const PasswordModal: React.FC<{
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 const Profile: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const { userProfile, updateUserProfile } = useAuth();
   const { universalService, postUserImage } = ApiService();
   const universalServiceRef = useRef(universalService);
   universalServiceRef.current = universalService;
 
-  const [profile, setProfile]           = useState<ProfileData | null>(null);
-  const [loading, setLoading]           = useState(true);
-  const [activeTab, setActiveTab]       = useState(0);
-  const [showPwModal, setShowPwModal]   = useState(false);
-  const [pwLoading, setPwLoading]       = useState(false);
-  const [cropperOpen, setCropperOpen]   = useState(false);
-  const [rawImage, setRawImage]         = useState<string | null>(null);
+  const [profile, setProfile] = useState<ProfileData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState(0);
+  const [showPwModal, setShowPwModal] = useState(false);
+  const [pwLoading, setPwLoading] = useState(false);
+  const [cropperOpen, setCropperOpen] = useState(false);
+  const [rawImage, setRawImage] = useState<string | null>(null);
   const [uploadingPic, setUploadingPic] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const employeeId = userProfile?.EmployeeId ?? 
+  const employeeId = userProfile?.EmployeeId ??
     JSON.parse(localStorage.getItem("EmployeeDetails") || "{}").EmployeeId;
+  // Open popup from URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
 
+    if (params.get("popup") === "change-password") {
+      setShowPwModal(true);
+    }
+  }, [location.search]);
   // Fetch profile data
   useEffect(() => {
     if (!employeeId) {
       setLoading(false);
       return;
     }
-    
+
     (async () => {
       try {
         setLoading(true);
@@ -305,12 +314,12 @@ const Profile: React.FC = () => {
           procName: "Employee",
           Para: JSON.stringify({ ActionMode: "ProfileData", EditId: employeeId }),
         });
-        
+
         console.log("API Response:", response); // Debug log
-        
+
         // Handle different response structures
         let profileData = null;
-        
+
         if (Array.isArray(response)) {
           // If response is directly an array
           profileData = response[0];
@@ -324,7 +333,7 @@ const Profile: React.FC = () => {
           // If response is a single object
           profileData = response;
         }
-        
+
         if (profileData) {
           setProfile(profileData);
           console.log("Profile data set:", profileData);
@@ -332,12 +341,12 @@ const Profile: React.FC = () => {
           console.error("No profile data found in response:", response);
           toast.error("No profile data found");
         }
-      } catch (e) { 
+      } catch (e) {
         console.error("Error fetching profile:", e);
         toast.error("Failed to load profile data");
       }
-      finally { 
-        setLoading(false); 
+      finally {
+        setLoading(false);
       }
     })();
   }, [employeeId]);
@@ -347,16 +356,16 @@ const Profile: React.FC = () => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
-    reader.onload = (ev) => { 
-      setRawImage(ev.target?.result as string); 
-      setCropperOpen(true); 
+    reader.onload = (ev) => {
+      setRawImage(ev.target?.result as string);
+      setCropperOpen(true);
     };
     reader.readAsDataURL(file);
     e.target.value = "";
   };
 
   const handleCrop = async (blob: Blob) => {
-    setCropperOpen(false); 
+    setCropperOpen(false);
     setRawImage(null);
     try {
       setUploadingPic(true);
@@ -369,14 +378,14 @@ const Profile: React.FC = () => {
         setProfile((p) => p ? { ...p, ProfilePic: newPic } : p);
         if (userProfile) updateUserProfile({ ...userProfile, ProfilePic: newPic });
         toast.success("Profile picture updated");
-      } else { 
-        toast.error("Upload failed"); 
+      } else {
+        toast.error("Upload failed");
       }
-    } catch { 
-      toast.error("Failed to update profile picture"); 
+    } catch {
+      toast.error("Failed to update profile picture");
     }
-    finally { 
-      setUploadingPic(false); 
+    finally {
+      setUploadingPic(false);
     }
   };
 
@@ -386,20 +395,20 @@ const Profile: React.FC = () => {
       setPwLoading(true);
       await universalServiceRef.current({
         procName: "Employee",
-        Para: JSON.stringify({ 
-          ActionMode: "UpdatePassword", 
-          EditId: employeeId, 
-          OldPassword: oldPw, 
-          NewPassword: newPw 
+        Para: JSON.stringify({
+          ActionMode: "UpdatePassword",
+          EditId: employeeId,
+          OldPassword: oldPw,
+          NewPassword: newPw
         }),
       });
       toast.success("Password changed successfully");
       setShowPwModal(false);
-    } catch { 
-      toast.error("Failed to change password"); 
+    } catch {
+      toast.error("Failed to change password");
     }
-    finally { 
-      setPwLoading(false); 
+    finally {
+      setPwLoading(false);
     }
   };
 
@@ -417,18 +426,18 @@ const Profile: React.FC = () => {
 
   // Format addresses
   const permanentAddr = [
-    profile?.Address, 
-    profile?.CityName, 
-    profile?.StateName, 
-    profile?.CountryName, 
+    profile?.Address,
+    profile?.CityName,
+    profile?.StateName,
+    profile?.CountryName,
     profile?.Pincode
   ].filter(Boolean).join(", ");
-  
+
   const currentAddr = [
-    profile?.CurrentAddress, 
-    profile?.CurrentCityName, 
-    profile?.CurrentStateName, 
-    profile?.CurrentCountryName, 
+    profile?.CurrentAddress,
+    profile?.CurrentCityName,
+    profile?.CurrentStateName,
+    profile?.CurrentCountryName,
     profile?.CurrentPinCode
   ].filter(Boolean).join(", ");
 
@@ -438,14 +447,14 @@ const Profile: React.FC = () => {
     : null;
 
   // Get full name
-  const fullName = profile?.Name?.trim() || 
-    `${userProfile?.FirstName ?? ""} ${userProfile?.LastName ?? ""}`.trim() || 
+  const fullName = profile?.Name?.trim() ||
+    `${userProfile?.FirstName ?? ""} ${userProfile?.LastName ?? ""}`.trim() ||
     "User";
-  
+
   const initials = fullName.split(/\s+/).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 
   // Skills array - trim and clean
-  const skillsArray = profile?.Skills?.trim() 
+  const skillsArray = profile?.Skills?.trim()
     ? profile.Skills.trim().split(",").filter(s => s.trim()).map(s => s.trim())
     : [];
 
@@ -495,28 +504,33 @@ const Profile: React.FC = () => {
   return (
     <>
       <ToastContainer position="top-right" autoClose={3000} />
-      <CropperModal 
-        open={cropperOpen} 
-        image={rawImage || ""} 
-        onCrop={handleCrop} 
-        onClose={() => { 
-          setCropperOpen(false); 
-          setRawImage(null); 
-        }} 
-        aspectRatio={1} 
+      <CropperModal
+        open={cropperOpen}
+        image={rawImage || ""}
+        onCrop={handleCrop}
+        onClose={() => {
+          setCropperOpen(false);
+          setRawImage(null);
+        }}
+        aspectRatio={1}
       />
-      <input 
-        ref={fileInputRef} 
-        type="file" 
-        accept="image/*" 
-        className="hidden" 
-        onChange={handleFileSelect} 
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={handleFileSelect}
       />
-      {showPwModal && 
-        <PasswordModal 
-          onClose={() => setShowPwModal(false)} 
-          onSubmit={handlePasswordChange} 
-          loading={pwLoading} 
+      {showPwModal &&
+        <PasswordModal
+          onClose={() => {
+            setShowPwModal(false);
+
+            // remove query param after close
+            navigate("/superadmin/my-profile", { replace: true });
+          }}
+          onSubmit={handlePasswordChange}
+          loading={pwLoading}
         />
       }
 
@@ -524,8 +538,8 @@ const Profile: React.FC = () => {
       <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] rounded-md overflow-hidden">
 
         {/* Cover */}
-        <div className="relative h-[140px] overflow-hidden" 
-             style={{ background: "linear-gradient(135deg, #1a3a6e 0%, #1a5276 40%, #117a65 100%)" }}>
+        <div className="relative h-[140px] overflow-hidden"
+          style={{ background: "linear-gradient(135deg, #1a3a6e 0%, #1a5276 40%, #117a65 100%)" }}>
           <div className="absolute -top-10 -right-10 w-52 h-52 rounded-full bg-white/5" />
           <div className="absolute -bottom-14 -left-5 w-56 h-56 rounded-full bg-white/5" />
           <svg className="absolute inset-0 w-full h-full opacity-[0.08]" xmlns="http://www.w3.org/2000/svg">
@@ -565,16 +579,15 @@ const Profile: React.FC = () => {
 
             {/* Status + actions */}
             <div className="flex flex-wrap items-center gap-2 pb-1">
-              <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border ${
-                profile?.IsActive
-                  ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
-                  : "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800"
-              }`}>
+              <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border ${profile?.IsActive
+                ? "bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800"
+                : "bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 border-red-200 dark:border-red-800"
+                }`}>
                 <span className={`w-1.5 h-1.5 rounded-full ${profile?.IsActive ? "bg-emerald-500" : "bg-red-500"}`} />
                 {profile?.IsActive ? "Active" : "Inactive"}
               </span>
               <button
-                onClick={() => setShowPwModal(true)}
+                onClick={() => navigate("/superadmin/my-profile?popup=change-password")}
                 className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full border border-gray-200 dark:border-[#172036] bg-white dark:bg-[#172036] text-gray-600 dark:text-gray-300 hover:border-[#605DFF] hover:text-[#605DFF] transition-colors"
               >
                 <i className="material-symbols-outlined !text-[14px] text-[#605DFF]">lock_reset</i>
@@ -647,13 +660,13 @@ const Profile: React.FC = () => {
                 <p className="text-xs text-gray-400 text-center py-4">No companies assigned</p>
               ) : (
                 companies.map((c) => (
-                  <div key={c.CompanyId} 
-                       className="flex items-center gap-3 p-[10px] rounded-lg bg-gray-50 dark:bg-[#0a1020] border border-gray-100 dark:border-[#172036] mb-2 last:mb-0">
+                  <div key={c.CompanyId}
+                    className="flex items-center gap-3 p-[10px] rounded-lg bg-gray-50 dark:bg-[#0a1020] border border-gray-100 dark:border-[#172036] mb-2 last:mb-0">
                     {c.CompanyLogo && IMAGE_PREVIEW_URL ? (
-                      <img 
-                        src={`${IMAGE_PREVIEW_URL}CompanyDocs/${c.CompanyLogo}`} 
-                        alt={c.CompanyName} 
-                        className="w-9 h-9 rounded-lg object-cover flex-shrink-0 border border-gray-200 dark:border-[#172036]" 
+                      <img
+                        src={`${IMAGE_PREVIEW_URL}CompanyDocs/${c.CompanyLogo}`}
+                        alt={c.CompanyName}
+                        className="w-9 h-9 rounded-lg object-cover flex-shrink-0 border border-gray-200 dark:border-[#172036]"
                       />
                     ) : (
                       <div className="w-9 h-9 rounded-lg bg-[#605DFF]/10 flex items-center justify-center text-[#605DFF] font-medium flex-shrink-0">
@@ -717,11 +730,10 @@ const Profile: React.FC = () => {
                 <button
                   key={tab.label}
                   onClick={() => setActiveTab(i)}
-                  className={`relative flex items-center gap-1.5 px-5 py-[13px] text-xs font-medium whitespace-nowrap transition-colors border-b-2 ${
-                    activeTab === i
-                      ? "text-[#605DFF] border-[#605DFF] bg-white dark:bg-[#0c1427]"
-                      : "text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-300"
-                  }`}
+                  className={`relative flex items-center gap-1.5 px-5 py-[13px] text-xs font-medium whitespace-nowrap transition-colors border-b-2 ${activeTab === i
+                    ? "text-[#605DFF] border-[#605DFF] bg-white dark:bg-[#0c1427]"
+                    : "text-gray-500 dark:text-gray-400 border-transparent hover:text-gray-700 dark:hover:text-gray-300"
+                    }`}
                 >
                   <i className="material-symbols-outlined !text-[14px]">{tab.icon}</i>
                   {tab.label}
@@ -813,8 +825,8 @@ const Profile: React.FC = () => {
                   : (
                     <div className="flex flex-col gap-[6px]">
                       {documents.map((d, i) => (
-                        <div key={i} 
-                             className="flex items-center justify-between p-[11px] rounded-lg bg-gray-50 dark:bg-[#0a1020] border border-gray-100 dark:border-[#172036] hover:border-[#605DFF]/30 transition-colors">
+                        <div key={i}
+                          className="flex items-center justify-between p-[11px] rounded-lg bg-gray-50 dark:bg-[#0a1020] border border-gray-100 dark:border-[#172036] hover:border-[#605DFF]/30 transition-colors">
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="w-8 h-8 rounded-lg bg-white dark:bg-[#172036] flex items-center justify-center flex-shrink-0 border border-gray-100 dark:border-[#172036]">
                               <i className={`material-symbols-outlined !text-[15px] ${d.Attachment ? "text-[#605DFF]" : "text-gray-400"}`}>
@@ -909,8 +921,8 @@ const Profile: React.FC = () => {
                   : (
                     <div className="flex flex-col gap-[6px]">
                       {assets.map((a, i) => (
-                        <div key={i} 
-                             className="flex items-center justify-between p-[11px] rounded-lg bg-gray-50 dark:bg-[#0a1020] border border-gray-100 dark:border-[#172036]">
+                        <div key={i}
+                          className="flex items-center justify-between p-[11px] rounded-lg bg-gray-50 dark:bg-[#0a1020] border border-gray-100 dark:border-[#172036]">
                           <div className="flex items-center gap-3 min-w-0">
                             <div className="w-8 h-8 rounded-lg bg-[#605DFF]/10 flex items-center justify-center flex-shrink-0">
                               <i className="material-symbols-outlined !text-[15px] text-[#605DFF]">devices</i>
@@ -920,11 +932,10 @@ const Profile: React.FC = () => {
                               <p className="text-[11px] text-gray-400">{a.AssetCode ? `#${a.AssetCode}` : "No code"} · {fmtDate(a.IssuedDate)}</p>
                             </div>
                           </div>
-                          <span className={`flex-shrink-0 ml-3 text-[11px] font-medium px-2.5 py-1 rounded ${
-                            a.Status === "Returned"
-                              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400"
-                              : "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400"
-                          }`}>
+                          <span className={`flex-shrink-0 ml-3 text-[11px] font-medium px-2.5 py-1 rounded ${a.Status === "Returned"
+                            ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400"
+                            : "bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400"
+                            }`}>
                             {a.Status || "In use"}
                           </span>
                         </div>

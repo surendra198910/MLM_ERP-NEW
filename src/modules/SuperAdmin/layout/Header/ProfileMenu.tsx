@@ -190,7 +190,7 @@ const ProfileMenu: React.FC = () => {
           
             <li>
               <Link
-                to="/superadmin/my-profile"
+                to="/superadmin/my-profile?popup=change-password"
                 className="block relative py-[8px]
                            ltr:pl-[50px] ltr:pr-[20px]
                            text-black dark:text-white
