@@ -62,39 +62,39 @@ const Template: React.FC = () => {
     preset: "thisMonth",
   });
   const BinarySchema = Yup.object().shape({
-    Date: Yup.string().required("Date is required"),
+    fromdate: Yup.string().required("From Date is required"),
+    todate: Yup.string().required("To Date is required"),
   });
   const statsConfig = [
-   {
-    key: "UnprocessedIncome",
-    title: "Unprocessed Income",
-    icon: "today",
-    variant: "highlight",
-    showCurrency: true
-  },
-     {
-    key: "TotalIncome",
-    title: "Total Income",
-    icon: "account_balance_wallet",
-    variant: "income",
-    showCurrency: true
-  },
- 
-  {
-    key: "ThisMonthIncome",
-    title: "This Month Income",
-    icon: "calendar_month",
-    variant: "income",
-    showCurrency: true
-  },
-  {
-    key: "LastMonthIncome",
-    title: "Last Month Income",
-    icon: "history",
-    variant: "income",
-    showCurrency: true
-  },
+    {
+      key: "UnprocessedIncome",
+      title: "Unprocessed Income",
+      icon: "today",
+      variant: "highlight",
+      showCurrency: true,
+    },
+    {
+      key: "TotalIncome",
+      title: "Total Income",
+      icon: "account_balance_wallet",
+      variant: "income",
+      showCurrency: true,
+    },
 
+    {
+      key: "ThisMonthIncome",
+      title: "This Month Income",
+      icon: "calendar_month",
+      variant: "income",
+      showCurrency: true,
+    },
+    {
+      key: "LastMonthIncome",
+      title: "Last Month Income",
+      icon: "history",
+      variant: "income",
+      showCurrency: true,
+    },
   ];
   const fetchFormPermissions = async () => {
     try {
@@ -437,16 +437,18 @@ const Template: React.FC = () => {
 
     return `${day}-${month}-${year}`;
   };
-  const handleProcessBinary = async (date: string) => {
+  const handleProcessBinary = async (fromDate: string, toDate: string) => {
     try {
-     const formattedDate = formatToDDMMMYYYY(date);
+      const formattedFromDate = formatToDDMMMYYYY(fromDate);
+      const formattedToDate = formatToDDMMMYYYY(toDate);
 
       const confirmResult = await Swal.fire({
         title: "Process Binary Income?",
         html: `
                   <div style="font-size:14px;">
-                      Do you want to process Binary Income of
-                      <b style="color:#3085d6;">${formattedDate}</b> ?
+                      Do you want to process Binary Income from
+                      <b style="color:#3085d6;">${formattedFromDate}</b> to
+                      <b style="color:#3085d6;">${formattedToDate}</b>?
                   </div>
               `,
         icon: "question",
@@ -459,23 +461,25 @@ const Template: React.FC = () => {
       if (!confirmResult.isConfirmed) return;
 
       setProcessingBinary(true);
-
+      debugger;
       const payload = {
         procName: "ProcessBinaryIncome",
         Para: JSON.stringify({
           ProcessBy: localStorage.getItem("CompanyId"),
-          ACtionmode: 'ProcessIncome',
-          FromDate: date,
+          ACtionmode: "ProcessIncome",
+          FromDate: fromDate,
+          ToDate: toDate,
         }),
       };
-
+      // console.log("Process Binary Payload:", payload);
+      // return;
       const response = await universalService(payload);
       const res = Array.isArray(response) ? response[0] : response;
 
       if (res?.StatusCode === 1) {
         await Swal.fire({
           title: "Success!",
-          html: `Binary Income processed successfully for <b>${formattedDate}</b>`,
+          html: `Binary Income processed successfully from <b>${formattedFromDate}</b> to <b>${formattedToDate}</b>`,
           icon: "success",
           confirmButtonColor: "#3085d6",
         });
@@ -834,52 +838,49 @@ const Template: React.FC = () => {
 
                 <Formik
                   initialValues={{
-                    Date: todayDate,
+                    fromdate: fromStr,
+                    todate: toStr,
                   }}
                   validationSchema={BinarySchema}
                   onSubmit={(values) => {
-                    handleProcessBinary(values.Date);
+                    handleProcessBinary(values.fromdate, values.todate);
                   }}
                 >
                   <Form className="space-y-5">
                     {/* Date */}
                     <div>
                       <label className="mb-[10px] font-medium block">
-                        Select Date <span className="text-red-500">*</span>
+                        From Date <span className="text-red-500">*</span>
                       </label>
 
-                      <Field name="Date">
-                        {({ field, form }: any) => (
-                          <input
-                            type="text"
-                            value={formatToDDMMMYYYY(field.value)}
-                            onChange={(e) => {
-                              const raw = e.target.value;
-                              const parsed = new Date(raw);
-                              if (!isNaN(parsed.getTime())) {
-                                form.setFieldValue(
-                                  "Date",
-                                  parsed.toISOString().split("T")[0],
-                                );
-                              }
-                            }}
-                            onFocus={(e) => {
-                              e.target.type = "date";
-                              e.target.value = field.value;
-                            }}
-                            onBlur={(e) => {
-                              e.target.type = "text";
-                              e.target.value = formatToDDMMMYYYY(field.value);
-                            }}
-                            className="h-[55px] rounded-md border border-gray-200
-            dark:border-[#172036] bg-white dark:bg-[#0c1427]
-            px-[17px] block w-full focus:border-primary-button-bg"
-                          />
-                        )}
-                      </Field>
+                      <Field
+                        type="date"
+                        name="fromdate"
+                        className="h-[55px] rounded-md border border-gray-200
+  dark:border-[#172036] bg-white dark:bg-[#0c1427]
+  px-[17px] block w-full focus:border-primary-button-bg"
+                      />
 
                       <ErrorMessage
-                        name="Date"
+                        name="fromdate"
+                        component="p"
+                        className="text-red-500 text-sm"
+                      />
+
+                      <label className="mb-[10px] font-medium block">
+                        To Date <span className="text-red-500">*</span>
+                      </label>
+
+                      <Field
+                        type="date"
+                        name="todate"
+                        className="h-[55px] rounded-md border border-gray-200
+  dark:border-[#172036] bg-white dark:bg-[#0c1427]
+  px-[17px] block w-full focus:border-primary-button-bg"
+                      />
+
+                      <ErrorMessage
+                        name="todate"
                         component="p"
                         className="text-red-500 text-sm"
                       />
