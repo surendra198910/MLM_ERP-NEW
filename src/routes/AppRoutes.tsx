@@ -547,7 +547,7 @@ const AppRoutes = () => {
       <Route path="/maps" element={<Maps />} />
       <Route path="/notifications" element={<Notifications />} />
       <Route path="/members" element={<Members />} />
-      <Route path="/my-profile" element={<MyProfile />} />
+      {/* <Route path="/my-profile" element={<MyProfile />} /> */}
 
       {/* Settings */}
       <Route path="/settings" element={<AccountSettings />} />

@@ -74,20 +74,20 @@ const Header: React.FC<HeaderProps> = ({ toggleActive }) => {
             </div>
 
             {/* <SearchForm /> */}
-            <CompanyInfo />
+            {/* <CompanyInfo /> */}
 
             {/* <AppsMenu /> */}
             <CompanyTools />
           </div>
 
           <div className="flex items-center justify-center md:justify-normal mt-[13px] md:mt-0">
-            <Welcomebutton />
+            {/* <Welcomebutton /> */}
 
             <SearchPopup />
 
             <DarkMode />
 
-            <ChooseLanguage />
+            {/* <ChooseLanguage /> */}
 
             <Fullscreen />
 

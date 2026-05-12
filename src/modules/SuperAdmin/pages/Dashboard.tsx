@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import type { ApexOptions } from "apexcharts";
+import { useNavigate } from "react-router-dom";
 import { ApiService } from "../../../services/ApiService";
 import { useCurrency } from "../context/CurrencyContext";
 
@@ -30,24 +31,24 @@ interface DashboardData {
   TotalSponsorIncome: number;
   TotalROILevelIncome: number;
   IncomeBreakdown: string;
-  TeamGrowth: string;
   EarningsChart: string;
+  TotalTickets: number;
+  OpenTickets: number;
+  NewTickets: number;
+  ClosedTickets: number;
+  WorkingTickets: number;
   TopInvestors: string;
   RecentTransactions: string;
   RecentRegistrations: string;
 }
 interface IncomeItem      { IncomeType: string; TotalIncome: number; SharePct: number; }
-interface GrowthItem      { week: string; WeekStart: string; members: number; }
 interface EarningsItem    { date: string; earnings: number; withdrawals: number; }
 interface TopInvestor     { ClientId: number; ClientName: string; UserName: string; InvestmentAmount: number; RegistrationDate: string; }
 interface RecentTx        { MemberId: number; UserName: string; TransactionNote: string; TransType: string; Amount: number; LogType: string; TransDate: string; }
 interface RecentReg       { ClientId: number; ClientName: string; UserName: string; SponsorUserName: string; SponsorName: string; RegistrationDate: string; InvestmentAmount: number; MemberStatus: string; }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
-const fmt = (n: number) =>
-  n >= 1_000_000 ? (n / 1_000_000).toFixed(2) + "M"
-  : n >= 1_000   ? (n / 1_000).toFixed(2) + "K"
-  : (n ?? 0).toFixed(2);
+const fmt = (n: number) => Number(n ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
 function parseJson<T>(raw: string, fallback: T): T {
   try { return raw && raw !== "NoRecord" ? JSON.parse(raw) : fallback; }
@@ -61,12 +62,16 @@ const Skeleton = ({ className = "" }) => (
 
 // ─── Stat Card ────────────────────────────────────────────────────────────────
 const StatCard = ({
-  label, value, sub, icon, numColor, iconColor, iconBg,
+  label, value, sub, icon, numColor, iconColor, iconBg, onClick,
 }: {
   label: string; value: string | number; sub?: string;
   icon: string; numColor: string; iconColor: string; iconBg: string;
+  onClick?: () => void;
 }) => (
-  <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-md">
+  <div
+    onClick={onClick}
+    className={`trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-md transition-shadow ${onClick ? "cursor-pointer hover:shadow-md" : ""}`}
+  >
     <div className="trezo-card-content flex items-start justify-between gap-3">
       <div className="flex-1 min-w-0">
         <span className="block text-sm text-gray-500 dark:text-gray-400">{label}</span>
@@ -81,10 +86,16 @@ const StatCard = ({
 );
 
 // ─── Main Component ───────────────────────────────────────────────────────────
+
+
 const Dashboard: React.FC = () => {
   const { universalService } = ApiService();
   const { currency } = useCurrency();
   const cs = currency?.symbol ?? "$";
+  const navigate = useNavigate();
+
+  
+  const go = (path: string) => () => navigate(path);
 
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -117,7 +128,6 @@ const Dashboard: React.FC = () => {
 
   // ── Parse JSON fields ──────────────────────────────────────────────────────
   const incomeBreakdown = parseJson<IncomeItem[]>(data?.IncomeBreakdown ?? "", []);
-  const teamGrowth      = parseJson<GrowthItem[]>(data?.TeamGrowth ?? "", []);
   const earningsChart   = parseJson<EarningsItem[]>(data?.EarningsChart ?? "", []);
   const topInvestors    = parseJson<TopInvestor[]>(data?.TopInvestors ?? "", []);
   const recentTxs       = parseJson<RecentTx[]>(data?.RecentTransactions ?? "", []);
@@ -144,24 +154,15 @@ const Dashboard: React.FC = () => {
     tooltip: { shared: true, intersect: false },
   };
 
-  const growthOpts: ApexOptions = {
-    chart: { toolbar: { show: false } },
-    colors: ["#605DFF"],
-    plotOptions: { bar: { borderRadius: 4, columnWidth: "55%" } },
-    dataLabels: { enabled: false },
-    grid: { borderColor: "#ECEEF2" },
-    xaxis: {
-      categories: teamGrowth.map((g) => g.week),
-      labels: { style: { colors: "#8695AA", fontSize: "11px" } },
-      axisBorder: { show: false }, axisTicks: { show: false },
-    },
-    yaxis: {
-      labels: { formatter: (v) => String(Math.round(v)), style: { colors: "#64748B", fontSize: "11px" } },
-      axisBorder: { show: false }, axisTicks: { show: false },
-    },
-  };
 
   const incomeColors = ["#605DFF", "#AD63F6", "#3584FC"];
+
+  const incomeRoutes: Record<string, string> = {
+    "ROI Income":      "/superadmin/commission/roi-income-report",
+    "Sponsor Income":  "/superadmin/commission/sponsor-income-report",
+    "ROI Level Income":"/superadmin/commission/roi-level-income-report",
+    "Binary Income":   "/superadmin/commission/binary-income-report",
+  };
 
   // ── Loading skeleton ───────────────────────────────────────────────────────
   if (loading) {
@@ -202,24 +203,28 @@ const Dashboard: React.FC = () => {
           sub={`Today +${data?.TodayMembers ?? 0}  ·  Inactive ${data?.InactiveMembers ?? 0}`}
           icon="group"            numColor="text-blue-600 dark:text-blue-400"
           iconColor="text-blue-500" iconBg="bg-blue-50 dark:bg-blue-900/20"
+          onClick={go("/superadmin/client/manage-client")}
         />
         <StatCard
           label="Active Members"  value={(data?.ActiveMembers ?? 0).toLocaleString()}
           sub={`Active Rate: ${(data?.ActiveRate ?? 0).toFixed(2)}%`}
           icon="verified_user"    numColor="text-emerald-600 dark:text-emerald-400"
           iconColor="text-emerald-500" iconBg="bg-emerald-50 dark:bg-emerald-900/20"
+          onClick={go("/superadmin/client/manage-client")}
         />
         <StatCard
-          label="This Week"       value={(data?.ThisWeekMembers ?? 0).toLocaleString()}
-          sub="New registrations this week"
-          icon="calendar_today"   numColor="text-violet-600 dark:text-violet-400"
+          label="Inactive Members" value={(data?.InactiveMembers ?? 0).toLocaleString()}
+          sub={`Active Rate: ${(data?.ActiveRate ?? 0).toFixed(2)}%`}
+          icon="person_off"        numColor="text-violet-600 dark:text-violet-400"
           iconColor="text-violet-500" iconBg="bg-violet-50 dark:bg-violet-900/20"
+          onClick={go("/superadmin/client/manage-client")}
         />
         <StatCard
           label="This Month"      value={(data?.ThisMonthMembers ?? 0).toLocaleString()}
           sub="New registrations this month"
           icon="date_range"       numColor="text-amber-600 dark:text-amber-400"
           iconColor="text-amber-500" iconBg="bg-amber-50 dark:bg-amber-900/20"
+          onClick={go("/superadmin/client/manage-client")}
         />
       </div>
 
@@ -228,28 +233,32 @@ const Dashboard: React.FC = () => {
       ════════════════════════════════════════════════════════════════════ */}
       <div className="sm:grid sm:grid-cols-2 xl:grid-cols-4 sm:gap-x-[25px]">
         <StatCard
-          label="Platform Business" value={`${cs}${fmt(data?.TotalPlatformBusiness ?? 0)}`}
+          label="Total Business" value={`${cs}${fmt(data?.TotalPlatformBusiness ?? 0)}`}
           sub={`Earnings: ${cs}${fmt(data?.TotalEarning ?? 0)}`}
           icon="trending_up"        numColor="text-blue-600 dark:text-blue-400"
           iconColor="text-blue-500" iconBg="bg-blue-50 dark:bg-blue-900/20"
+          onClick={go("/superadmin/investment/investment-report")}
         />
         <StatCard
           label="Wallet Balance"    value={`${cs}${fmt(data?.TotalWalletBalance ?? 0)}`}
           sub={`Commission ${cs}${fmt(data?.TotalCommissionWallet ?? 0)}  ·  ROI ${cs}${fmt(data?.TotalROIWallet ?? 0)}`}
           icon="account_balance_wallet" numColor="text-purple-600 dark:text-purple-400"
           iconColor="text-purple-500" iconBg="bg-purple-50 dark:bg-purple-900/20"
+          onClick={go("/superadmin/wallet/member-wallet")}
         />
         <StatCard
           label="Income Distributed" value={`${cs}${fmt(data?.TotalIncomeDistributed ?? 0)}`}
           sub={`ROI ${cs}${fmt(data?.TotalROIIncome ?? 0)}  ·  Sponsor ${cs}${fmt(data?.TotalSponsorIncome ?? 0)}`}
           icon="payments"            numColor="text-emerald-600 dark:text-emerald-400"
           iconColor="text-emerald-500" iconBg="bg-emerald-50 dark:bg-emerald-900/20"
+          onClick={go("/superadmin/commission/roi-income-report")}
         />
         <StatCard
           label="Total Withdrawals"  value={`${cs}${fmt(data?.TotalWithdrawals ?? 0)}`}
           sub={`Pending ${data?.PendingWithdrawalCount ?? 0}  ·  Approved ${data?.ApprovedWithdrawalCount ?? 0}`}
           icon="savings"             numColor="text-rose-600 dark:text-rose-400"
           iconColor="text-rose-500"  iconBg="bg-rose-50 dark:bg-rose-900/20"
+          onClick={go("/superadmin/withdraw/withdraw-reports")}
         />
       </div>
 
@@ -307,7 +316,11 @@ const Dashboard: React.FC = () => {
             </div>
             <div className="space-y-6">
               {incomeBreakdown.map((item, i) => (
-                <div key={item.IncomeType}>
+                <div
+                  key={item.IncomeType}
+                  onClick={() => { const r = incomeRoutes[item.IncomeType]; if (r) navigate(r); }}
+                  className={incomeRoutes[item.IncomeType] ? "cursor-pointer group" : ""}
+                >
                   <div className="flex justify-between items-center mb-2">
                     <span className="text-sm font-medium text-black dark:text-white">{item.IncomeType}</span>
                     <div className="text-right">
@@ -350,7 +363,7 @@ const Dashboard: React.FC = () => {
                 { label: "Approved", amount: data?.ApprovedWithdrawalAmount ?? 0, count: data?.ApprovedWithdrawalCount ?? 0, bg: "bg-emerald-50 dark:bg-emerald-900/20", border: "border-emerald-200 dark:border-emerald-800", num: "text-emerald-500" },
                 { label: "Rejected", amount: data?.RejectedWithdrawalAmount ?? 0, count: data?.RejectedWithdrawalCount ?? 0, bg: "bg-rose-50    dark:bg-rose-900/20",    border: "border-rose-200    dark:border-rose-800",    num: "text-rose-500"    },
               ] as const).map(({ label, amount, count, bg, border, num }) => (
-                <div key={label} className={`flex items-center justify-between p-3 rounded-xl border ${bg} ${border}`}>
+                <div key={label} onClick={go("/superadmin/withdraw/withdraw-reports")} className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer hover:shadow-sm transition-shadow ${bg} ${border}`}>
                   <div>
                     <span className="text-[10px] uppercase tracking-widest text-gray-500 dark:text-gray-400">{label}</span>
                     <p className={`text-lg font-bold ${num} !mb-0 leading-tight mt-0.5`}>{cs}{fmt(amount)}</p>
@@ -361,7 +374,8 @@ const Dashboard: React.FC = () => {
                   </div>
                 </div>
               ))}
-              <div className="flex items-center justify-between pt-3 border-t border-gray-100 dark:border-[#172036]">
+              <div className="flex items-center justify-between pt-3 border-t border-gray-
+              100 dark:border-[#172036]">
                 <span className="text-sm text-gray-500 dark:text-gray-400">Total Withdrawals</span>
                 <span className="text-base font-bold text-black dark:text-white">{cs}{fmt(data?.TotalWithdrawals ?? 0)}</span>
               </div>
@@ -369,25 +383,68 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Team Growth — bar chart */}
+        {/* Support Tickets */}
         <div className="lg:col-span-2">
-          <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-md">
+          <div className="trezo-card bg-white dark:bg-[#0c1427] mb-[25px] p-[20px] md:p-[25px] rounded-md h-[94%]">
+
+            {/* ── Header ── */}
             <div className="trezo-card-header mb-[20px] md:mb-[25px] flex items-center justify-between">
-              <h5 className="!mb-0">Team Growth</h5>
-              <span className="text-xs text-gray-400 dark:text-gray-500">Last 8 weeks</span>
+              <div>
+                <h5 className="!mb-0">Support Tickets</h5>
+                <p className="text-xs text-gray-400 dark:text-gray-500 mt-1 !mb-0">All-time overview</p>
+              </div>
+              {/* Total hero pill */}
+              <div onClick={go("/superadmin/support-center/search-ticket-all")} className="flex items-center gap-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-full px-4 py-1.5 cursor-pointer hover:shadow-sm transition-shadow">
+                <i className="material-symbols-outlined text-[18px] text-blue-500">confirmation_number</i>
+                <span className="text-lg font-black text-blue-600 dark:text-blue-400 leading-none">
+                  {(data?.TotalTickets ?? 0).toLocaleString()}
+                </span>
+                <span className="text-[10px] uppercase tracking-wider text-blue-400">Total</span>
+              </div>
             </div>
-            <div className="ltr:-ml-[10px] rtl:-mr-[10px]">
-              {Chart && teamGrowth.length > 0 ? (
-                <Chart
-                  options={growthOpts}
-                  series={[{ name: "New Members", data: teamGrowth.map((g) => g.members) }]}
-                  type="bar" height={260} width="100%"
-                />
-              ) : (
-                <div className="h-[260px] flex items-center justify-center text-sm text-gray-400">
-                  {!Chart ? "Loading chart…" : "No registrations in the last 8 weeks"}
-                </div>
-              )}
+
+            {/* ── Status rows ── */}
+            <div className="space-y-3">
+              {([
+                { label: "New",     val: data?.NewTickets     ?? 0, icon: "fiber_new",         accent: "#7c3aed", bar: "bg-violet-500", badge: "bg-violet-100 text-violet-700 dark:bg-violet-900/30 dark:text-violet-300" },
+                { label: "Open",    val: data?.OpenTickets    ?? 0, icon: "drafts",             accent: "#f59e0b", bar: "bg-amber-400",  badge: "bg-amber-100  text-amber-700  dark:bg-amber-900/30  dark:text-amber-300"  },
+                { label: "Working", val: data?.WorkingTickets ?? 0, icon: "manufacturing",      accent: "#0ea5e9", bar: "bg-sky-500",    badge: "bg-sky-100    text-sky-700    dark:bg-sky-900/30    dark:text-sky-300"    },
+                { label: "Closed",  val: data?.ClosedTickets  ?? 0, icon: "check_circle",       accent: "#22c55e", bar: "bg-emerald-500",badge: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300" },
+              ] as const).map(({ label, val, icon, accent, bar, badge }) => {
+                const total = data?.TotalTickets ?? 0;
+                const pct   = total > 0 ? Math.round((val / total) * 100) : 0;
+                return (
+                  <div key={label} onClick={go("/superadmin/support-center/search-ticket-all")} className="flex items-center gap-4 p-3 rounded-xl bg-gray-50 dark:bg-[#0a1020] border border-gray-100 dark:border-[#172036] group hover:shadow-sm transition-shadow cursor-pointer">
+
+                    {/* Colored accent bar */}
+                    <div className="w-1 self-stretch rounded-full flex-shrink-0" style={{ background: accent }} />
+
+                    {/* Icon */}
+                    <div className="w-[38px] h-[38px] rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: accent + "1a" }}>
+                      <i className="material-symbols-outlined text-[20px]" style={{ color: accent }}>{icon}</i>
+                    </div>
+
+                    {/* Label + bar */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">{label}</span>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badge}`}>{pct}%</span>
+                      </div>
+                      <div className="h-1.5 bg-gray-200 dark:bg-[#172036] rounded-full overflow-hidden">
+                        <div
+                          className={`h-full rounded-full transition-all duration-700 ${bar}`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Count */}
+                    <div className="text-right flex-shrink-0 w-[48px]">
+                      <span className="text-xl font-black text-black dark:text-white leading-none">{val.toLocaleString()}</span>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -407,7 +464,7 @@ const Dashboard: React.FC = () => {
               <table className="w-full">
                 <tbody className="text-black dark:text-white">
                   {topInvestors.map((inv, i) => (
-                    <tr key={inv.ClientId}>
+                    <tr key={inv.ClientId} onClick={go("/superadmin/investment/investment-report")} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-[#172036] transition-colors">
                       <td className="ltr:text-left whitespace-nowrap px-0 py-[13px] border-b border-gray-100 dark:border-[#172036]">
                         <div className="flex items-center gap-3">
                           <div className="w-[36px] h-[36px] rounded-full bg-primary-50 dark:bg-[#15203c] flex items-center justify-center flex-shrink-0">
@@ -459,7 +516,7 @@ const Dashboard: React.FC = () => {
                   </thead>
                   <tbody className="text-black dark:text-white">
                     {recentRegs.map((reg) => (
-                      <tr key={reg.ClientId}>
+                      <tr key={reg.ClientId} onClick={go("/superadmin/client/manage-client")} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-[#172036] transition-colors">
                         <td className="ltr:text-left whitespace-nowrap px-[20px] py-[12px] md:ltr:first:pl-[25px] border-b border-gray-100 dark:border-[#172036]">
                           <span className="block font-medium text-sm">{reg.ClientName}</span>
                           <span className="text-gray-400 text-[11px]">[{reg.UserName}]</span>
@@ -525,7 +582,7 @@ const Dashboard: React.FC = () => {
                 {recentTxs.map((tx, i) => {
                   const isCr = tx.TransType?.trim() === "CR";
                   return (
-                    <tr key={i}>
+                    <tr key={i} onClick={go("/superadmin/withdraw/withdraw-reports")} className="cursor-pointer hover:bg-gray-50 dark:hover:bg-[#172036] transition-colors">
                       <td className="ltr:text-left whitespace-nowrap px-[20px] py-[12px] md:ltr:first:pl-[25px] border-b border-gray-100 dark:border-[#172036]">
                         <span className="font-medium text-sm">{tx.UserName}</span>
                       </td>

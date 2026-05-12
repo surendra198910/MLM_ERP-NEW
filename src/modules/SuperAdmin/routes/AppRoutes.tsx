@@ -10,6 +10,7 @@ import Header from "../layout/Header/index";
 import SidebarMenu from "../layout/Sidebar/index";
 import Footer from "../layout/Footer";
 import DashboardIndex from "../pages/Dashboard";
+import NewProfile from "../pages/Profile";
 import CRMContacts from "../pages/CrmContacts";
 import CRMCustomers from "../pages/CrmCustomers";
 import Leads from "../pages/Leads";
@@ -608,6 +609,7 @@ const AppRoutes = () => {
                 path="/superadmin/admin-tools/income-settings"
                 element={<IncomeSettings />}
               />
+              <Route path="/superadmin/my-profile" element={<NewProfile />} />
             </Route>
           </Routes>
 
