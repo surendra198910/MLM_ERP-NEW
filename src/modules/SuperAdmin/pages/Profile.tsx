@@ -393,21 +393,35 @@ const Profile: React.FC = () => {
   const handlePasswordChange = async (oldPw: string, newPw: string) => {
     try {
       setPwLoading(true);
-      await universalServiceRef.current({
+
+      const response = await universalServiceRef.current({
         procName: "Employee",
         Para: JSON.stringify({
-          ActionMode: "UpdatePassword",
+          ActionMode: "ChangePassword",
           EditId: employeeId,
           OldPassword: oldPw,
-          NewPassword: newPw
+          NewPassword: newPw,
         }),
       });
-      toast.success("Password changed successfully");
-      setShowPwModal(false);
-    } catch {
-      toast.error("Failed to change password");
-    }
-    finally {
+
+      console.log("Change Password Response:", response);
+
+      // Handle array response
+      const result = Array.isArray(response)
+        ? response[0]
+        : response?.data?.[0] || response?.data || response;
+
+      if (result?.statuscode === "1") {
+        toast.success(result?.msg || "Password changed successfully");
+        setShowPwModal(false);
+      } else {
+        toast.error(result?.msg || "Failed to change password");
+      }
+
+    } catch (error) {
+      console.error("Password Change Error:", error);
+      toast.error("Something went wrong");
+    } finally {
       setPwLoading(false);
     }
   };
