@@ -155,12 +155,12 @@ const ProfileMenu: React.FC = () => {
           <ul>
             <li>
               <Link
-                to="/my-profile"
+                to="/superadmin/my-profile"
                 className={`block relative py-[8px]
                             ltr:pl-[50px] ltr:pr-[20px]
                             transition-all hover:text-primary-500
                             ${
-                              pathname === "/my-profile"
+                              pathname === "/superadmin/my-profile"
                                 ? "text-primary-500"
                                 : "text-black dark:text-white"
                             }`}
@@ -174,7 +174,7 @@ const ProfileMenu: React.FC = () => {
 
             <li>
               <Link
-                to="/apps/support-tickets"
+                to="/superadmin/support-center/search-ticket-all"
                 className="block relative py-[8px]
                            ltr:pl-[50px] ltr:pr-[20px]
                            text-black dark:text-white
@@ -183,28 +183,14 @@ const ProfileMenu: React.FC = () => {
                 <i className="material-symbols-outlined absolute ltr:left-[20px] top-1/2 -translate-y-1/2 !text-[22px]">
                   support
                 </i>
-                My Support Tickets
+                Support Tickets
               </Link>
             </li>
 
+          
             <li>
               <Link
-                to="/apps/to-do-list"
-                className="block relative py-[8px]
-                           ltr:pl-[50px] ltr:pr-[20px]
-                           text-black dark:text-white
-                           hover:text-primary-500"
-              >
-                <i className="material-symbols-outlined absolute ltr:left-[20px] top-1/2 -translate-y-1/2 !text-[22px]">
-                  format_list_bulleted
-                </i>
-                My Tasks
-              </Link>
-            </li>
-
-            <li>
-              <Link
-                to="/change-password"
+                to="/superadmin/my-profile"
                 className="block relative py-[8px]
                            ltr:pl-[50px] ltr:pr-[20px]
                            text-black dark:text-white
