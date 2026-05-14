@@ -73,7 +73,7 @@ const CompanyInfo: React.FC = () => {
   return (
     <div
       ref={dropdownRef}
-      className="relative mx-[8px] md:mx-[10px] lg:mx-[12px] cursor-pointer"
+      className="relative mx-[8px] md:mx-[10px] lg:mx-[12px]"
       onMouseEnter={() => setActive(true)}
       onMouseLeave={() => setActive(false)}
     >
@@ -92,70 +92,9 @@ const CompanyInfo: React.FC = () => {
           {employee.CompanyName || "Company"}
         </span>
 
-        <i className="ri-arrow-down-s-line text-[15px]
-                      absolute ltr:-right-[3px] rtl:-left-[3px]
-                      top-1/2 -translate-y-1/2 mt-px" />
       </div>
 
-      {/* ================= DROPDOWN ================= */}
-      {active && (
-        <div
-          className="
-            bg-white dark:bg-[#0c1427]
-            shadow-3xl dark:shadow-none
-            py-[18px]
-            absolute mt-[13px]
-            w-[260px]
-            z-[1]
-            top-full ltr:right-0 rtl:left-0
-            rounded-md
-          "
-        >
-          {/* HEADER */}
-          <div className="flex items-center border-b border-gray-100 dark:border-[#172036]
-                          pb-[12px] mx-[20px] mb-[10px]">
-            <img
-              src={logoUrl}
-              alt="company-logo"
-              className="rounded-md w-[42px] h-[42px]
-                         object-cover border-2 border-primary-200
-                         ltr:mr-[10px]"
-            />
-            <div>
-              <span className="block text-black dark:text-white font-medium text-sm">
-                {employee.CompanyName}
-              </span>
-              <span className="block text-xs text-gray-500">
-                FY {employee.FinancialYear}
-              </span>
-            </div>
-          </div>
-
-          {/* DETAILS */}
-          <ul className="px-[20px] space-y-[8px] text-sm">
-            <li className="flex items-center gap-2 text-black dark:text-white">
-              <i className="material-symbols-outlined !text-[18px] text-primary-500">
-                person
-              </i>
-              {fullName || "-"}
-            </li>
-
-            <li className="flex items-center gap-2 text-black dark:text-white">
-              <i className="material-symbols-outlined !text-[18px] text-primary-500">
-                badge
-              </i>
-              {employee.DesignationName || "-"}
-            </li>
-
-            <li className="flex items-center gap-2 text-black dark:text-white break-all">
-              <i className="material-symbols-outlined !text-[18px] text-primary-500">
-                mail
-              </i>
-              {employee.EmailId || "-"}
-            </li>
-          </ul>
-        </div>
-      )}
+    
     </div>
   );
 };

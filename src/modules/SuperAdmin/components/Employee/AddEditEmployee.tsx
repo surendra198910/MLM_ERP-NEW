@@ -1234,7 +1234,7 @@ export default function AddEmployee() {
               setDocValues({});
               setTab(0);
             }
-            navigate("/hrms/employee/manage-employee");
+            navigate("/superadmin/employee/manage-employee");
           }
         });
       } else {

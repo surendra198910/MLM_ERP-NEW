@@ -74,7 +74,7 @@ const Header: React.FC<HeaderProps> = ({ toggleActive }) => {
             </div>
 
             {/* <SearchForm /> */}
-            {/* <CompanyInfo /> */}
+            <CompanyInfo />
 
             {/* <AppsMenu /> */}
             <CompanyTools />
