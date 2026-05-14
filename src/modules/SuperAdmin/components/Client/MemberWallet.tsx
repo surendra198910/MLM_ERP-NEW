@@ -2,12 +2,15 @@ import React, { useState, useEffect, useRef } from "react";
 import { Formik, Form, Field, ErrorMessage } from "formik";
 import { useLocation } from "react-router-dom";
 import * as Yup from "yup";
+import { motion, AnimatePresence, type Variants, type Easing } from "framer-motion";
 import AutoCompleter from "../../../../components/CommonFormElements/InputTypes/AutoCompleter";
 import { ApiService } from "../../../../services/ApiService";
 import Swal from "sweetalert2";
 import { useCurrency } from "../../context/CurrencyContext";
 import { SmartActions } from "../Security/SmartActionWithFormName";
 import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
+import { FaChevronLeft, FaChevronRight, FaArrowDown, FaArrowUp } from "react-icons/fa";
+
 /* ---------------- VALIDATION SCHEMA ---------------- */
 const validationSchema = Yup.object().shape({
   transactionType: Yup.string().required("Transaction Type is required"),
@@ -20,7 +23,61 @@ const validationSchema = Yup.object().shape({
   referenceNo: Yup.string().max(30, "Max 30 characters allowed"),
   remarks: Yup.string().max(250, "Max 250 characters allowed"),
 });
+
 const today = new Date().toISOString().split("T")[0];
+
+const inputCls =
+  "w-full border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm h-10 " +
+  "bg-white dark:bg-gray-800 dark:text-gray-100 " +
+  "focus:outline-none focus:border-primary-button-bg focus:ring-1 focus:ring-primary-button-bg/20 transition-all";
+
+/* ---------------- ANIMATION VARIANTS ---------------- */
+const cardContainer = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.07 } },
+};
+const cardItem: Variants = {
+  hidden: { opacity: 0, y: 18 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.38, ease: [0.25, 0.46, 0.45, 0.94] as Easing } },
+};
+const rowVariant: Variants = {
+  hidden: { opacity: 0, x: -8 },
+  show: (i: number) => ({
+    opacity: 1, x: 0,
+    transition: { delay: i * 0.04, duration: 0.28 },
+  }),
+};
+const slideIn: Variants = {
+  hidden: { opacity: 0, x: 20 },
+  show: { opacity: 1, x: 0, transition: { duration: 0.32, ease: "easeOut" as Easing } },
+  exit: { opacity: 0, x: 20, transition: { duration: 0.18 } },
+};
+const expandIn: Variants = {
+  hidden: { opacity: 0, y: -8, scaleY: 0.9 },
+  show: { opacity: 1, y: 0, scaleY: 1, transition: { duration: 0.25, ease: "easeOut" as Easing } },
+  exit: { opacity: 0, y: -8, scaleY: 0.9, transition: { duration: 0.18 } },
+};
+
+/* ---------------- WALLET HELPERS ---------------- */
+const walletIcon = (name: string) => {
+  const n = name?.toLowerCase() ?? "";
+  if (n.includes("roi") || n.includes("income")) return "trending_up";
+  if (n.includes("commission") || n.includes("sponsor")) return "handshake";
+  if (n.includes("product") || n.includes("shopping")) return "shopping_bag";
+  if (n.includes("bonus")) return "stars";
+  return "account_balance_wallet";
+};
+
+const walletColor = (name: string): string => {
+  const n = name?.toLowerCase() ?? "";
+  if (n.includes("roi") || n.includes("income")) return "#10b981";
+  if (n.includes("commission") || n.includes("sponsor")) return "#3b82f6";
+  if (n.includes("product") || n.includes("shopping")) return "#f59e0b";
+  if (n.includes("bonus")) return "#8b5cf6";
+  return "#6366f1";
+};
+
+/* ================================================================ */
 const MemberWalletsElegant: React.FC = () => {
   interface Wallet {
     WalletId: number;
@@ -29,6 +86,7 @@ const MemberWalletsElegant: React.FC = () => {
     Balance: number;
     IsActive: boolean;
   }
+
   const { currency } = useCurrency();
   const [selectedWallet, setSelectedWallet] = useState<Wallet | null>(null);
   const [walletList, setWalletList] = useState<any[]>([]);
@@ -41,32 +99,20 @@ const MemberWalletsElegant: React.FC = () => {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(7);
   const [totalCount, setTotalCount] = useState(0);
-  const totalPages = Math.ceil(totalCount / pageSize);
   const formikRef = useRef<any>(null);
   const [autoResetKey, setAutoResetKey] = useState(0);
 
-  // ✅ Member List comes from API / state
-  /* ---------------- API FUNCTION ---------------- */
+  /* ---------------- API FUNCTIONS (unchanged) ---------------- */
   const fetchManagers = async (searchText: string) => {
     try {
       setLoading(true);
-
       const payload = {
         procName: "Client",
-        Para: JSON.stringify({
-          searchData: searchText,
-          ActionMode: "getUsersList",
-        }),
+        Para: JSON.stringify({ searchData: searchText, ActionMode: "getUsersList" }),
       };
-
       const res = await universalService(payload);
       const data = res?.data || res;
-
-      if (Array.isArray(data)) {
-        setUsers(data);
-      } else {
-        setUsers([]);
-      }
+      setUsers(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to load managers", err);
       setUsers([]);
@@ -74,21 +120,17 @@ const MemberWalletsElegant: React.FC = () => {
       setLoading(false);
     }
   };
+
   const fetchMemberDetails = async (clientId: number) => {
     try {
       const payload = {
         procName: "Client",
-        Para: JSON.stringify({
-          ClientId: clientId,
-          ActionMode: "GetClientDetails",
-        }),
+        Para: JSON.stringify({ ClientId: clientId, ActionMode: "GetClientDetails" }),
       };
-
       const res = await universalService(payload);
       const data = res?.data || res;
-
       if (Array.isArray(data) && data.length > 0) {
-        setMemberDetails(data[0]); // single row
+        setMemberDetails(data[0]);
       } else {
         setMemberDetails(null);
       }
@@ -97,51 +139,34 @@ const MemberWalletsElegant: React.FC = () => {
       setMemberDetails(null);
     }
   };
+
   const fetchWallets = async (clientid: string) => {
     try {
       const payload = {
         procName: "GetMLMSettings",
-        Para: JSON.stringify({
-          ClientId: clientid,
-          ActionMode: "GetWallets",
-        }),
+        Para: JSON.stringify({ ClientId: clientid, ActionMode: "GetWallets" }),
       };
-
       const res = await universalService(payload);
       const data = res?.data || res;
-
-      if (Array.isArray(data)) {
-        setWalletList(data);
-      } else {
-        setWalletList([]);
-      }
+      setWalletList(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Wallet fetch failed", err);
       setWalletList([]);
     }
   };
-  useEffect(() => {
-    fetchWallets("0");
-  }, []);
+
+  useEffect(() => { fetchWallets("0"); }, []);
+
   const submitWalletTransaction = async (values: any) => {
     try {
       console.log(memberDetails);
-
-      // ✅ Client Validation
       if (!memberDetails?.ClientId) {
-        Swal.fire("Error", "Please select a member first!", "error");
-        return;
+        Swal.fire("Error", "Please select a member first!", "error"); return;
       }
-
-      // ✅ Wallet Validation
       if (!selectedWallet?.WalletId) {
-        Swal.fire("Error", "Please select a wallet first!", "error");
-        return;
+        Swal.fire("Error", "Please select a wallet first!", "error"); return;
       }
-
       const isDark = document.documentElement.classList.contains("dark");
-
-      // ✅ Confirmation Popup
       const confirm = await Swal.fire({
         title: "Confirm Wallet Transaction",
         icon: "warning",
@@ -149,51 +174,27 @@ const MemberWalletsElegant: React.FC = () => {
         color: isDark ? "#e5e7eb" : "#111827",
         html: `
         <div style="text-align:left; font-size:14px;">
-          <div style="
-            background:${isDark ? "#111827" : "#f9fafb"};
-            border-radius:10px;
-            padding:12px;
-            border:1px solid ${isDark ? "#1f2937" : "#e5e7eb"};
-          ">
-            
-            <div style="display:flex; justify-content:space-between; padding:6px 0;">
+          <div style="background:${isDark ? "#111827" : "#f9fafb"};border-radius:10px;padding:12px;border:1px solid ${isDark ? "#1f2937" : "#e5e7eb"};">
+            <div style="display:flex;justify-content:space-between;padding:6px 0;">
               <span style="color:#9ca3af;">Member</span>
-              <span style="font-weight:600;">
-                ${memberDetails.Name} (${memberDetails.UserName})
-              </span>
+              <span style="font-weight:600;">${memberDetails.Name} (${memberDetails.UserName})</span>
             </div>
-
-            <div style="display:flex; justify-content:space-between; padding:6px 0;">
+            <div style="display:flex;justify-content:space-between;padding:6px 0;">
               <span style="color:#9ca3af;">Wallet</span>
-              <span style="font-weight:600; color:#3b82f6;">
-                ${selectedWallet?.WalletDisplayName || "N/A"}
-              </span>
+              <span style="font-weight:600;color:#3b82f6;">${selectedWallet?.WalletDisplayName || "N/A"}</span>
             </div>
-
-            <div style="
-              display:flex;
-              justify-content:space-between;
-              padding:6px 0;
-              border-top:1px dashed #6b7280;
-              margin-top:6px;
-              padding-top:10px;
-            ">
+            <div style="display:flex;justify-content:space-between;padding:6px 0;border-top:1px dashed #6b7280;margin-top:6px;padding-top:10px;">
               <span style="color:#9ca3af;">Amount</span>
-              <span style="font-weight:700; color:#22c55e; font-size:16px;">
-                ${currency.symbol}${values.amount}
-              </span>
+              <span style="font-weight:700;color:#22c55e;font-size:16px;">${currency.symbol}${values.amount}</span>
             </div>
-
           </div>
-        </div>
-      `,
+        </div>`,
         showCancelButton: true,
         confirmButtonText: "Yes, Proceed",
         cancelButtonText: "Cancel",
         confirmButtonColor: "#16a34a",
         cancelButtonColor: "#9ca3af",
       });
-
       if (!confirm.isConfirmed) return;
 
       const payload = {
@@ -211,33 +212,19 @@ const MemberWalletsElegant: React.FC = () => {
           ActionMode: "WalletTransaction",
         }),
       };
-
       const response = await universalService(payload);
-      const res = Array.isArray(response)
-        ? response[0]
-        : response?.data?.[0];
-
+      const res = Array.isArray(response) ? response[0] : response?.data?.[0];
       if (res?.StatusCode == "1") {
-        Swal.fire({
-          title: "Success!",
-          text: res?.Msg || "Action completed successfully.",
-          icon: "success",
-          confirmButtonText: "OK",
-          confirmButtonColor: "#3b82f6",
-        }).then((result) => {
-          if (result.isConfirmed) {
-            fetchWalletTransactions(selectedUser, page, pageSize);
-            fetchWallets(selectedUser);
-            formikRef.current?.resetForm();
-          }
-        });
+        Swal.fire({ title: "Success!", text: res?.Msg || "Action completed successfully.", icon: "success", confirmButtonColor: "#3b82f6" })
+          .then((result) => {
+            if (result.isConfirmed) {
+              fetchWalletTransactions(selectedUser, page, pageSize);
+              fetchWallets(selectedUser);
+              formikRef.current?.resetForm();
+            }
+          });
       } else {
-        Swal.fire({
-          title: "Error",
-          text: res?.Msg || "Operation failed",
-          icon: "error",
-          confirmButtonText: "OK",
-        });
+        Swal.fire({ title: "Error", text: res?.Msg || "Operation failed", icon: "error" });
       }
     } catch (error) {
       console.error("Transaction Failed", error);
@@ -245,25 +232,14 @@ const MemberWalletsElegant: React.FC = () => {
     }
   };
 
-  const fetchWalletTransactions = async (
-    clientId: number,
-    pageNumber: number,
-    pageSize: number,
-  ) => {
+  const fetchWalletTransactions = async (clientId: number, pageNumber: number, pageSize: number) => {
     try {
       const payload = {
         procName: "WalletTransaction_CRDR",
-        Para: JSON.stringify({
-          ClientId: clientId,
-          ActionMode: "GetWalletTransaction",
-          PageNumber: pageNumber,
-          PageSize: pageSize,
-        }),
+        Para: JSON.stringify({ ClientId: clientId, ActionMode: "GetWalletTransaction", PageNumber: pageNumber, PageSize: pageSize }),
       };
-
       const res = await universalService(payload);
       const data = res?.data || res;
-
       if (Array.isArray(data)) {
         setTransactions(data);
         setTotalCount(data[0].TotalCount);
@@ -279,6 +255,7 @@ const MemberWalletsElegant: React.FC = () => {
       setTotalCount(0);
     }
   };
+
   useEffect(() => {
     if (selectedUser) {
       fetchMemberDetails(selectedUser);
@@ -286,9 +263,10 @@ const MemberWalletsElegant: React.FC = () => {
       fetchWalletTransactions(selectedUser, page, pageSize);
     }
   }, [selectedUser, page]);
+
   const handleResetAll = () => {
     formikRef.current?.resetForm();
-    setAutoResetKey((k) => k + 1); // 👈 clears autocomplete
+    setAutoResetKey((k) => k + 1);
     setSelectedUser(null);
     setMemberDetails(null);
     setSelectedWallet(null);
@@ -298,57 +276,33 @@ const MemberWalletsElegant: React.FC = () => {
     setTotalCount(0);
     fetchWallets("0");
   };
+
   const imageBaseUrl = import.meta.env.VITE_IMAGE_PREVIEW_URL;
 
-  //PERMISSION API CALL
-  const [permissionsLoading, setPermissionsLoading] = useState(true);
-  const [hasPageAccess, setHasPageAccess] = useState(true);
+  const [, setPermissionsLoading] = useState(true);
+  const [, setHasPageAccess] = useState(true);
   const location = useLocation();
   const path = location.pathname;
   const formName = path.split("/").pop();
+
   const fetchFormPermissions = async () => {
     try {
       setPermissionsLoading(true);
-
       const saved = localStorage.getItem("EmployeeDetails");
       const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
-
       const payload = {
         procName: "AssignForm",
-        Para: JSON.stringify({
-          ActionMode: "GetForms",
-          FormName: formName, // 👈 category for this page
-          EmployeeId: employeeId,
-        }),
+        Para: JSON.stringify({ ActionMode: "GetForms", FormName: formName, EmployeeId: employeeId }),
       };
-
       const response = await universalService(payload);
       const data = response?.data ?? response;
-
-      // ❌ Invalid or empty response → deny access
-      if (!Array.isArray(data)) {
-        setHasPageAccess(false);
-        return;
-      }
-
-      // 🔍 Find permission for THIS form/page
+      if (!Array.isArray(data)) { setHasPageAccess(false); return; }
       const pagePermission = data.find(
-        (p) =>
-          String(p.FormNameWithExt).trim().toLowerCase() ===
-          formName?.trim().toLowerCase(),
+        (p) => String(p.FormNameWithExt).trim().toLowerCase() === formName?.trim().toLowerCase(),
       );
-
-      // ❌ No permission OR empty Action
-      if (
-        !pagePermission ||
-        !pagePermission.Action ||
-        pagePermission.Action.trim() === ""
-      ) {
-        setHasPageAccess(false);
-        return;
+      if (!pagePermission || !pagePermission.Action || pagePermission.Action.trim() === "") {
+        setHasPageAccess(false); return;
       }
-
-      // ✅ Permission allowed → load SmartActions
       SmartActions.load(data);
       setHasPageAccess(true);
     } catch (error) {
@@ -358,24 +312,48 @@ const MemberWalletsElegant: React.FC = () => {
       setPermissionsLoading(false);
     }
   };
-  useEffect(() => {
-    fetchFormPermissions();
-  }, []);
+
+  useEffect(() => { fetchFormPermissions(); }, []);
+
+  /* ================================================================ */
+  /* UI                                                               */
+  /* ================================================================ */
   return (
-    <div className="trezo-card bg-white dark:bg-[#0c1427] rounded-2xl shadow-lg">
-      {/* ================= HEADER ================= */}
-      <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-4 py-4 mb-4">
-        <div className="text-lg font-bold text-gray-800 dark:text-white">
-          Wallet Credit & Debit
+    <div className="bg-white dark:bg-[#0c1427] rounded-lg shadow">
+
+      {/* ── Header ──────────────────────────────────────────────────────── */}
+      <div className="flex items-center justify-between border-b border-gray-200 dark:border-gray-700 px-6 py-4">
+        <div className="flex items-center gap-3">
+          <div className="w-11 h-11 rounded-xl relative flex items-center justify-center flex-shrink-0 bg-primary-button-bg/10">
+            <i className="material-symbols-outlined absolute text-[38px] text-primary-button-bg/20"
+              style={{ fontVariationSettings: "'FILL' 1, 'wght' 400" }}>
+              account_balance
+            </i>
+            <i className="material-symbols-outlined relative text-[20px] text-primary-button-bg"
+              style={{ fontVariationSettings: "'FILL' 0, 'wght' 600" }}>
+              account_balance
+            </i>
+          </div>
+          <div>
+            <h5 className="!mb-0 font-bold text-xl text-black dark:text-white leading-tight">
+              Wallet Credit &amp; Debit
+            </h5>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 !mb-0">
+              Manage member wallet balances — credit or debit any wallet
+            </p>
+          </div>
         </div>
 
-        <div className="flex gap-3">
+        <div className="flex gap-2">
           <button
             type="button"
             onClick={handleResetAll}
-            className="px-4 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-600 dark:text-gray-300 rounded text-sm font-medium transition-colors"
+            className="flex items-center gap-1.5 px-4 py-2 border border-gray-200 dark:border-gray-700
+              text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800
+              rounded-md text-sm font-medium transition-all"
           >
-            Reset Form
+            <i className="material-symbols-outlined text-[16px]">restart_alt</i>
+            Reset
           </button>
           <PermissionAwareTooltip
             allowed={SmartActions.canAdd(formName)}
@@ -386,413 +364,529 @@ const MemberWalletsElegant: React.FC = () => {
               type="submit"
               form="walletForm"
               disabled={!SmartActions.canAdd(formName)}
-              className="px-6 py-2 bg-primary-button-bg hover:bg-primary-button-bg-hover text-white rounded text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+              className="flex items-center gap-2 px-5 py-2
+                bg-primary-button-bg hover:bg-primary-button-bg-hover
+                text-white rounded-md text-sm font-medium transition-all shadow-sm disabled:opacity-50"
             >
+              <i className="material-symbols-outlined text-[16px]">swap_horiz</i>
               Process Transaction
             </button>
           </PermissionAwareTooltip>
         </div>
       </div>
 
-      {/* ================= MEMBER SECTION ================= */}
-      <div
-        className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-[#f6f7f9bd] dark:bg-[#0c1410]
-px-4 py-5
+      {/* ── Member Search ────────────────────────────────────────────────── */}
+      <div className="mx-6 mt-5 mb-2 rounded-xl border border-gray-100 dark:border-gray-700/60
+        bg-gray-50/60 dark:bg-[#111827]/40 p-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-center">
 
-sm:px-6
-md:px-10
-min-h-[135px]
-rounded-[14px]
-flex items-center mx-4"
-      >
-        {/* SEARCH MEMBER */}
-        <div>
-          <label className="text-sm text-gray-700 dark:text-white mb-1 block">
-            Select Member (Type First 3 Letters)
-          </label>
-
-          <div className="flex mt-2 shadow-sm rounded-lg overflow-visible">
-            <AutoCompleter
-              memberList={users}
-              loading={loading}
-              onSearch={fetchManagers} // ✅ Parent API Passed Here
-              onSelect={(member) => {
-                setSelectedUser(member.id);
-                setPage(1); // reset pagination
-                console.log("Selected Member:", member);
-              }}
-              clearTrigger={autoResetKey}
-            />
-            <button className="w-[55px] flex items-center justify-center bg-primary-button-bg text-white hover:bg-primary-button-bg-hover transition">
-              <i className="material-symbols-outlined">search</i>
-            </button>
-          </div>
-          <p className="text-xs text-gray-400 dark:text-white mt-1 italic">
-            You can search using Name, Username, Email address, or Mobile number
-          </p>
-        </div>
-
-        {/* MEMBER INFO */}
-        {memberDetails && (
-          <div
-            className="
-      flex items-center justify-between
-      border-l border-[#2222220f]
-      px-2 py-2
-    "
-          >
-            {/* LEFT SIDE */}
-            <div className="flex items-center gap-4">
-              {/* ✅ Logo */}
-              <div className="w-[65px] h-[65px] rounded-xl overflow-hidden flex-shrink-0">
-                <img
-                  src={`${imageBaseUrl}${memberDetails?.Logo}`}
-                  alt="Client Logo"
-                  className="w-full h-full object-cover"
-                  onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                    e.currentTarget.src = `${imageBaseUrl}default.jpg`;
-                  }}
-                />
-              </div>
-
-              {/* ✅ Info */}
-              <div className="space-y-[3px]">
-                {/* Name + Paid Tag */}
-                <div className="flex items-center gap-2">
-                  <h3
-                    className="text-base font-bold text-gray-800 dark:text-white leading-none mb-0 text-base sm:text-[18px] md:text-[20px]"
-                    style={{ margin: 0 }}
-                  >
-                    {memberDetails.Name}
-                  </h3>
-
-                  {/* Paid Tag */}
-                  <span
-                    className={`px-2 py-[2px] text-[11px] rounded-md font-semibold
-              ${memberDetails.PaidStatus === "Paid"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-red-100 text-red-600"
-                      }`}
-                  >
-                    {memberDetails.PaidStatus}
-                  </span>
-                </div>
-
-                {/* Username */}
-                <p
-                  className="text-sm text-gray-500 mb-0 leading-none"
-                  style={{ margin: 0 }}
-                >
-                  {memberDetails.UserName}
-                </p>
-
-                {/* Email + Contact Compact */}
-                <p
-                  className="text-xs text-gray-400 mb-0 leading-none"
-                  style={{ margin: 0 }}
-                >
-                  {memberDetails.EmailId} • {memberDetails.ContactNo}
-                </p>
-              </div>
+          <div>
+            <label className="block text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest mb-2">
+              Select Member
+            </label>
+            <div className="flex shadow-sm rounded-lg overflow-visible">
+              <AutoCompleter
+                memberList={users}
+                loading={loading}
+                onSearch={fetchManagers}
+                onSelect={(member) => {
+                  setSelectedUser(member.id);
+                  setPage(1);
+                  console.log("Selected Member:", member);
+                }}
+                clearTrigger={autoResetKey}
+              />
+              <button className="w-[46px] flex items-center justify-center bg-primary-button-bg
+                text-white hover:bg-primary-button-bg-hover transition rounded-r-lg flex-shrink-0">
+                <i className="material-symbols-outlined text-[20px]">search</i>
+              </button>
             </div>
-
-            {/* RIGHT SIDE STATUS */}
-            <span
-              className={`px-4 py-[6px] rounded-xl text-xs font-semibold
-        ${memberDetails.Status == "1"
-                  ? "bg-green-500 text-white"
-                  : "bg-red-500 text-white"
-                }`}
-            >
-              {memberDetails.Status == "1" ? "Active" : "Inactive"}
-            </span>
+            <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1.5 italic">
+              Search by Name, Username, Email or Mobile number
+            </p>
           </div>
-        )}
+
+          {/* Member info — animated slide-in */}
+          <AnimatePresence mode="wait">
+            {memberDetails ? (
+              <motion.div
+                key="member-info"
+                variants={slideIn}
+                initial="hidden"
+                animate="show"
+                exit="exit"
+                className="flex items-center justify-between gap-4 pl-4 border-l border-gray-200 dark:border-gray-700"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 ring-2 ring-gray-100 dark:ring-gray-700">
+                    <img
+                      src={`${imageBaseUrl}${memberDetails?.Logo}`}
+                      alt="Client Logo"
+                      className="w-full h-full object-cover"
+                      onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
+                        e.currentTarget.src = `${imageBaseUrl}default.jpg`;
+                      }}
+                    />
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-base font-bold text-gray-800 dark:text-white leading-none !mb-0">
+                        {memberDetails.Name}
+                      </h3>
+                      <span className={`px-2 py-0.5 text-[10px] rounded font-semibold ${
+                        memberDetails.PaidStatus === "Paid"
+                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                          : "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400"
+                      }`}>
+                        {memberDetails.PaidStatus}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 !mb-0 leading-none">
+                      @{memberDetails.UserName}
+                    </p>
+                    <p className="text-[11px] text-gray-400 dark:text-gray-500 !mb-0 leading-none">
+                      {memberDetails.EmailId} · {memberDetails.ContactNo}
+                    </p>
+                  </div>
+                </div>
+                <span className={`px-3 py-1 rounded-lg text-xs font-bold flex-shrink-0 ${
+                  memberDetails.Status == "1"
+                    ? "bg-green-500/10 text-green-600 dark:text-green-400 ring-1 ring-green-300 dark:ring-green-800"
+                    : "bg-red-500/10 text-red-600 dark:text-red-400 ring-1 ring-red-300 dark:ring-red-800"
+                }`}>
+                  {memberDetails.Status == "1" ? "Active" : "Inactive"}
+                </span>
+              </motion.div>
+            ) : (
+              <div className="flex items-center justify-center h-16 pl-4 border-l border-gray-200 dark:border-gray-700">
+                <p className="text-sm text-gray-400 dark:text-gray-500 italic">
+                  Select a member to view details
+                </p>
+              </div>
+            )}
+          </AnimatePresence>
+        </div>
       </div>
 
-      {/* ================= FORM + TABLE ================= */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-5 p-4 px-5">
-        {/* ================= WALLET CARDS ================= */}
-        <div>
-          <div className="flex flex-wrap gap-5">
-            {walletList.map((wallet) => (
-              <div
-                key={wallet.WalletId}
-                onClick={() => setSelectedWallet(wallet)}
-                className={`w-[170px] p-5 rounded-xl cursor-pointer transition-all shadow-sm dark:bg-[#0c1427]
-        ${selectedWallet?.WalletId === wallet.WalletId
-                    ? "bg-blue-50 border-2 border-primary-button-bg scale-[1.03]"
-                    : "bg-gray-50 border border-gray-200 hover:scale-[1.02]"
-                  }`}
-              >
-                {/* Amount (Static for now) */}
-                <h2 className="text-xl font-bold text-gray-800">
-                  {currency.symbol}
-                  {wallet.Balance}
-                </h2>
+      {/* ── Wallet Cards + Form / Transaction Table ───────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
 
-                {/* Wallet Name from API */}
-                <p className="text-sm text-gray-500 mt-1">
-                  {wallet.WalletDisplayName}
-                </p>
-              </div>
-            ))}
-          </div>
-          {/* ================= LEFT FORM ================= */}
-          <Formik
-            innerRef={formikRef}
-            initialValues={{
-              transactionType: "",
-              amount: "",
-              paymentMode: "",
-              paymentDate: today,
-              referenceNo: "",
-              remarks: "",
-            }}
-            validationSchema={validationSchema}
-            onSubmit={(values, { resetForm }) => {
-              submitWalletTransaction(values);
-            }}
-          >
-            {() => (
-              <Form id="walletForm" className="space-y-5 mt-5">
-                {/* Transaction Type */}
-                <div>
-                  <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">
-                    Transaction Type <span className="text-red-500">*</span>
-                  </label>
-                  <Field
-                    as="select"
-                    name="transactionType"
-                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm h-10 placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500  "
-                  >
-                    <option value="">Select Transaction Type</option>
-                    <option value="CR">Credit</option>
-                    <option value="DR">Debit</option>
-                  </Field>
-                  <ErrorMessage
-                    name="transactionType"
-                    component="p"
-                    className="text-red-500 text-xs mt-1"
-                  />
-                </div>
+        {/* ── Left: Wallet picker + Form ──────────────────────────────────── */}
+        <div className="space-y-5">
 
-                {/* Amount */}
-                <div>
-                  <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">
-                    Amount({currency.symbol}){" "}
-                    <span className="text-red-500">*</span>
-                  </label>
-                  <Field
-                    type="text"
-                    name="amount"
-                    placeholder="Enter Amount"
-                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm h-10 placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500  "
-                  />
-                  <ErrorMessage
-                    name="amount"
-                    component="p"
-                    className="text-red-500 text-xs mt-1"
-                  />
-                </div>
-
-                {/* Payment Mode */}
-                <div>
-                  <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">
-                    Payment Mode <span className="text-red-500">*</span>
-                  </label>
-                  <Field
-                    as="select"
-                    name="paymentMode"
-                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm h-10 placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500  "
-                  >
-                    <option value="">Select Mode</option>
-                    <option value="Bank">Bank</option>
-                    <option value="UPI">UPI</option>
-                    <option value="Wallet">Wallet</option>
-                  </Field>
-                  <ErrorMessage
-                    name="paymentMode"
-                    component="p"
-                    className="text-red-500 text-xs mt-1"
-                  />
-                </div>
-
-                {/* Payment Date */}
-                <div>
-                  <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">
-                    Payment Date <span className="text-red-500">*</span>
-                  </label>
-                  <Field
-                    type="date"
-                    name="paymentDate"
-                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm h-10 placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500  "
-                  />
-                  <ErrorMessage
-                    name="paymentDate"
-                    component="p"
-                    className="text-red-500 text-xs mt-1"
-                  />
-                </div>
-
-                {/* Reference */}
-                <div>
-                  <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">
-                    Reference Number
-                  </label>
-                  <Field
-                    type="text"
-                    name="referenceNo"
-                    placeholder="Optional Reference"
-                    className="w-full border border-gray-200 rounded-md px-3 py-2 text-sm h-10 placeholder-gray-400 focus:outline-none focus:border-primary-500 focus:ring-1 focus:ring-primary-500 transition-all bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100 dark:placeholder-gray-500  "
-                  />
-                </div>
-
-                {/* Remarks */}
-                <div>
-                  <label className="text-sm text-gray-700 dark:text-gray-300 mb-1 block">
-                    Description / Remarks
-                  </label>
-                  <Field name="remarks">
-                    {({ field }) => (
-                      <div>
-                        <textarea
-                          {...field}
-                          maxLength={250}
-                          className="w-full h-[90px] border border-gray-200 rounded-md px-3 py-2"
-                        />
-                        <p className="text-xs text-gray-500">
-                          {field.value?.length || 0}/250 characters
-                        </p>
-                      </div>
-                    )}
-                  </Field>
-                </div>
-              </Form>
-            )}
-          </Formik>
-        </div>
-
-        {/* ================= RIGHT TABLE ================= */}
-        <div className="rounded-2xl shadow-sm p-5 bg-white dark:bg-[#0c1427]">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-4">
-            <div className="text-lg font-bold text-gray-800 dark:text-white">
-              Transaction History
+          {/* Wallet cards — stagger animation */}
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500">
+                Select Wallet
+              </p>
+              {walletList.length > 0 && (
+                <span className="text-[11px] text-gray-400 dark:text-gray-500">
+                  Total:{" "}
+                  <span className="font-bold text-gray-600 dark:text-gray-300">
+                    {currency.symbol}
+                    {walletList.reduce((sum, w) => sum + Number(w.Balance || 0), 0).toFixed(2)}
+                  </span>
+                </span>
+              )}
             </div>
 
-            <span className="text-xs px-3 py-1 rounded-full bg-gray-100 dark:bg-gray-800 text-gray-500">
-              Recent Activity
-            </span>
+            <motion.div
+              className="flex flex-wrap gap-3"
+              variants={cardContainer}
+              initial="hidden"
+              animate="show"
+              key={walletList.length}
+            >
+              {walletList.map((wallet) => {
+                const isSelected = selectedWallet?.WalletId === wallet.WalletId;
+                const accent = walletColor(wallet.WalletDisplayName);
+                return (
+                  <motion.div
+                    key={wallet.WalletId}
+                    variants={cardItem}
+                    onClick={() => setSelectedWallet(wallet)}
+                    whileHover={{ scale: 1.03, transition: { duration: 0.18 } }}
+                    whileTap={{ scale: 0.97 }}
+                    animate={isSelected
+                      ? { scale: 1.04, transition: { type: "spring", stiffness: 300, damping: 20 } }
+                      : { scale: 1 }
+                    }
+                    className={`relative w-[160px] rounded-xl cursor-pointer border transition-colors duration-200 overflow-hidden
+                      ${isSelected
+                        ? "border-primary-button-bg bg-primary-button-bg/5 dark:bg-primary-button-bg/10 shadow-md"
+                        : "border-gray-200 dark:border-gray-700 bg-white dark:bg-[#111827]/50 hover:border-gray-300 dark:hover:border-gray-600 hover:shadow-sm"
+                      }`}
+                  >
+                    {/* Colored top strip */}
+                    <div
+                      className="h-[3px] w-full absolute top-0 left-0"
+                      style={{ backgroundColor: accent }}
+                    />
+
+                    <div className="pt-5 px-4 pb-4">
+                      {/* Selected dot */}
+                      {isSelected && (
+                        <motion.span
+                          layoutId="wallet-selected-dot"
+                          className="absolute top-3 right-3 w-2 h-2 rounded-full"
+                          style={{ backgroundColor: accent }}
+                          initial={false}
+                          transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                        />
+                      )}
+
+                      {/* Icon */}
+                      <div
+                        className="w-9 h-9 rounded-lg flex items-center justify-center mb-3"
+                        style={{ backgroundColor: accent + "1a" }}
+                      >
+                        <i
+                          className="material-symbols-outlined text-[20px]"
+                          style={{ color: accent, fontVariationSettings: "'FILL' 0, 'wght' 500" }}
+                        >
+                          {walletIcon(wallet.WalletDisplayName)}
+                        </i>
+                      </div>
+
+                      {/* Balance */}
+                      <p
+                        className="text-lg font-bold leading-none !mb-1"
+                        style={{ color: accent }}
+                      >
+                        {currency.symbol}{Number(wallet.Balance).toFixed(2)}
+                      </p>
+
+                      {/* Name */}
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 leading-tight !mb-0 truncate">
+                        {wallet.WalletDisplayName}
+                      </p>
+                    </div>
+                  </motion.div>
+                );
+              })}
+
+              {walletList.length === 0 && (
+                <p className="text-sm text-gray-400 italic py-4">No wallets available</p>
+              )}
+            </motion.div>
+          </div>
+
+          {/* Form */}
+          <div className="rounded-xl border border-gray-100 dark:border-gray-700/60
+            bg-gray-50/40 dark:bg-[#111827]/30 p-5">
+
+            {/* Selected wallet summary banner */}
+            <AnimatePresence>
+              {selectedWallet && (
+                <motion.div
+                  key={selectedWallet.WalletId}
+                  variants={expandIn}
+                  initial="hidden"
+                  animate="show"
+                  exit="exit"
+                  className="mb-4 origin-top"
+                >
+                  <div
+                    className="rounded-lg px-4 py-3 flex items-center justify-between"
+                    style={{
+                      border: `1px solid ${walletColor(selectedWallet.WalletDisplayName)}30`,
+                      backgroundColor: walletColor(selectedWallet.WalletDisplayName) + "0d",
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div
+                        className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0"
+                        style={{ backgroundColor: walletColor(selectedWallet.WalletDisplayName) + "20" }}
+                      >
+                        <i
+                          className="material-symbols-outlined text-[16px]"
+                          style={{
+                            color: walletColor(selectedWallet.WalletDisplayName),
+                            fontVariationSettings: "'FILL' 0, 'wght' 500",
+                          }}
+                        >
+                          {walletIcon(selectedWallet.WalletDisplayName)}
+                        </i>
+                      </div>
+                      <div>
+                        <p className="text-xs font-semibold text-gray-700 dark:text-gray-200 !mb-0 leading-tight">
+                          {selectedWallet.WalletDisplayName}
+                        </p>
+                        <p className="text-[10px] text-gray-400 dark:text-gray-500 !mb-0">Selected wallet</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p
+                        className="text-sm font-bold !mb-0 leading-tight"
+                        style={{ color: walletColor(selectedWallet.WalletDisplayName) }}
+                      >
+                        {currency.symbol}{Number(selectedWallet.Balance).toFixed(2)}
+                      </p>
+                      <p className="text-[10px] text-gray-400 !mb-0">Current Balance</p>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400 dark:text-gray-500 mb-4">
+              Transaction Details
+            </p>
+
+            <Formik
+              innerRef={formikRef}
+              initialValues={{
+                transactionType: "",
+                amount: "",
+                paymentMode: "",
+                paymentDate: today,
+                referenceNo: "",
+                remarks: "",
+              }}
+              validationSchema={validationSchema}
+              onSubmit={(values) => { submitWalletTransaction(values); }}
+            >
+              {({ field: _field }: any) => (
+                <Form id="walletForm" className="space-y-4">
+
+                  {/* Row 1: Transaction Type + Amount */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+                        Type <span className="text-red-500">*</span>
+                      </label>
+                      <Field as="select" name="transactionType" className={inputCls}>
+                        <option value="">Select Type</option>
+                        <option value="CR">Credit</option>
+                        <option value="DR">Debit</option>
+                      </Field>
+                      <ErrorMessage name="transactionType" component="p" className="text-red-500 text-xs mt-1" />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+                        Amount <span className="text-red-500">*</span>
+                      </label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-400 pointer-events-none">
+                          {currency.symbol}
+                        </span>
+                        <Field
+                          type="text"
+                          name="amount"
+                          placeholder="0.00"
+                          className={`${inputCls} !pl-7`}
+                        />
+                      </div>
+                      <ErrorMessage name="amount" component="p" className="text-red-500 text-xs mt-1" />
+                    </div>
+                  </div>
+
+                  {/* Row 2: Payment Mode + Payment Date */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+                        Mode <span className="text-red-500">*</span>
+                      </label>
+                      <Field as="select" name="paymentMode" className={inputCls}>
+                        <option value="">Select Mode</option>
+                        <option value="Bank">Bank</option>
+                        <option value="UPI">UPI</option>
+                        <option value="Wallet">Wallet</option>
+                      </Field>
+                      <ErrorMessage name="paymentMode" component="p" className="text-red-500 text-xs mt-1" />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+                        Date <span className="text-red-500">*</span>
+                      </label>
+                      <Field type="date" name="paymentDate" className={inputCls} />
+                      <ErrorMessage name="paymentDate" component="p" className="text-red-500 text-xs mt-1" />
+                    </div>
+                  </div>
+
+                  {/* Reference No */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+                      Reference Number
+                    </label>
+                    <Field
+                      type="text"
+                      name="referenceNo"
+                      placeholder="Optional reference"
+                      className={inputCls}
+                    />
+                  </div>
+
+                  {/* Remarks */}
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">
+                      Remarks
+                    </label>
+                    <Field name="remarks">
+                      {({ field }) => (
+                        <div>
+                          <textarea
+                            {...field}
+                            maxLength={250}
+                            rows={3}
+                            placeholder="Optional notes..."
+                            className="w-full border border-gray-200 dark:border-gray-700 rounded-md px-3 py-2 text-sm
+                              bg-white dark:bg-gray-800 dark:text-gray-100 resize-none
+                              focus:outline-none focus:border-primary-button-bg focus:ring-1 focus:ring-primary-button-bg/20
+                              transition-all placeholder:text-gray-300 dark:placeholder:text-gray-600"
+                          />
+                          <p className="text-[11px] text-gray-400 text-right mt-0.5">
+                            {field.value?.length || 0} / 250
+                          </p>
+                        </div>
+                      )}
+                    </Field>
+                  </div>
+
+                </Form>
+              )}
+            </Formik>
+          </div>
+        </div>
+
+        {/* ── Right: Transaction History ───────────────────────────────────── */}
+        <div className="rounded-xl border border-gray-100 dark:border-gray-700/60
+          bg-white dark:bg-[#0c1427] flex flex-col">
+
+          {/* Section header */}
+          <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 dark:border-gray-800">
+            <div className="flex items-center gap-2">
+              <i className="material-symbols-outlined text-[18px] text-primary-button-bg"
+                style={{ fontVariationSettings: "'FILL' 0, 'wght' 500" }}>
+                receipt_long
+              </i>
+              <span className="text-sm font-bold text-gray-800 dark:text-white">Transaction History</span>
+            </div>
+            {totalCount > 0 && (
+              <span className="text-[11px] px-2.5 py-0.5 rounded-full bg-primary-button-bg/10
+                text-primary-button-bg font-semibold">
+                {totalCount} records
+              </span>
+            )}
           </div>
 
           {/* Table */}
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700 rounded-lg shadow-sm">
-              <thead className="bg-primary-table-bg dark:bg-gray-800">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-primary-table-text dark:text-gray-300 uppercase tracking-wider">
-                    #
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-primary-table-text dark:text-gray-300 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-primary-table-text dark:text-gray-300 uppercase tracking-wider">
-                    Wallet
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-primary-table-text dark:text-gray-300 uppercase tracking-wider">
-                    Type
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-primary-table-text dark:text-gray-300 uppercase tracking-wider">
-                    Amount
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-primary-table-text dark:text-gray-300 uppercase tracking-wider">
-                    Mode
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-primary-table-text dark:text-gray-300 uppercase tracking-wider">
-                    Ref No
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-semibold text-primary-table-text dark:text-gray-300 uppercase tracking-wider">
-                    Remarks
-                  </th>
+          <div className="overflow-x-auto flex-1">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-primary-table-bg text-primary-table-text dark:bg-[#15203c]">
+                  <th className="px-4 py-3 text-left font-semibold w-10">#</th>
+                  <th className="px-4 py-3 text-left font-semibold">Date</th>
+                  <th className="px-4 py-3 text-left font-semibold">Wallet</th>
+                  <th className="px-4 py-3 text-left font-semibold w-20">Type</th>
+                  <th className="px-4 py-3 text-left font-semibold">Amount</th>
+                  <th className="px-4 py-3 text-left font-semibold">Mode</th>
+                  <th className="px-4 py-3 text-left font-semibold">Ref</th>
+                  <th className="px-4 py-3 text-left font-semibold">Remarks</th>
                 </tr>
               </thead>
-              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+              <tbody className="bg-white dark:bg-[#0c1427] divide-y divide-gray-50 dark:divide-gray-800">
                 {transactions.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-10 text-center">
+                    <td colSpan={8} className="py-14 text-center">
                       <div className="flex flex-col items-center gap-2 text-gray-400">
-                        <i className="material-symbols-outlined text-5xl">
-                          receipt_long
-                        </i>
-                        <p className="font-medium text-gray-600 dark:text-gray-300">
-                          No Transactions Found
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          Wallet transactions will appear here once added.
+                        <i className="material-symbols-outlined text-5xl opacity-30">receipt_long</i>
+                        <p className="text-sm font-medium text-gray-500 dark:text-gray-400">No Transactions Found</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">
+                          {selectedUser
+                            ? "No wallet transactions yet for this member."
+                            : "Select a member to view transaction history."}
                         </p>
                       </div>
                     </td>
                   </tr>
                 ) : (
                   transactions.map((item, index) => (
-                    <tr
+                    <motion.tr
                       key={index}
-                      className="hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
+                      custom={index}
+                      variants={rowVariant}
+                      initial="hidden"
+                      animate="show"
+                      className="hover:bg-gray-50 dark:hover:bg-[#172036] transition-colors"
                     >
-                      <td className="px-4 py-3 font-medium">{index + 1}</td>
-                      <td className="px-4 py-3">{item.PaymentDate}</td>
-                      <td className="px-4 py-3">{item.WalletDisplayName}</td>
+                      <td className="px-4 py-3 text-gray-500 dark:text-gray-400 font-medium">
+                        {(page - 1) * pageSize + index + 1}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 dark:text-gray-400 whitespace-nowrap text-xs">
+                        {item.PaymentDate}
+                      </td>
+                      <td className="px-4 py-3 text-xs">
+                        <span className="flex items-center gap-1.5">
+                          <span
+                            className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: walletColor(item.WalletDisplayName) }}
+                          />
+                          <span className="text-gray-700 dark:text-gray-300">{item.WalletDisplayName}</span>
+                        </span>
+                      </td>
                       <td className="px-4 py-3">
-                        <span
-                          className={`px-2 py-1 rounded text-xs font-semibold ${item.TranType === "CR"
-                              ? "bg-green-100 text-green-700"
-                              : "bg-red-100 text-red-700"
-                            }`}
-                        >
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold ${
+                          item.TranType === "CR"
+                            ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                            : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                        }`}>
+                          {item.TranType === "CR"
+                            ? <FaArrowDown size={9} />
+                            : <FaArrowUp size={9} />}
                           {item.TranType}
                         </span>
                       </td>
-                      <td className="px-4 py-3 font-semibold">
-                        {currency.symbol}
-                        {item.Amount}
+                      <td className="px-4 py-3 font-bold whitespace-nowrap" style={{
+                        color: item.TranType === "CR" ? "#10b981" : "#ef4444",
+                      }}>
+                        {currency.symbol}{Number(item.Amount).toFixed(2)}
                       </td>
-                      <td className="px-4 py-3">{item.PaymentMode}</td>
-                      <td className="px-4 py-3 text-xs text-gray-500">
-                        {item.ReferenceNo || "-"}
+                      <td className="px-4 py-3 text-xs text-gray-500 dark:text-gray-400">
+                        {item.PaymentMode}
                       </td>
-                      <td className="px-4 py-3 text-xs text-gray-500">
-                        {item.Remarks || "-"}
+                      <td className="px-4 py-3 text-xs text-gray-400 dark:text-gray-500 font-mono">
+                        {item.ReferenceNo || "—"}
                       </td>
-                    </tr>
+                      <td className="px-4 py-3 text-xs text-gray-400 dark:text-gray-500 max-w-[80px] truncate">
+                        {item.Remarks || "—"}
+                      </td>
+                    </motion.tr>
                   ))
                 )}
               </tbody>
             </table>
+          </div>
 
-            {/* Pagination */}
-            <div className="flex justify-end items-center gap-3 mt-4">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="px-3 py-1 border rounded disabled:opacity-50 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-              >
-                Prev
-              </button>
-
-              <span className="text-sm">
+          {/* Pagination */}
+          {totalCount > 0 && (
+            <div className="flex justify-between items-center px-5 py-3 border-t border-gray-100 dark:border-gray-800">
+              <span className="text-xs text-gray-400 dark:text-gray-500">
                 Page {page} of {Math.ceil(totalCount / pageSize) || 1}
               </span>
-
-              <button
-                onClick={() => setPage((p) => p + 1)}
-                disabled={page >= Math.ceil(totalCount / pageSize)}
-                className="px-3 py-1 border rounded disabled:opacity-50 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
-              >
-                Next
-              </button>
+              <div className="flex items-center gap-1.5">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="w-7 h-7 flex items-center justify-center rounded-md border border-gray-200 dark:border-gray-700
+                    text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition"
+                >
+                  <FaChevronLeft size={10} />
+                </button>
+                <button
+                  onClick={() => setPage((p) => p + 1)}
+                  disabled={page >= Math.ceil(totalCount / pageSize)}
+                  className="w-7 h-7 flex items-center justify-center rounded-md border border-gray-200 dark:border-gray-700
+                    text-gray-500 hover:bg-gray-50 dark:hover:bg-gray-800 disabled:opacity-40 transition"
+                >
+                  <FaChevronRight size={10} />
+                </button>
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

@@ -1880,6 +1880,11 @@ html[dir="rtl"] {
     transform: rotate(360deg);
   }
 }
+
+@keyframes shimmer {
+  100% { transform: translateX(200%); }
+}
+
 /* SweetAlert2 Theme Integration */
 
 .swal2-confirm {
