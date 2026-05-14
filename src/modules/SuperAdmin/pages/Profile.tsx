@@ -401,6 +401,7 @@ const Profile: React.FC = () => {
           EditId: employeeId,
           OldPassword: oldPw,
           NewPassword: newPw,
+          ConfirmPassword:newPw,
         }),
       });
 
