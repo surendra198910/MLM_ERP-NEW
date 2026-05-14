@@ -5,12 +5,44 @@ import { ApiService } from "../../../../services/ApiService";
 import { toast, ToastContainer } from "react-toastify";
 import Swal from "sweetalert2";
 import "react-toastify/dist/ReactToastify.css";
-import { FaSave } from "react-icons/fa";
+import { FaSave, FaWallet } from "react-icons/fa";
+import { SiBnbchain, SiBitcoin, SiEthereum, SiSolana } from "react-icons/si";
+import { TbHexagon } from "react-icons/tb";
 import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
 import { SmartActions } from "../Security/SmartActionWithFormName";
 import AccessRestricted from "../../common/AccessRestricted";
 import Loader from "../../common/Loader";
 
+// ─── Chain helpers ────────────────────────────────────────────────────────────
+const CHAIN_META: Record<string, { color: string }> = {
+  BEP20: { color: "#F0B90B" },
+  TRC20:  { color: "#FF060A" },
+  ERC20: { color: "#627EEA" },
+  SOL:   { color: "#9945FF" },
+  BTC:   { color: "#F7931A" },
+};
+
+const TronIcon = ({ size = 22 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="#FF060A" xmlns="http://www.w3.org/2000/svg">
+    <path d="M22.46 6.28 13.17.27a2.12 2.12 0 0 0-2.34 0L1.54 6.28a2.1 2.1 0 0 0-.77 2.86l4.46 7.72L12 22.46l6.77-5.6 4.46-7.72a2.1 2.1 0 0 0-.77-2.86ZM12 17.5l-4-6.93L12 3.5l4 7.07L12 17.5Z" />
+  </svg>
+);
+
+const getChainIcon = (label: string, size = 22) => {
+  switch (label?.toUpperCase()) {
+    case "BEP20": return <SiBnbchain size={size} style={{ color: "#F0B90B" }} />;
+    case "TRC20": return <TronIcon size={size} />;
+    case "ERC20": return <SiEthereum size={size} style={{ color: "#627EEA" }} />;
+    case "SOL":   return <SiSolana size={size} style={{ color: "#9945FF" }} />;
+    case "BTC":   return <SiBitcoin size={size} style={{ color: "#F7931A" }} />;
+    default:      return <TbHexagon size={size} style={{ color: "#6B7280" }} />;
+  }
+};
+
+const getChainColor = (label: string) =>
+  CHAIN_META[label?.toUpperCase()]?.color ?? "#6B7280";
+
+// ─── Component ────────────────────────────────────────────────────────────────
 export default function CryptoWalletSetting() {
   const { universalService } = ApiService();
 
@@ -22,11 +54,6 @@ export default function CryptoWalletSetting() {
 
   const path = location.pathname;
   const formName = path.split("/").pop();
-
-  const inputClass =
-    "w-full border border-gray-200 rounded-md px-3 py-2 text-sm h-10 " +
-    "focus:outline-none focus:border-primary-button-bg focus:ring-1 focus:ring-primary-button-bg " +
-    "bg-white dark:bg-gray-800 dark:border-gray-700 dark:text-gray-100";
 
   // -------------------------------------
   // PERMISSIONS
@@ -93,9 +120,9 @@ export default function CryptoWalletSetting() {
       const data = res?.data || res || [];
 
       const formatted = data.map((item, index) => ({
-        Id: item.Id || 0, // if exists later
+        Id: item.Id || 0,
         WalletTypeId: item.WalletTypeId,
-        Label: item.Chain, // UI label same usage
+        Label: item.Chain,
         Url: item.DepositAddress || "",
       }));
 
@@ -139,7 +166,6 @@ export default function CryptoWalletSetting() {
     try {
       setLoading(true);
 
-      // 🔥 Direct pass
       const payload = {
         procName: "ManageCompanyCryptowallet",
         Para: JSON.stringify({
@@ -155,8 +181,7 @@ export default function CryptoWalletSetting() {
       };
 
       const res = await universalService(payload);
-      const result = res; ///res?.data?.[0] || res?.data || res;
-      // debugger
+      const result = res;
 
       if (result[0].StatusCode == 1) {
         Swal.fire("Success!", result[0]?.Msg, "success");
@@ -173,7 +198,7 @@ export default function CryptoWalletSetting() {
   };
 
   // -------------------------------------
-  // STATES (UNCHANGED)
+  // GUARDS
   // -------------------------------------
   if (permissionsLoading) return <Loader />;
   if (!hasPageAccess) return <AccessRestricted />;
@@ -187,21 +212,43 @@ export default function CryptoWalletSetting() {
   }
 
   // -------------------------------------
-  // UI (100% SAME)
+  // UI
   // -------------------------------------
   return (
     <div className="bg-white dark:bg-[#0c1427] rounded-lg shadow p-6 relative">
+      {/* Loading overlay */}
       {loading && (
         <div className="absolute inset-0 bg-white/60 dark:bg-black/40 flex items-center justify-center z-10 rounded-lg">
           <div className="animate-spin w-8 h-8 border-4 border-primary-500 border-t-transparent rounded-full" />
         </div>
       )}
 
-      <div className="flex justify-between items-center border-b border-gray-200 pb-3 mb-3 -mx-[20px] md:-mx-[20px] px-[20px] md:px-[25px]">
-        <div>
-          <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
-            Manage Crypto Wallet
-          </h5>
+      {/* ── Header ────────────────────────────────────────────────────────── */}
+      <div className="flex justify-between items-center border-b border-gray-200 dark:border-gray-700 pb-4 mb-6 -mx-6 px-6">
+        <div className="flex items-center gap-3">
+          {/* Dual-tone icon */}
+          <div className="w-11 h-11 rounded-xl relative flex items-center justify-center flex-shrink-0 bg-primary-button-bg/10">
+            <i
+              className="material-symbols-outlined absolute text-[38px] text-primary-button-bg/20"
+              style={{ fontVariationSettings: "'FILL' 1, 'wght' 400" }}
+            >
+              account_balance_wallet
+            </i>
+            <i
+              className="material-symbols-outlined relative text-[20px] text-primary-button-bg"
+              style={{ fontVariationSettings: "'FILL' 0, 'wght' 600" }}
+            >
+              account_balance_wallet
+            </i>
+          </div>
+          <div>
+            <h5 className="!mb-0 font-bold text-xl text-black dark:text-white leading-tight">
+              Manage Crypto Wallet
+            </h5>
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 !mb-0">
+              Configure deposit addresses for each blockchain network
+            </p>
+          </div>
         </div>
 
         <div className="flex gap-2">
@@ -209,54 +256,94 @@ export default function CryptoWalletSetting() {
             <button
               onClick={handleSubmit}
               disabled={!SmartActions.canUpdate(formName)}
-              className="flex items-center gap-2 px-4 py-1.5 
-                            bg-primary-button-bg hover:bg-primary-button-bg-hover 
-                            text-white rounded text-sm disabled:opacity-50"
+              className="flex items-center gap-2 px-4 py-2
+                bg-primary-button-bg hover:bg-primary-button-bg-hover
+                text-white rounded-md text-sm font-medium transition-all shadow-sm disabled:opacity-50"
             >
-              <FaSave /> Update
+              <FaSave size={13} /> Update
             </button>
           </PermissionAwareTooltip>
         </div>
       </div>
 
-      <div className="space-y-6 animate-fadeIn">
-        <div className="border-t border-gray-100 dark:border-gray-800 mt-4">
-          {platforms.map((item, index) => (
-            <div
-              key={item.WalletTypeId}
-              className="flex flex-col md:flex-row md:items-center py-5 border-b border-gray-50 dark:border-[#15203c] last:border-0 transition-colors hover:bg-gray-50/50 dark:hover:bg-[#15203c]/30 px-2"
-            >
-              <div className="w-full md:w-1/3 mb-2 md:mb-0">
-                <label className="text-sm font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary-button-bg"></span>
-                  {item.Label}
-                </label>
-                <p className="text-[11px] text-gray-500 dark:text-gray-400 ml-3.5 uppercase tracking-tighter">
-                  Wallet Address
-                </p>
-              </div>
+      {/* ── Wallet list ────────────────────────────────────────────────────── */}
+      {platforms.length === 0 ? (
+        <div className="text-center py-16 text-gray-400">
+          <FaWallet className="text-4xl mx-auto mb-3 opacity-20" />
+          <p className="text-sm font-medium">No wallet types configured</p>
+          <p className="text-xs mt-1">Add wallet types in Wallet Type Setting first</p>
+        </div>
+      ) : (
+        <div className="space-y-3 animate-fadeIn">
+          {platforms.map((item, index) => {
+            const accentColor = getChainColor(item.Label);
+            const hasAddress = !!item.Url.trim();
 
-              <div className="w-full md:w-2/3">
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={item.Url}
-                    onChange={(e) => handleChange(index, e.target.value)}
-                    className={`${inputClass} !h-[48px] w-full bg-white dark:bg-[#0c1427] 
-              border-gray-200 dark:border-gray-700 
-              focus:border-primary-button-bg focus:ring-1 focus:ring-primary-button-bg/20 
-              rounded-md px-4 text-sm transition-all shadow-sm`}
-                    placeholder={`Enter ${item.Label} wallet address`}
-                  />
-                  <div
-                    className={`absolute bottom-0 left-0 h-0.5 bg-primary-button-bg transition-all duration-300 ${item.Url ? "w-full" : "w-0"}`}
-                  ></div>
+            return (
+              <div
+                key={item.WalletTypeId}
+                className="rounded-xl border border-gray-100 dark:border-gray-700/60
+                  bg-gray-50/40 dark:bg-[#111827]/40 p-4 transition-all
+                  hover:border-gray-200 dark:hover:border-gray-600 hover:shadow-sm"
+              >
+                <div className="flex flex-col md:flex-row md:items-center gap-4">
+
+                  {/* Chain identity */}
+                  <div className="flex items-center gap-3 md:w-56 flex-shrink-0">
+                    <div
+                      className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                      style={{ backgroundColor: accentColor + "1a" }}
+                    >
+                      {getChainIcon(item.Label, 22)}
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-900 dark:text-white leading-tight">
+                        {item.Label}
+                      </p>
+                      <span className="text-[10px] font-semibold uppercase tracking-wider text-gray-400 dark:text-gray-500">
+                        Deposit Address
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Input with left accent bar */}
+                  <div className="md:flex-1 relative">
+                    <div
+                      className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-6 rounded-full"
+                      style={{ backgroundColor: accentColor }}
+                    />
+                    <input
+                      type="text"
+                      value={item.Url}
+                      onChange={(e) => handleChange(index, e.target.value)}
+                      className="w-full pl-4 pr-4 py-2.5 text-sm font-mono
+                        border border-gray-200 dark:border-gray-700 rounded-lg
+                        bg-white dark:bg-[#0c1427] dark:text-gray-100
+                        focus:outline-none focus:border-primary-button-bg focus:ring-1 focus:ring-primary-button-bg/20
+                        placeholder:text-gray-300 dark:placeholder:text-gray-600
+                        transition-all"
+                      placeholder={`Enter ${item.Label} deposit address`}
+                    />
+                  </div>
+
+                  {/* Configured status dot */}
+                  <div className="flex-shrink-0 hidden md:flex items-center">
+                    <span
+                      title={hasAddress ? "Address configured" : "No address set"}
+                      className={`w-2.5 h-2.5 rounded-full ring-2 transition-all ${
+                        hasAddress
+                          ? "bg-green-500 ring-green-200 dark:ring-green-900"
+                          : "bg-gray-300 ring-gray-100 dark:bg-gray-600 dark:ring-gray-800"
+                      }`}
+                    />
+                  </div>
+
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
-      </div>
+      )}
 
       <ToastContainer />
     </div>

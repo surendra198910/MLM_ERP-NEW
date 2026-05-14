@@ -377,11 +377,32 @@ export default function GlobalSetting() {
                     )}
 
                     {/* HEADER */}
-                    <div className="flex justify-between items-center border-b border-gray-200  pb-3 mb-3 -mx-[20px] md:-mx-[20px] px-[20px] md:px-[25px]">
-                        <div className="trezo-card-title">
-                            <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
-                                Withdraw Setting
-                            </h5>
+                    <div className="flex justify-between items-center border-b border-gray-200 pb-3 mb-3 -mx-[20px] md:-mx-[20px] px-[20px] md:px-[25px]">
+                        <div className="flex items-center gap-3">
+                            {/* Dual-tone icon — filled layer (soft) + outlined layer (vivid) */}
+                            <div className="w-11 h-11 rounded-xl relative flex items-center justify-center flex-shrink-0 bg-primary-button-bg/10">
+                                <i
+                                    className="material-symbols-outlined absolute text-[38px] text-primary-button-bg/20"
+                                    style={{ fontVariationSettings: "'FILL' 1, 'wght' 400" }}
+                                >
+                                    savings
+                                </i>
+                                <i
+                                    className="material-symbols-outlined relative text-[20px] text-primary-button-bg"
+                                    style={{ fontVariationSettings: "'FILL' 0, 'wght' 600" }}
+                                >
+                                    savings
+                                </i>
+                            </div>
+
+                            <div>
+                                <h5 className="!mb-0 font-bold text-xl text-black dark:text-white leading-tight">
+                                    Withdraw Setting
+                                </h5>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5 !mb-0">
+                                    Configure withdrawal &amp; transfer limits, charges and payout mode
+                                </p>
+                            </div>
                         </div>
 
                         <div className="flex gap-2">

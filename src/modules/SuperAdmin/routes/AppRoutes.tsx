@@ -148,6 +148,7 @@ import ApproveRejectRequestFund from "../components/RequestFund/ApproveRejectReq
 import RequestFundReport from "../components/RequestFund/RequestFundReport.js";
 import BinaryTreeComponent from "../components/Team/BinaryTree/GenealogyBinaryTree.js";
 import ManageLoginType from "../components/AdministrativeTools/AddReport/ManageLoginType.js";
+import ManageAdminCryptoWallet from "../components/AdministrativeTools/ManageAdminCryptoWallet";
 
 import IncomeSettings from "../components/AdminTools/IncomeSettings.js";
 import ROILevelIncomeReport from "../components/Commission/ROILevelIncomeReport.js";
@@ -591,6 +592,10 @@ const AppRoutes = () => {
               <Route
                 path="/superadmin/admin-tools/CryptoWallet-setting"
                 element={<ManageCryptowallet />}
+              />
+              <Route
+                path="/superadmin/admin-tools/manage-crypto-wallet-setting"
+                element={<ManageAdminCryptoWallet />}
               />
               <Route
                 path="/superadmin/superadmin-tools/wallet-setting/wallettype-setting"
