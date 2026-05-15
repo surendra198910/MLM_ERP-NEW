@@ -154,6 +154,11 @@ import IncomeSettings from "../components/AdminTools/IncomeSettings.js";
 import ROILevelIncomeReport from "../components/Commission/ROILevelIncomeReport.js";
 import BinaryIncomeReport from "../components/Commission/BinaryIncomeReport.js";
 
+import ACtiveInActiveMembers from "../components/reports/ACtiveInActiveMembers.js";
+
+import TopEarners from "../components/Reports/TopEarners.js";
+
+
 const AppRoutes = () => {
   useEffect(() => {
     const s = document.createElement("script");
@@ -553,6 +558,19 @@ const AppRoutes = () => {
               <Route
                 path="/superadmin/reports/p2p-report"
                 element={<P2PReport />}
+              />
+
+               <Route
+                path="/superadmin/reports/p2p-report"
+                element={<P2PReport />}
+              />
+              <Route
+                path="/superadmin/reports/Active-InActive-Members"
+                element={<ACtiveInActiveMembers />}
+              />
+              <Route
+                path="/superadmin/reports/TopEarners"
+                element={<TopEarners />}
               />
               <Route
                 path="/superadmin/commission/sponsor-income-report"
