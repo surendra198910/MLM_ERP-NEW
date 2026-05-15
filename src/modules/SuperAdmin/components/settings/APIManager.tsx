@@ -4,7 +4,7 @@ import { ApiService } from "../../../../services/ApiService";
 import Swal from "sweetalert2";
 import Pagination from "../../common/Pagination";
 import AddProviderModal from "./AddProviderModal";
-import { FaSms, FaWhatsapp, FaEnvelope, FaEdit, FaTrash } from "react-icons/fa";
+import { FaSms, FaWhatsapp, FaEnvelope, FaMobileAlt, FaEdit, FaTrash } from "react-icons/fa";
 import { toast, ToastContainer } from "react-toastify";
 import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
 import { SmartActions } from "../Security/SmartActionWithFormName";
@@ -41,6 +41,7 @@ export default function ApiManager() {
         { label: "SMS", icon: <FaSms /> },
         { label: "WhatsApp", icon: <FaWhatsapp /> },
         { label: "Email", icon: <FaEnvelope /> },
+         { label: "Recharge", icon: <FaMobileAlt /> },
     ];
 
     const fetchFormPermissions = async () => {

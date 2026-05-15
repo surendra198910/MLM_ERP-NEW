@@ -159,6 +159,7 @@ import BinaryTeamReport from "../components/Reports/BinaryTeamReport.js";
 import ACtiveInActiveMembers from "../components/reports/ACtiveInActiveMembers.js";
 
 import TopEarners from "../components/Reports/TopEarners.js";
+import WalletReport from "../components/Reports/WalletReport.js";
 
 
 const AppRoutes = () => {
@@ -585,6 +586,10 @@ const AppRoutes = () => {
               <Route
                 path="/superadmin/reports/binary-team-report"
                 element={<BinaryTeamReport />}
+              />
+              <Route
+                path="/superadmin/reports/wallet-report"
+                element={<WalletReport />}
               />
               //Withdrawal
               <Route

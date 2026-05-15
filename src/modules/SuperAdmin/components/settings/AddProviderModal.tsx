@@ -368,6 +368,7 @@ export default function AddProviderModal({
                                                 <option value="SMS">SMS</option>
                                                 <option value="WhatsApp">WhatsApp</option>
                                                 <option value="Email">Email</option>
+                                                <option value="Recharge">Recharge</option>
                                             </select>
                                         </div>
 
