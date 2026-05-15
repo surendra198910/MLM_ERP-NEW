@@ -153,6 +153,8 @@ import ManageAdminCryptoWallet from "../components/AdministrativeTools/ManageAdm
 import IncomeSettings from "../components/AdminTools/IncomeSettings.js";
 import ROILevelIncomeReport from "../components/Commission/ROILevelIncomeReport.js";
 import BinaryIncomeReport from "../components/Commission/BinaryIncomeReport.js";
+import TeamDownlineReport from "../components/Reports/TeamDownlineReport.js";
+import BinaryTeamReport from "../components/Reports/BinaryTeamReport.js";
 
 import ACtiveInActiveMembers from "../components/reports/ACtiveInActiveMembers.js";
 
@@ -575,6 +577,14 @@ const AppRoutes = () => {
               <Route
                 path="/superadmin/commission/sponsor-income-report"
                 element={<SponsorIncomeReport />}
+              />
+               <Route
+                path="/superadmin/reports/team-downline-report"
+                element={<TeamDownlineReport />}
+              />
+              <Route
+                path="/superadmin/reports/binary-team-report"
+                element={<BinaryTeamReport />}
               />
               //Withdrawal
               <Route
