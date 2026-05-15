@@ -235,6 +235,27 @@ const Template: React.FC = () => {
               // ⭐ NORMAL ROW
               const value = row[c.ColumnKey];
 
+              const IMAGE_BASE_URL =
+                import.meta.env.VITE_IMAGE_PREVIEW_URL_2 + "ClientImages/";
+
+              if (c.ColumnKey === "Name") {
+                const profileUrl = `${IMAGE_BASE_URL}${row?.ClientLogo ?? "default_user_male.png"}`;
+                return (
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={profileUrl}
+                      alt="user"
+                      className="w-9 h-9 rounded-full object-cover border"
+                    />
+                    <div className="flex flex-col leading-tight">
+                      <span className="font-medium text-sm">
+                        {row.ClientName ?? "-"}|{row["UserName"]}
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
+
               if (c.IsCurrency && value != null) {
                 return `$${Number(value).toLocaleString()}`;
               }

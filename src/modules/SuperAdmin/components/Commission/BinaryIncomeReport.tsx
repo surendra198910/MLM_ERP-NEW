@@ -97,7 +97,7 @@ const Template: React.FC = () => {
       showCurrency: true,
     },
   ];
-  const fetchFormPermissions = async () => {
+  const fetchFormPermissions = async () => { 
     try {
       setPermissionsLoading(true);
 

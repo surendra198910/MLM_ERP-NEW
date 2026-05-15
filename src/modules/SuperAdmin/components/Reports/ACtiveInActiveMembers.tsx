@@ -8,7 +8,7 @@ import ExportButtons from "../../../../components/CommonFormElements/ExportButto
 import StatsCards from "../../../../components/CommonFormElements/StatsCard/StatsCards";
 import DateRangeFilter from "../../../../components/CommonFormElements/DateRangeFilter/DateRangeFilter";
 import OopsNoData from "../../../../components/CommonFormElements/DataNotFound/OopsNoData";
-import TableSkeleton from "../Forms/TableSkeleton"; 
+import TableSkeleton from "../Forms/TableSkeleton";
 import customStyles from "../../../../components/CommonFormElements/DataTableComponents/CustomStyles";
 import PermissionAwareTooltip from "../Tooltip/PermissionAwareTooltip";
 import { SmartActions } from "../Security/SmartActionWithFormName";
@@ -16,8 +16,8 @@ import { useLocation } from "react-router-dom";
 import Loader from "../../common/Loader";
 import AccessRestricted from "../../common/AccessRestricted";
 import ActionCell from "../../../../components/CommonFormElements/DataTableComponents/ActionCell";
-import { useCurrency } from "../../context/CurrencyContext";
 import LandingIllustration from "../../../../components/CommonFormElements/LandingIllustration/LandingIllustration";
+
 const Template: React.FC = () => {
   const [searchInput, setSearchInput] = useState("");
   const [filterColumn, setFilterColumn] = useState("");
@@ -40,13 +40,13 @@ const Template: React.FC = () => {
   const [permissionsLoading, setPermissionsLoading] = useState(true);
   const [hasPageAccess, setHasPageAccess] = useState(true);
   const [initialSortReady, setInitialSortReady] = useState(false);
-  const { currency } = useCurrency();
   const location = useLocation();
   const path = location.pathname;
   const formName = path.split("/").pop();
   const canExport = SmartActions.canExport(formName);
+  const [statusFilter, setStatusFilter] = useState("all");
 
-  // DATE RANGE FILTER
+  //DateRangeFilter
   interface DateRange {
     from: string;
     to: string;
@@ -67,30 +67,35 @@ const Template: React.FC = () => {
     to: toStr,
   });
 
+  // centraliztion
+  const pageTitle = "Active InActive Members  Report";
+  const title = "Active InActive Members ";
+  const procedureName = "ActiveInactiveMembers";
+
   const statsConfig = [
     {
-      key: "TotalTransfers",
-      title: "Total Transfers",
-      icon: "payment",
-      variant: "income",
+      key: "TotalActiveMembers",
+      title: "Active Members",
+      icon: "verified",
+      showCurrency: false,
     },
     {
-      key: "TotalAmount",
-      title: "Total Amount",
-      icon: "payments",
-      variant: "income",
+      key: "TotalInactiveMembers",
+      title: "Inactive Members",
+      icon: "person_off",
+      showCurrency: false,
     },
     {
-      key: "TotalFinalAmount",
-      title: "Total FinalAmount",
-      icon: "history",
-      variant: "income",
-    },
-    {
-      key: "TodayTransfer",
-      title: "Today Transfer",
+      key: "TodayMembers",
+      title: "Today Members",
       icon: "today",
-      variant: "highlight",
+      showCurrency: false,
+    },
+    {
+      key: "ThisMonthMembers",
+      title: "This Month Members",
+      icon: "calendar_month",
+      showCurrency: false,
     },
   ];
   const fetchFormPermissions = async () => {
@@ -167,7 +172,7 @@ const Template: React.FC = () => {
         procName: "GetUserGridColumns",
         Para: JSON.stringify({
           UserId: employeeId,
-          GridName: "USP_AdminP2PReport",
+          GridName: "USP_" + procedureName,
         }),
       };
 
@@ -234,6 +239,44 @@ const Template: React.FC = () => {
               // ⭐ NORMAL ROW
               const value = row[c.ColumnKey];
 
+              const IMAGE_BASE_URL =
+                import.meta.env.VITE_IMAGE_PREVIEW_URL_2 + "ClientImages/";
+
+              if (c.ColumnKey === "MemberName") {
+                const profileUrl = `${IMAGE_BASE_URL}${row?.ClientLogo}`;
+                return (
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={profileUrl}
+                      alt="user"
+                      className="w-9 h-9 rounded-full object-cover border"
+                    />
+                    <div className="flex flex-col leading-tight">
+                      <span className="font-medium text-sm">
+                        {row["MemberName"]}
+                      </span>
+                    </div>
+                  </div>
+                );
+              }
+              // debugger
+              if (c.ColumnKey === "Status") {
+                const isActive = row.Status === "Active";
+
+                return (
+                  <span
+                    className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border
+        ${
+          isActive
+            ? "bg-green-100 text-green-700 border-green-200"
+            : "bg-red-100 text-red-700 border-red-200"
+        }`}
+                  >
+                    {row.Status} 
+                  </span>
+                );
+              }
+
               if (c.IsCurrency && value != null) {
                 return `$${Number(value).toLocaleString()}`;
               }
@@ -241,6 +284,22 @@ const Template: React.FC = () => {
               return value ?? "-";
             },
           }));
+        const actionColumn = {
+          name: "Action",
+          cell: (row: any) => {
+            if (row.__isTotal) return null;
+
+            return (
+              <ActionCell
+                row={row}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
+            );
+          },
+          ignoreRowClick: true,
+          button: true,
+        };
 
         setColumns([...reactCols]);
       } else {
@@ -263,12 +322,14 @@ const Template: React.FC = () => {
     }));
   const fetchExportData = async () => {
     const payload = {
-      procName: "AdminP2PReport",
+      procName: procedureName,
       Para: JSON.stringify({
         SearchBy: filterColumn,
         Criteria: searchInput,
         Page: page,
         PageSize: 0,
+        Status: statusFilter || "all",
+
         SortIndexColumn: sortIndex,
         SortDir: sortDirection,
 
@@ -283,7 +344,7 @@ const Template: React.FC = () => {
   };
   const GetStats = async () => {
     const payload = {
-      procName: "AdminP2PReport",
+      procName: procedureName,
       Para: JSON.stringify({
         ActionMode: "GetStats",
       }),
@@ -314,7 +375,7 @@ const Template: React.FC = () => {
       setTableLoading(true);
 
       const payload = {
-        procName: "AdminP2PReport",
+        procName: procedureName,
         Para: JSON.stringify({
           SearchBy: options?.searchBy ?? filterColumn ?? "",
           Criteria: options?.criteria ?? searchInput ?? "",
@@ -322,6 +383,8 @@ const Template: React.FC = () => {
           PageSize: perPageToUse,
           SortIndexColumn: sortIndex,
           SortDir: sortDirection,
+
+          Status: options?.statusFilter ?? statusFilter ?? "all",
 
           FromDate: pendingRange.from || null,
           ToDate: pendingRange.to || null,
@@ -331,7 +394,10 @@ const Template: React.FC = () => {
       const res = await universalService(payload);
       const result = res?.data || res;
 
-      if (Array.isArray(result)) {
+      if (result?.rows && Array.isArray(result.rows)) {
+        setData(result.rows);
+        setTotalRows(result[0]?.TotalRecords || 0);
+      } else if (Array.isArray(result)) {
         setData(result);
         setTotalRows(result[0]?.TotalRecords || 0);
       } else {
@@ -351,7 +417,7 @@ const Template: React.FC = () => {
       procName: "UniversalColumnSelector",
       Para: JSON.stringify({
         EmployeeId: employeeId,
-        USPName: "USP_FetchROIIncome",
+        USPName: "USP_" + procedureName,
         ActionMode: "List",
         Mode: "Get",
       }),
@@ -437,7 +503,7 @@ const Template: React.FC = () => {
       <div className="trezo-card-header mb-[10px] md:mb-[10px] sm:flex items-center justify-between pb-5 border-b border-gray-200 -mx-[20px] md:-mx-[25px] px-[20px] md:px-[25px]">
         <div className="trezo-card-title">
           <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
-            P2P Report
+            {pageTitle}
           </h5>
         </div>
 
@@ -484,9 +550,7 @@ const Template: React.FC = () => {
                            }`}
                 >
                   <option value="">Select Filter Option</option>
-                  <option value="ToMember">To Member</option>
-                  <option value="FromMember">From Member</option>
-                  <option value="WalletType">Wallet Type</option>
+                  <option value="Username">Username</option>
                 </select>
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
                   <i className="material-symbols-outlined !text-[18px]">
@@ -524,6 +588,40 @@ const Template: React.FC = () => {
               </PermissionAwareTooltip>
             </div>
 
+            {/* STATUS DROPDOWN */}
+            <div className="relative w-full sm:w-[111px]">
+              <PermissionAwareTooltip
+                allowed={SmartActions.canAdvancedSearch(formName)}
+                allowedText="Status Filter"
+              >
+                <span className="absolute left-2.5 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-500">
+                  <i className="material-symbols-outlined !text-[18px]">
+                    filter_list
+                  </i>
+                </span>
+
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className={`w-full h-[34px] pl-8 pr-8 text-xs rounded-md appearance-none outline-none border transition-all
+        ${
+          SmartActions.canAdvancedSearch(formName)
+            ? "bg-white text-black border-gray-300 focus:border-primary-button-bg"
+            : "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+        }`}
+                >
+                  <option value="all">All Status</option>
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                </select>
+
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center pointer-events-none text-gray-400">
+                  <i className="material-symbols-outlined !text-[18px]">
+                    expand_more
+                  </i>
+                </span>
+              </PermissionAwareTooltip>
+            </div>
             {/* 3. BUTTONS GROUP (Exactly from your design) */}
             <div className="flex items-center gap-2">
               {/* SEARCH BUTTON */}
@@ -555,24 +653,12 @@ const Template: React.FC = () => {
                   }`}
                 >
                   <ColumnSelector
-                    procName="USP_AdminP2PReport"
+                    procName={`USP_${procedureName}`}
                     onApply={fetchVisibleColumns}
                   />
                 </div>
               </PermissionAwareTooltip>
-              {/* ADD BUTTON
-              <PermissionAwareTooltip
-                allowed={SmartActions.canAdd(formName)}
-                allowedText="Add New"
-              >
-                <button
-                  type="button"
-                  disabled={!SmartActions.canAdd(formName)}
-                  className="w-[34px] h-[34px] flex items-center justify-center rounded-md border border-primary-button-bg text-white bg-primary-button-bg hover:bg-white hover:border-primary-button-bg hover:text-primary-button-bg transition-all shadow-sm disabled:opacity-50"
-                >
-                  <i className="material-symbols-outlined text-[20px]">add</i>
-                </button>
-              </PermissionAwareTooltip> */}
+
               {/* REFRESH BUTTON (Visible when showTable is true) */}
             </div>
             {(filterColumn || searchInput) && (
@@ -607,12 +693,12 @@ const Template: React.FC = () => {
       </div>
       {!showTable && (
         <LandingIllustration
-          title="P2P Report"
+          title={pageTitle}
           formName={formName}
           addLabel="Add Income"
           description={
             <>
-              Search P2P Report using filters above.
+              Search {title} using filters above.
               <br />
               Manage records, export reports and analyse performance.
               <br />
@@ -683,7 +769,7 @@ const Template: React.FC = () => {
                   className={!canExport ? "pointer-events-none opacity-50" : ""}
                 >
                   <ExportButtons
-                    title="P2P Report"
+                    title={pageTitle}
                     columns={exportColumns}
                     fetchData={fetchExportData}
                     disabled={!canExport}
