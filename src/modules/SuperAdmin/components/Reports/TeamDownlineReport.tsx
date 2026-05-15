@@ -10,6 +10,7 @@ import { SmartActions } from "../Security/SmartActionWithFormName";
 import { useLocation } from "react-router-dom";
 import Loader from "../../common/Loader";
 import AccessRestricted from "../../common/AccessRestricted";
+import { useCurrency } from "../../context/CurrencyContext";
 
 interface SelfDetail {
   Name: string;
@@ -29,6 +30,7 @@ interface DownlineRow {
 
 const TeamDownlineReport: React.FC = () => {
   const { universalService } = ApiService();
+  const { currency } = useCurrency();
   const location = useLocation();
   const formName = location.pathname.split("/").pop();
   const canExport = SmartActions.canExport(formName);
@@ -48,7 +50,7 @@ const TeamDownlineReport: React.FC = () => {
   const [isAtRoot, setIsAtRoot] = useState(true);
 
   const fetchFormPermissions = async () => {
-    try {
+    try { 
       const saved = localStorage.getItem("EmployeeDetails");
       const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
 
@@ -165,7 +167,7 @@ const TeamDownlineReport: React.FC = () => {
   ];
 
   const IMAGE_BASE_URL =
-    import.meta.env.VITE_IMAGE_PREVIEW_URL_3 + "ClientImages/";
+    import.meta.env.VITE_IMAGE_PREVIEW_URL_2 + "ClientImages/";
 
   const columns: TableColumn<DownlineRow>[] = [
     // {
@@ -185,10 +187,7 @@ const TeamDownlineReport: React.FC = () => {
             src={`${IMAGE_BASE_URL}${row.ClientLogo}`}
             alt={row.NAME}
             className="w-9 h-9 rounded-full object-cover border border-gray-200 flex-shrink-0"
-            onError={(e) => {
-              (e.target as HTMLImageElement).src =
-                "";
-            }}
+           
           />
           <div className="flex flex-col lead-ing-tight">
             <span className="font-semibold text-sm text-gray-800 dark:text-gray-100">
@@ -216,7 +215,7 @@ const TeamDownlineReport: React.FC = () => {
       name: "JOINING AMOUNT",
       selector: (row: DownlineRow) => row.JoiningAmount,
       sortable: true,
-      cell: (row: DownlineRow) => row.JoiningAmount ?? 0,
+      cell: (row: DownlineRow) => currency.symbol + (row.JoiningAmount ?? 0).toLocaleString(),
     },
     {
       name: "ACTION",
