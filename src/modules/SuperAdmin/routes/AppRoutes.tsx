@@ -156,10 +156,11 @@ import BinaryIncomeReport from "../components/Commission/BinaryIncomeReport.js";
 import TeamDownlineReport from "../components/Reports/TeamDownlineReport.js";
 import BinaryTeamReport from "../components/Reports/BinaryTeamReport.js";
 
-import ACtiveInActiveMembers from "../components/reports/ACtiveInActiveMembers.js";
+import ActiveInActiveMembers from "../components/Reports/ACtiveInActiveMembers.js";
 
 import TopEarners from "../components/Reports/TopEarners.js";
 import WalletReport from "../components/Reports/WalletReport.js";
+import ReferalReport from "../components/Reports/ReferalReport.js";
 
 
 const AppRoutes = () => {
@@ -568,8 +569,14 @@ const AppRoutes = () => {
                 element={<P2PReport />}
               />
               <Route
+                path="/superadmin/reports/ReferalReport"
+                element={<ReferalReport />}
+              />
+
+
+              <Route
                 path="/superadmin/reports/Active-InActive-Members"
-                element={<ACtiveInActiveMembers />}
+                element={<ActiveInActiveMembers />}
               />
               <Route
                 path="/superadmin/reports/TopEarners"
