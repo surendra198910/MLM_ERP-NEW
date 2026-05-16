@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { ApiService } from "../../../../services/ApiService";
 import DataTable from "react-data-table-component";
 import type { TableColumn } from "react-data-table-component";
@@ -19,6 +19,15 @@ import { useCurrency } from "../../context/CurrencyContext";
 const pageTitle = "Wallet Report";
 const procedureName = "GetWalletReport";
 
+// ✅ Move outside component — stable reference, never recreated
+const IMAGE_BASE_URL =
+  import.meta.env.VITE_IMAGE_PREVIEW_URL_2 + "ClientImages/";
+
+// ✅ Stable fallback handler — defined once, never recreated
+const handleImgError = (e: React.SyntheticEvent<HTMLImageElement>) => {
+  (e.target as HTMLImageElement).src = "/images/default-avatar.png";
+};
+
 interface WalletRow {
   SNO: number;
   ClientId: number;
@@ -32,6 +41,61 @@ interface WalletRow {
   ProductWallet: number;
   TotalRecords: number;
 }
+
+const statsConfig = [
+  // {
+  //   key: "TotalMembers",
+  //   title: "Total Members",
+  //   icon: "groups",
+  //   showCurrency: false,
+  // },
+  // {
+  //   key: "ActiveMembers",
+  //   title: "Active Members",
+  //   icon: "verified",
+  //   showCurrency: false,
+  // },
+  // {
+  //   key: "InactiveMembers",
+  //   title: "Inactive Members",
+  //   icon: "person_off",
+  //   showCurrency: false,
+  // },
+  // {
+  //   key: "TotalWalletAmount",
+  //   title: "Total Wallet",
+  //   icon: "account_balance_wallet",
+  //   showCurrency: true,
+  // },
+];
+
+const exportColumns = [
+  { key: "SNO", label: "SNO" },
+  { key: "MemberName", label: "Member Name" },
+  { key: "UserName", label: "Username" },
+  { key: "Status", label: "Status" },
+  { key: "WalletAmount", label: "Wallet Amount" },
+  { key: "ROIWallet", label: "ROI Wallet" },
+  { key: "CommissionWallet", label: "Commission Wallet" },
+  { key: "ProductWallet", label: "Product Wallet" },
+];
+
+// Add this OUTSIDE the main component, at the top of the file
+const MemberAvatar: React.FC<{ logo: string | null; name: string }> =
+  React.memo(({ logo, name }) => {
+    const [imgSrc, setImgSrc] = useState(
+      logo ? `${IMAGE_BASE_URL}${logo}` : "/images/default-avatar.png",
+    );
+
+    return (
+      <img
+        src={imgSrc}
+        alt={name}
+        className="w-9 h-9 rounded-full object-cover border border-gray-200 flex-shrink-0"
+        onError={() => setImgSrc("/images/default-avatar.png")}
+      />
+    );
+  });
 
 const WalletReport: React.FC = () => {
   const { universalService } = ApiService();
@@ -57,100 +121,84 @@ const WalletReport: React.FC = () => {
   const [permissionsLoading, setPermissionsLoading] = useState(true);
   const [hasPageAccess, setHasPageAccess] = useState(true);
 
-  const statsConfig = [
-    { key: "TotalMembers",      title: "Total Members",    icon: "groups",                 showCurrency: false },
-    { key: "ActiveMembers",     title: "Active Members",   icon: "verified",               showCurrency: false },
-    { key: "InactiveMembers",   title: "Inactive Members", icon: "person_off",             showCurrency: false },
-    { key: "TotalWalletAmount", title: "Total Wallet",     icon: "account_balance_wallet", showCurrency: true  },
-  ];
+  // ✅ Memoize fmt so it only changes when currency changes
+  const fmt = useCallback(
+    (val: number) => currency.symbol + Number(val ?? 0).toLocaleString(),
+    [currency.symbol],
+  );
 
-  const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_PREVIEW_URL_2 + "ClientImages/";
-
-  const fmt = (val: number) => currency.symbol + Number(val ?? 0).toLocaleString();
-
-  const columns: TableColumn<WalletRow>[] = [
-    {
-      name: "SNO",
-      selector: (r) => r.SNO,
-      sortable: true,
-      width: "70px",
-    },
-    {
-      name: "MEMBER",
-      selector: (r) => r.MemberName,
-      sortable: true,
-      minWidth: "220px",
-      cell: (r) => (
-        <div className="flex items-center gap-3 py-1">
-          <img
-            src={ `${IMAGE_BASE_URL}${r.ClientLogo}` }
-            alt={r.MemberName}
-            className="w-9 h-9 rounded-full object-cover border border-gray-200 flex-shrink-0"
-            onError={(e) => { (e.target as HTMLImageElement).src = "/images/default-avatar.png"; }}
-          />
-          <div className="flex flex-col leading-tight">
-            <span className="font-semibold text-sm text-gray-800 dark:text-gray-100">
-              {r.MemberName}
-            </span>
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              {r.UserName}
-            </span>
+  // ✅ Memoize columns so DataTable doesn't re-render rows when parent re-renders
+  const columns: TableColumn<WalletRow>[] = useMemo(
+    () => [
+      {
+        name: "SNO",
+        selector: (r) => r.SNO,
+        sortable: true,
+        width: "70px",
+      },
+      {
+        name: "MEMBER",
+        selector: (r) => r.MemberName,
+        sortable: true,
+        minWidth: "220px",
+        cell: (r) => (
+          <div className="flex items-center gap-3 py-1">
+            <MemberAvatar logo={r.ClientLogo} name={r.MemberName} />{" "}
+            {/* ✅ use this */}
+            <div className="flex flex-col leading-tight">
+              <span className="font-semibold text-sm text-gray-800 dark:text-gray-100">
+                {r.MemberName}
+              </span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">
+                {r.UserName}
+              </span>
+            </div>
           </div>
-        </div>
-      ),
-    },
-    {
-      name: "STATUS",
-      selector: (r) => r.Status,
-      sortable: true,
-      cell: (r) => (
-        <span
-          className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${
-            r.Status === "Active"
-              ? "bg-green-100 text-green-700 border-green-200"
-              : "bg-red-100 text-red-700 border-red-200"
-          }`}
-        >
-          {r.Status}
-        </span>
-      ),
-    },
-    {
-      name: "WALLET AMOUNT",
-      selector: (r) => r.WalletAmount,
-      sortable: true,
-      cell: (r) => fmt(r.WalletAmount),
-    },
-    {
-      name: "ROI WALLET",
-      selector: (r) => r.ROIWallet,
-      sortable: true,
-      cell: (r) => fmt(r.ROIWallet),
-    },
-    {
-      name: "COMMISSION WALLET",
-      selector: (r) => r.CommissionWallet,
-      sortable: true,
-      cell: (r) => fmt(r.CommissionWallet),
-    },
-    {
-      name: "PRODUCT WALLET",
-      selector: (r) => r.ProductWallet,
-      sortable: true,
-      cell: (r) => fmt(r.ProductWallet),
-    },
-  ];
-
-  const exportColumns = [
-    { key: "SNO",               label: "SNO" },
-    { key: "MemberName",        label: "Member Name" },
-    { key: "UserName",          label: "Username" },
-    { key: "Status",            label: "Status" },
-    { key: "WalletAmount",      label: "Wallet Amount" },
-    { key: "ROIWallet",         label: "ROI Wallet" },
-    { key: "CommissionWallet",  label: "Commission Wallet" },
-    { key: "ProductWallet",     label: "Product Wallet" },
-  ];
+        ),
+      },
+      {
+        name: "STATUS",
+        selector: (r) => r.Status,
+        sortable: true,
+        cell: (r) => (
+          <span
+            className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${
+              r.Status === "Active"
+                ? "bg-green-100 text-green-700 border-green-200"
+                : "bg-red-100 text-red-700 border-red-200"
+            }`}
+          >
+            {r.Status}
+          </span>
+        ),
+      },
+      {
+        name: "WALLET AMOUNT",
+        selector: (r) => r.WalletAmount,
+        sortable: true,
+        cell: (r) => fmt(r.WalletAmount),
+      },
+      {
+        name: "ROI WALLET",
+        selector: (r) => r.ROIWallet,
+        sortable: true,
+        cell: (r) => fmt(r.ROIWallet),
+      },
+      {
+        name: "COMMISSION WALLET",
+        selector: (r) => r.CommissionWallet,
+        sortable: true,
+        cell: (r) => fmt(r.CommissionWallet),
+      },
+      {
+        name: "PRODUCT WALLET",
+        selector: (r) => r.ProductWallet,
+        sortable: true,
+        cell: (r) => fmt(r.ProductWallet),
+      },
+    ],
+    [fmt],
+  ); // ✅ only rebuilds when fmt changes (i.e. currency changes)
 
   const fetchFormPermissions = async () => {
     try {
@@ -159,16 +207,27 @@ const WalletReport: React.FC = () => {
       const employeeId = saved ? JSON.parse(saved).EmployeeId : 0;
       const payload = {
         procName: "AssignForm",
-        Para: JSON.stringify({ ActionMode: "GetForms", FormName: formName, EmployeeId: employeeId }),
+        Para: JSON.stringify({
+          ActionMode: "GetForms",
+          FormName: formName,
+          EmployeeId: employeeId,
+        }),
       };
       const response = await universalService(payload);
       const result = response?.data ?? response;
-      if (!Array.isArray(result)) { setHasPageAccess(false); return; }
+      if (!Array.isArray(result)) {
+        setHasPageAccess(false);
+        return;
+      }
       const perm = result.find(
         (p: { FormNameWithExt: string; Action: string }) =>
-          String(p.FormNameWithExt).trim().toLowerCase() === formName?.trim().toLowerCase(),
+          String(p.FormNameWithExt).trim().toLowerCase() ===
+          formName?.trim().toLowerCase(),
       );
-      if (!perm || !perm.Action || perm.Action.trim() === "") { setHasPageAccess(false); return; }
+      if (!perm || !perm.Action || perm.Action.trim() === "") {
+        setHasPageAccess(false);
+        return;
+      }
       SmartActions.load(result);
       setHasPageAccess(true);
     } catch {
@@ -188,7 +247,10 @@ const WalletReport: React.FC = () => {
     setStats(result[0] || {});
   };
 
-  const fetchGridData = async (options?: { pageOverride?: number; perPageOverride?: number }) => {
+  const fetchGridData = async (options?: {
+    pageOverride?: number;
+    perPageOverride?: number;
+  }) => {
     try {
       setTableLoading(true);
       const payload = {
@@ -263,7 +325,10 @@ const WalletReport: React.FC = () => {
   };
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { fetchFormPermissions(); GetStats(); }, []);
+  useEffect(() => {
+    fetchFormPermissions();
+    GetStats();
+  }, []);
 
   useEffect(() => {
     if (!showTable || !hasVisitedTable) return;
@@ -279,14 +344,18 @@ const WalletReport: React.FC = () => {
       {/* HEADER */}
       <div className="trezo-card-header mb-[10px] md:mb-[10px] sm:flex items-center justify-between pb-5 border-b border-gray-200 -mx-[20px] md:-mx-[25px] px-[20px] md:px-[25px]">
         <div className="trezo-card-title">
-          <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">{pageTitle}</h5>
+          <h5 className="!mb-0 font-bold text-xl text-black dark:text-white">
+            {pageTitle}
+          </h5>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-3 sm:mt-0 flex-wrap justify-end">
           {/* FILTER DROPDOWN */}
           <div className="relative w-full sm:w-[180px]">
             <span className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-gray-500">
-              <i className="material-symbols-outlined !text-[18px]">filter_list</i>
+              <i className="material-symbols-outlined !text-[18px]">
+                filter_list
+              </i>
             </span>
             <select
               value={filterColumn}
@@ -298,7 +367,9 @@ const WalletReport: React.FC = () => {
               <option value="ClientName">Member Name</option>
             </select>
             <span className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400">
-              <i className="material-symbols-outlined !text-[18px]">expand_more</i>
+              <i className="material-symbols-outlined !text-[18px]">
+                expand_more
+              </i>
             </span>
           </div>
 
@@ -319,7 +390,10 @@ const WalletReport: React.FC = () => {
 
           {/* BUTTONS */}
           <div className="flex items-center gap-2">
-            <PermissionAwareTooltip allowed={SmartActions.canSearch(formName)} allowedText="Search">
+            <PermissionAwareTooltip
+              allowed={SmartActions.canSearch(formName)}
+              allowedText="Search"
+            >
               <button
                 type="button"
                 onClick={applySearch}
@@ -364,7 +438,11 @@ const WalletReport: React.FC = () => {
       ) : (
         <div>
           {/* STATS */}
-          <StatsCards stats={stats} config={statsConfig} loading={tableLoading} />
+          <StatsCards
+            stats={stats}
+            config={statsConfig}
+            loading={tableLoading}
+          />
 
           {/* TOOLBAR */}
           {!tableLoading && data.length > 0 && (
@@ -386,12 +464,16 @@ const WalletReport: React.FC = () => {
                   <option value="100">100 / page</option>
                 </select>
                 <span className="absolute inset-y-0 right-2 flex items-center pointer-events-none">
-                  <i className="material-symbols-outlined text-[18px] text-gray-500">expand_more</i>
+                  <i className="material-symbols-outlined text-[18px] text-gray-500">
+                    expand_more
+                  </i>
                 </span>
               </div>
 
               <PermissionAwareTooltip allowed={canExport}>
-                <div className={!canExport ? "pointer-events-none opacity-50" : ""}>
+                <div
+                  className={!canExport ? "pointer-events-none opacity-50" : ""}
+                >
                   <ExportButtons
                     title={pageTitle}
                     columns={exportColumns}
@@ -413,14 +495,20 @@ const WalletReport: React.FC = () => {
               paginationServer
               paginationTotalRows={totalRows}
               paginationComponent={(props) => (
-                <CustomPagination {...props} currentPage={page} rowsPerPage={perPage} />
+                <CustomPagination
+                  {...props}
+                  currentPage={page}
+                  rowsPerPage={perPage}
+                />
               )}
               onChangePage={handlePageChange}
               onChangeRowsPerPage={handlePerRowsChange}
               onSort={handleSort}
               sortServer
               progressPending={tableLoading}
-              progressComponent={<TableSkeleton rows={perPage} columns={columns.length} />}
+              progressComponent={
+                <TableSkeleton rows={perPage} columns={columns.length} />
+              }
               noDataComponent={!tableLoading && <OopsNoData />}
             />
           </div>
